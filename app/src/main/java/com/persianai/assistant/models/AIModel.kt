@@ -111,6 +111,13 @@ enum class AIModel(
         "مدل GPT-4o Mini از سرویس لیارا",
         16000
     ),
+    LIARA_GPT_5_NANO(
+        "openai/gpt-5-nano",
+        "GPT-5 Nano (Liara)",
+        AIProvider.LIARA,
+        "مدل GPT-5 Nano از لیارا",
+        32000
+    ),
     IVIRA_GPT5_NANO(
         "gpt-5-nano",
         "GPT-5 Nano (Ivira)",
@@ -145,6 +152,27 @@ enum class AIModel(
         AIProvider.OPENAI,
         "مدل اقتصادی OpenAI",
         4000
+    ),
+    GAPGPT_GPT_4O_MINI(
+        "gpt-4o-mini",
+        "GPT-4o Mini (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل GPT-4o Mini از GAPGPT",
+        16000
+    ),
+    GAPGPT_GPT_5_NANO(
+        "gpt-5-nano",
+        "GPT-5 Nano (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل GPT-5 Nano از GAPGPT",
+        32000
+    ),
+    GAPGPT_DEEPSEEK_V3(
+        "gapgpt-deepseek-v3",
+        "DeepSeek V3 (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل DeepSeek V3 از GAPGPT",
+        8000
     );
 
     companion object {

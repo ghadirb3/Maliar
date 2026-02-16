@@ -96,29 +96,77 @@ abstract class BaseChatActivity : AppCompatActivity() {
     }
 
     private fun chooseBestModel(apiKeys: List<APIKey>, pref: ProviderPreference): AIModel {
-        // اولویت: OpenAI > Liara > Avalai > آفلاین
-        val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
+        // ۱. تلاش برای خواندن از ریموت
+        val remoteConfigManager = com.persianai.assistant.config.RemoteAIConfigManager.getInstance(this)
+        val remoteModels = try {
+            remoteConfigManager.loadCached()?.ai_text_models
+                ?.filter { it.enabled }
+                ?.sortedBy { it.priority ?: 999 }
+                ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.w("BaseChatActivity", "Failed to load remote config", e)
+            emptyList()
+        }
 
-        val selected = when {
-            activeProviders.contains(com.persianai.assistant.models.AIProvider.OPENAI) -> {
-                android.util.Log.d("BaseChatActivity", "✅ استفاده از OpenAI: GPT-4o Mini")
-                AIModel.GPT_4O_MINI
+        // ۲. اولین مدل ریموت که کلید فعال دارد را برگردان
+        for (model in remoteModels) {
+            val provider = when (model.provider.lowercase()) {
+                "openai" -> com.persianai.assistant.models.AIProvider.OPENAI
+                "liara" -> com.persianai.assistant.models.AIProvider.LIARA
+                "gapgpt" -> com.persianai.assistant.models.AIProvider.GAPGPT
+                "avalai" -> com.persianai.assistant.models.AIProvider.AVALAI
+                "ivira" -> com.persianai.assistant.models.AIProvider.IVIRA
+                "openrouter" -> com.persianai.assistant.models.AIProvider.OPENROUTER
+                "anthropic" -> com.persianai.assistant.models.AIProvider.ANTHROPIC
+                "aiml" -> com.persianai.assistant.models.AIProvider.AIML
+                else -> null
             }
-            activeProviders.contains(com.persianai.assistant.models.AIProvider.LIARA) -> {
-                android.util.Log.d("BaseChatActivity", "✅ استفاده از Liara: GPT-4o Mini")
-                AIModel.LIARA_GPT_4O_MINI
-            }
-            activeProviders.contains(com.persianai.assistant.models.AIProvider.AVALAI) -> {
-                android.util.Log.d("BaseChatActivity", "✅ استفاده از Avalai: Gemini 2.5 Flash")
-                AIModel.AVALAI_GEMINI_FLASH
-            }
-            else -> {
-                android.util.Log.w("BaseChatActivity", "⚠️ هیچ کلید آنلاین فعال نیست، استفاده از مدل آفلاین")
-                AIModel.TINY_LLAMA_OFFLINE
+            if (provider != null && apiKeys.any { it.provider == provider && it.isActive }) {
+                // تلاش برای پیدا کردن AIModel متناظر با نام مدل
+                val aiModel = com.persianai.assistant.models.AIModel.fromModelId(model.name)
+                if (aiModel != null) {
+                    android.util.Log.d("BaseChatActivity", "✅ استفاده از مدل ریموت: ${model.name} (${model.provider})")
+                    android.util.Log.d("BaseChatActivity", "📊 Selected Model: ${aiModel.modelId}")
+                    return aiModel
+                }
+                // اگر مدل در enum نبود، اولین مدل فعال از همان provider را برگردان
+                val fallbackModel = com.persianai.assistant.models.AIModel.values()
+                    .find { it.provider == provider }
+                if (fallbackModel != null) {
+                    android.util.Log.d("BaseChatActivity", "✅ استفاده از مدل ریموت (fallback به ${fallbackModel.modelId}): ${model.name} (${model.provider})")
+                    android.util.Log.d("BaseChatActivity", "📊 Selected Model: ${fallbackModel.modelId}")
+                    return fallbackModel
+                }
             }
         }
 
-        android.util.Log.d("BaseChatActivity", "📊 Selected Model: ${selected.modelId}")
+        // ۳. Fallback به لیست ثابت داخل کد
+        android.util.Log.w("BaseChatActivity", "⚠️ هیچ مدل ریموت فعال و معتبری نبود، استفاده از لیست ثابت")
+        val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
+        val selected = when {
+            activeProviders.contains(com.persianai.assistant.models.AIProvider.GAPGPT) -> {
+                android.util.Log.d("BaseChatActivity", "✅ استفاده از GAPGPT (fallback): GPT-4o Mini")
+                com.persianai.assistant.models.AIModel.GAPGPT_GPT_4O_MINI
+            }
+            activeProviders.contains(com.persianai.assistant.models.AIProvider.LIARA) -> {
+                android.util.Log.d("BaseChatActivity", "✅ استفاده از Liara (fallback): GPT-4o Mini")
+                com.persianai.assistant.models.AIModel.LIARA_GPT_4O_MINI
+            }
+            activeProviders.contains(com.persianai.assistant.models.AIProvider.AVALAI) -> {
+                android.util.Log.d("BaseChatActivity", "✅ استفاده از Avalai (fallback): Gemini 2.5 Flash")
+                com.persianai.assistant.models.AIModel.AVALAI_GEMINI_FLASH
+            }
+            activeProviders.contains(com.persianai.assistant.models.AIProvider.OPENAI) -> {
+                android.util.Log.d("BaseChatActivity", "✅ استفاده از OpenAI (fallback): GPT-4o Mini")
+                com.persianai.assistant.models.AIModel.GPT_4O_MINI
+            }
+            else -> {
+                android.util.Log.w("BaseChatActivity", "⚠️ هیچ کلید آنلاین فعال نیست، استفاده از مدل آفلاین")
+                com.persianai.assistant.models.AIModel.TINY_LLAMA_OFFLINE
+            }
+        }
+
+        android.util.Log.d("BaseChatActivity", "📊 Selected Model (fallback): ${selected.modelId}")
         return selected
     }
 
