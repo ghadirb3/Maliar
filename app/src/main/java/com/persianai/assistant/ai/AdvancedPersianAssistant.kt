@@ -1,12 +1,17 @@
 package com.persianai.assistant.ai
 
 import android.content.Context
-import com.persianai.assistant.ai.AIClient
+import android.util.Log
+import com.persianai.assistant.ai.models.Intent
+import com.persianai.assistant.ai.models.IntentType
+import com.persianai.assistant.models.AssistantResponse
 import com.persianai.assistant.models.AIModel
+import com.persianai.assistant.models.APIKey
+import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.ChatMessage
 import com.persianai.assistant.models.MessageRole
-import com.persianai.assistant.finance.CheckManager
-import com.persianai.assistant.finance.InstallmentManager
+import com.persianai.assistant.utils.PreferencesManager
+import com.persianai.assistant.utils.SmartReminderManager
 import com.persianai.assistant.finance.FinanceManager
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.SmartReminderManager
@@ -145,22 +150,26 @@ class AdvancedPersianAssistant(private val context: Context) {
         }
     }
     
-    private fun chooseBestModel(apiKeys: List<APIKey>, providerPreference: String?): AIModel {
+    private fun chooseBestModel(apiKeys: List<APIKey>, providerPreference: PreferencesManager.ProviderPreference): AIModel {
         val activeKeys = apiKeys.filter { it.isActive }
         
         // Priority based on provider preference and availability
-        val preferredProvider = when {
-            providerPreference == "gapgpt" && activeKeys.any { it.provider == AIProvider.GAPGPT } -> AIProvider.GAPGPT
-            providerPreference == "liara" && activeKeys.any { it.provider == AIProvider.LIARA } -> AIProvider.LIARA
-            providerPreference == "openai" && activeKeys.any { it.provider == AIProvider.OPENAI } -> AIProvider.OPENAI
-            else -> null
+        val preferredProvider: AIProvider? = when (providerPreference) {
+            PreferencesManager.ProviderPreference.OPENAI_ONLY ->
+                activeKeys.firstOrNull { it.provider == AIProvider.OPENAI }?.provider
+            PreferencesManager.ProviderPreference.SMART_ROUTE ->
+                activeKeys.firstOrNull { it.provider == AIProvider.OPENAI }?.provider
+                    ?: activeKeys.firstOrNull()?.provider
+            PreferencesManager.ProviderPreference.AUTO ->
+                activeKeys.firstOrNull()?.provider
         }
         
         // Choose best model based on available providers
-        return when (preferredProvider ?: activeKeys.firstOrNull()?.provider) {
-            AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
-            AIProvider.LIARA -> AIModel.LLAMA_3_8B
+        val finalProvider = preferredProvider ?: activeKeys.firstOrNull()?.provider
+        return when (finalProvider) {
             AIProvider.OPENAI -> AIModel.GPT_4O_MINI
+            AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
+            AIProvider.LIARA -> AIModel.GPT_4O_MINI
             else -> AIModel.GPT_4O_MINI
         }
     }
