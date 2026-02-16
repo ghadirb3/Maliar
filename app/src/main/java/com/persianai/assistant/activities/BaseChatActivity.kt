@@ -137,6 +137,8 @@ abstract class BaseChatActivity : AppCompatActivity() {
         ttsHelper.initialize()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         
+        android.util.Log.d("BaseChatActivity", "✅ Components initialized, prefsManager is ready")
+        
         // Initialize conversation storage and load current conversation (if any)
         conversationStorage = com.persianai.assistant.storage.ConversationStorage(this)
         currentConversation = Conversation()
@@ -262,6 +264,11 @@ abstract class BaseChatActivity : AppCompatActivity() {
     protected abstract fun getVoiceButton(): View
 
     protected open fun setupChatUI() {
+        // Ensure prefsManager is initialized before setting up AI client
+        if (!::prefsManager.isInitialized) {
+            android.util.Log.e("BaseChatActivity", "⚠️ prefsManager not initialized in setupChatUI!")
+            return
+        }
         setupRecyclerView()
         setupListeners()
         setupAIClient()

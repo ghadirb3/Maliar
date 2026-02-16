@@ -303,14 +303,13 @@ class VoiceCommandService : Service() {
                 nm.createNotificationChannel(channel)
             }
             
-            // Run action intent
-            val runIntent = Intent(this, VoiceCommandReceiver::class.java).apply {
-                action = VoiceCommandReceiver.ACTION_RUN_COMMAND
-                putExtra(VoiceCommandReceiver.EXTRA_TRANSCRIPT, transcript)
-                putExtra(VoiceCommandReceiver.EXTRA_MODE, mode)
-                putExtra(VoiceCommandReceiver.EXTRA_NOTIFICATION_ID, NOTIFICATION_ID + 1)
+            // Run action intent - now goes to permission activity first
+            val runIntent = Intent(this, com.persianai.assistant.activities.VoicePermissionActivity::class.java).apply {
+                action = if (mode == MODE_REMINDER) ACTION_RECORD_REMINDER else ACTION_RECORD_COMMAND
+                putExtra("extra_mode", mode)
+                putExtra("extra_hint", "اجرای فرمان: $transcript")
             }
-            val runPending = PendingIntent.getBroadcast(
+            val runPending = PendingIntent.getActivity(
                 this,
                 NOTIFICATION_ID + 2,
                 runIntent,

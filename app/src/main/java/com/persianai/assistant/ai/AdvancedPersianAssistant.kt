@@ -67,23 +67,29 @@ class AdvancedPersianAssistant(private val context: Context) {
 
         val workingMode = prefsManager.getWorkingMode()
         val apiKeys = prefsManager.getAPIKeys()
-        val hasOpenAIKey = apiKeys.any { it.isActive && it.provider == com.persianai.assistant.models.AIProvider.OPENAI }
+        
+        // Check for any active API keys (not just OpenAI)
+        val hasActiveKeys = apiKeys.any { it.isActive }
 
         val canUseOnline = (workingMode == PreferencesManager.WorkingMode.ONLINE ||
-                workingMode == PreferencesManager.WorkingMode.HYBRID) && hasOpenAIKey
+                workingMode == PreferencesManager.WorkingMode.HYBRID) && hasActiveKeys
 
         if (!canUseOnline) {
-            if (workingMode == PreferencesManager.WorkingMode.ONLINE && !hasOpenAIKey) {
+            if (workingMode == PreferencesManager.WorkingMode.ONLINE && !hasActiveKeys) {
                 return AssistantResponse(
-                    text = "برای استفاده از مدل آنلاین، ابتدا کلید OpenAI را در تنظیمات وارد کنید."
+                    text = "برای استفاده از مدل آنلاین، ابتدا کلیدهای API را در تنظیمات وارد کنید."
                 )
             }
+            android.util.Log.d("AdvancedPersianAssistant", "Using offline mode - workingMode=$workingMode, hasActiveKeys=$hasActiveKeys")
             return baseResponse
         }
 
         return try {
             val aiClient = AIClient(context, apiKeys)
-            val model = AIModel.GPT_4O_MINI
+            // Use the best available model instead of hardcoded GPT-4O-MINI
+            val model = chooseBestModel(apiKeys, prefsManager.getProviderPreference())
+
+            android.util.Log.d("AdvancedPersianAssistant", "Using online model: ${model.modelId} (${model.provider})")
 
             suspend fun callOnline(prompt: String): String {
                 val resp = aiClient.sendMessage(
@@ -134,7 +140,28 @@ class AdvancedPersianAssistant(private val context: Context) {
                 baseResponse
             }
         } catch (e: Exception) {
+            android.util.Log.e("AdvancedPersianAssistant", "Online AI request failed", e)
             baseResponse
+        }
+    }
+    
+    private fun chooseBestModel(apiKeys: List<APIKey>, providerPreference: String?): AIModel {
+        val activeKeys = apiKeys.filter { it.isActive }
+        
+        // Priority based on provider preference and availability
+        val preferredProvider = when {
+            providerPreference == "gapgpt" && activeKeys.any { it.provider == AIProvider.GAPGPT } -> AIProvider.GAPGPT
+            providerPreference == "liara" && activeKeys.any { it.provider == AIProvider.LIARA } -> AIProvider.LIARA
+            providerPreference == "openai" && activeKeys.any { it.provider == AIProvider.OPENAI } -> AIProvider.OPENAI
+            else -> null
+        }
+        
+        // Choose best model based on available providers
+        return when (preferredProvider ?: activeKeys.firstOrNull()?.provider) {
+            AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
+            AIProvider.LIARA -> AIModel.LLAMA_3_8B
+            AIProvider.OPENAI -> AIModel.GPT_4O_MINI
+            else -> AIModel.GPT_4O_MINI
         }
     }
     
