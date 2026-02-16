@@ -2,17 +2,14 @@ package com.persianai.assistant.ai
 
 import android.content.Context
 import android.util.Log
-import com.persianai.assistant.ai.models.Intent
-import com.persianai.assistant.ai.models.IntentType
-import com.persianai.assistant.models.AssistantResponse
 import com.persianai.assistant.models.AIModel
-import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.AIProvider
+import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.ChatMessage
 import com.persianai.assistant.models.MessageRole
-import com.persianai.assistant.utils.PreferencesManager
-import com.persianai.assistant.utils.SmartReminderManager
+import com.persianai.assistant.finance.CheckManager
 import com.persianai.assistant.finance.FinanceManager
+import com.persianai.assistant.finance.InstallmentManager
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.SmartReminderManager
 import com.persianai.assistant.utils.TravelPlannerManager
