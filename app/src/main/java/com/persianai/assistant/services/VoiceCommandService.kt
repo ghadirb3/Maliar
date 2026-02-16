@@ -66,6 +66,7 @@ class VoiceCommandService : Service() {
                 if (!started) {
                     started = true
                     ensureChannel()
+                    // IMPORTANT: Start foreground immediately to avoid crashes
                     startForeground(NOTIFICATION_ID, buildNotification("🎤 آماده ضبط...", ""))
                 }
                 scope.launch {

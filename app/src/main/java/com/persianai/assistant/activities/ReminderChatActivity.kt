@@ -28,6 +28,7 @@ class ReminderChatActivity : BaseChatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "چت با دستیار یادآوری"
 
+        // Initialize UI components first, then setup chat
         setupChatUI()
     }
 
@@ -103,18 +104,20 @@ class ReminderChatActivity : BaseChatActivity() {
                     // ساخت یادآوری
                     val mgr = SmartReminderManager(this@ReminderChatActivity)
                     if (repeatPattern == SmartReminderManager.RepeatPattern.ONCE) {
-                        mgr.createSimpleReminder(
+                        val reminder = mgr.createSimpleReminder(
                             title = message,
                             description = "",
                             triggerTime = calendar.timeInMillis
                         )
+                        android.util.Log.d("ReminderChatActivity", "✅ Created simple reminder: ${reminder.title} at ${reminder.triggerTime}")
                     } else {
-                        mgr.createRecurringReminder(
+                        val reminder = mgr.createRecurringReminder(
                             title = message,
                             description = "",
                             firstTriggerTime = calendar.timeInMillis,
                             repeatPattern = repeatPattern
                         )
+                        android.util.Log.d("ReminderChatActivity", "✅ Created recurring reminder: ${reminder.title} at ${reminder.triggerTime}")
                     }
                     
                     "✅ یادآوری «$message» برای ساعت $time تنظیم شد."

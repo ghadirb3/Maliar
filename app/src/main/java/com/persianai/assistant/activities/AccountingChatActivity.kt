@@ -34,6 +34,7 @@ class AccountingChatActivity : BaseChatActivity() {
         checkManager = CheckManager(this)
         installmentManager = InstallmentManager(this)
 
+        // Initialize UI components first, then setup chat
         setupChatUI()
     }
 

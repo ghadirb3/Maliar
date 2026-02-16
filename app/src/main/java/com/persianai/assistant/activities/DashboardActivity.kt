@@ -958,7 +958,20 @@ class DashboardActivity : AppCompatActivity() {
     private fun getTodayRemindersCount(): Int {
         return try {
             val reminderManager = com.persianai.assistant.utils.SmartReminderManager(this)
-            reminderManager.getTodayReminders().size
+            val allReminders = reminderManager.getAllReminders()
+            val activeReminders = reminderManager.getActiveReminders()
+            val todayReminders = reminderManager.getTodayReminders()
+            
+            android.util.Log.d("DashboardActivity", "All reminders: ${allReminders.size}")
+            android.util.Log.d("DashboardActivity", "Active reminders: ${activeReminders.size}")
+            android.util.Log.d("DashboardActivity", "Today reminders: ${todayReminders.size}")
+            
+            // Debug: Show today's reminders details
+            todayReminders.forEach { reminder ->
+                android.util.Log.d("DashboardActivity", "Today reminder: ${reminder.title} at ${reminder.triggerTime}")
+            }
+            
+            todayReminders.size
         } catch (e: Exception) {
             android.util.Log.e("DashboardActivity", "Error getting today reminders", e)
             0

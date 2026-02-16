@@ -130,11 +130,13 @@ abstract class BaseChatActivity : AppCompatActivity() {
             return
         }
         
+        // Initialize critical components first
         prefsManager = PreferencesManager(this)
         modelDownloadManager = ModelDownloadManager(this)
         ttsHelper = TTSHelper(this)
         ttsHelper.initialize()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        
         // Initialize conversation storage and load current conversation (if any)
         conversationStorage = com.persianai.assistant.storage.ConversationStorage(this)
         currentConversation = Conversation()
