@@ -79,7 +79,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
     private var voiceConversationJob: Job? = null
     
     companion object {
-        protected const val CHAT_DISABLED = true
+        protected const val CHAT_DISABLED = false
         private const val REQUEST_RECORD_AUDIO = 1001
         const val EXTRA_START_VOICE_CONVERSATION = "extra_start_voice_conversation"
         private const val MENU_ID_VOICE_CONVERSATION = 99001

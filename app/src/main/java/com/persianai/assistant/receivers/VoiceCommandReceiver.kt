@@ -51,14 +51,16 @@ class VoiceCommandReceiver : BroadcastReceiver() {
         
         // Check RECORD_AUDIO permission for future voice commands
         if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            // Open app to request permission
-            val appIntent = Intent(context, com.persianai.assistant.activities.DashboardActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("request_permission", "RECORD_AUDIO")
+            // Request microphone permission via VoicePermissionActivity trampoline
+            val permIntent = Intent(context, com.persianai.assistant.activities.VoicePermissionActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("extra_mode", mode)
+                putExtra("extra_transcript", transcript)
+                putExtra("extra_notification_id", notificationId)
             }
-            context.startActivity(appIntent)
+            context.startActivity(permIntent)
             
-            showErrorNotification(context, "برای دستورات صوتی، مجوز ضبط صدا را در برنامه فعال کنید", notificationId)
+            showErrorNotification(context, "برای دستورات صوتی، اجازه دسترسی به میکروفون را بدهید", notificationId)
             return
         }
         
