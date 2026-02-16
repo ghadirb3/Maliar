@@ -986,9 +986,10 @@ class DashboardActivity : AppCompatActivity() {
             val accountingDB = com.persianai.assistant.data.AccountingDB(this)
             val allInstallments = accountingDB.getAllInstallments()
             // اقساطی که هنوز کامل نشده‌اند را بعنوان "در جریان امروز" در نظر می‌گیریم
-            allInstallments.count { installment ->
-                installment.status != com.persianai.assistant.models.InstallmentStatus.COMPLETED
-            }
+            val today = java.time.LocalDate.now()
+            val start = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val end = today.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            allInstallments.count { it.status != com.persianai.assistant.models.InstallmentStatus.COMPLETED && it.nextPaymentDate.time in start until end }
         } catch (e: Exception) {
             android.util.Log.e("DashboardActivity", "Error getting today installments", e)
             0
@@ -1025,7 +1026,7 @@ class DashboardActivity : AppCompatActivity() {
             val todayReminders = reminderManager.getTodayReminders()
             // Count special events like birthdays, appointments, etc.
             todayReminders.count { reminder ->
-                reminder.type.toString() in listOf("BIRTHDAY", "APPOINTMENT", "EVENT")
+                reminder.type.toString() in listOf("BIRTHDAY", "ANNIVERSARY", "FAMILY")
             }
         } catch (e: Exception) {
             android.util.Log.e("DashboardActivity", "Error getting today events", e)

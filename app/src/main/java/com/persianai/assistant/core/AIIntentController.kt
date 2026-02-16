@@ -11,6 +11,7 @@ import com.persianai.assistant.models.MessageRole
  import com.persianai.assistant.core.intent.*
  import com.persianai.assistant.core.modules.*
  import com.persianai.assistant.utils.PreferencesManager
+ import com.persianai.assistant.utils.ModelSelector
  import org.json.JSONObject
  import kotlinx.coroutines.Dispatchers
  import kotlinx.coroutines.withContext
@@ -125,10 +126,11 @@ import com.persianai.assistant.models.MessageRole
                 }
             }.trim()
 
-            // فقط اگر OpenAI فعال است، از GPT-4o Mini برای تشخیص Intent استفاده کن
-            val hasOpenAI = keys.any { it.isActive && it.provider == AIProvider.OPENAI }
-            if (!hasOpenAI) return@withContext null
-            val model = AIModel.GPT_4O_MINI
+            // انتخاب مدل آنلاین بر اساس اولویت remote ai_config.json و کلیدهای فعال
+            val activeKeys = keys.filter { it.isActive && it.key.isNotBlank() }
+            val model = ModelSelector.getAvailableAIModels(this@AIIntentController.context, activeKeys)
+                .firstOrNull { it.provider != AIProvider.LOCAL && it.provider != AIProvider.IVIRA }
+                ?: ModelSelector.selectBestModel(this@AIIntentController.context, activeKeys)
 
             Log.d("AIIntentController", "Online intent via model=${model.displayName} provider=${model.provider.name}")
 

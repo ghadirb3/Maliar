@@ -122,6 +122,14 @@ object ModelManager {
      * دریافت لیست اولویت مدل‌ها از remote config
      */
     fun getModelPriority(context: Context?): List<ModelWrapper> {
+        val ctx = context
+        if (ctx != null) {
+            try {
+                val remote = RemoteAIConfigManager.getInstance(ctx).getModelPriority()
+                if (remote.isNotEmpty()) return remote.map { ModelWrapper.from(it) }
+            } catch (_: Exception) {
+            }
+        }
         val dynamicModels = DynamicAIModel.getDynamicModels(context)
         
         if (dynamicModels.isNotEmpty()) {
