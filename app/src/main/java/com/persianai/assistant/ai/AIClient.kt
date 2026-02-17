@@ -188,11 +188,12 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
 
         val requestBody = when (model.provider) {
             AIProvider.GAPGPT -> {
-                // Simple request for GAPGPT - only essential fields
+                // GAPGPT request - explicitly disable streaming
                 mapOf(
                     "model" to model.modelId,
                     "messages" to messageList,
-                    "temperature" to 0.0
+                    "temperature" to 0.0,
+                    "stream" to false
                 )
             }
             else -> {
@@ -254,6 +255,11 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             }
 
             try {
+                // Handle streaming response for GAPGPT
+                if (model.provider == AIProvider.GAPGPT && responseBody.contains("data:")) {
+                    return parseGAPGPTStream(responseBody, requestId)
+                }
+
                 val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
                     ?: throw Exception("Failed to parse response as ChatResponse")
                 
@@ -306,6 +312,49 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 throw Exception("خطا در پردازش پاسخ API: ${e.message}")
             }
         }
+    }
+
+    /**
+     * Parse GAPGPT streaming response
+     */
+    private fun parseGAPGPTStream(responseBody: String, requestId: String): ChatMessage {
+        val contentBuilder = StringBuilder()
+        
+        responseBody.lines().forEach { line ->
+            line.trim().takeIf { it.startsWith("data:") }?.let { dataLine ->
+                val jsonStr = dataLine.removePrefix("data:").trim()
+                if (jsonStr == "[DONE]") return@forEach
+                
+                try {
+                    val json = gson.fromJson(jsonStr, JsonObject::class.java)
+                    val choices = json.getAsJsonArray("choices")
+                    if (choices != null && choices.size() > 0) {
+                        val choice = choices[0].asJsonObject
+                        val delta = choice.getAsJsonObject("delta")
+                        if (delta != null) {
+                            val content = delta.get("content")?.asString
+                            if (!content.isNullOrBlank()) {
+                                contentBuilder.append(content)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("AIClient", "[$requestId] Failed to parse stream chunk: $jsonStr", e)
+                }
+            }
+        }
+        
+        val finalContent = contentBuilder.toString()
+        if (finalContent.isBlank()) {
+            throw Exception("No content extracted from GAPGPT stream")
+        }
+        
+        android.util.Log.d("AIClient", "[$requestId] GAPGPT stream parsed successfully: ${finalContent.length} chars")
+        return ChatMessage(
+            role = MessageRole.ASSISTANT,
+            content = finalContent,
+            timestamp = System.currentTimeMillis()
+        )
     }
 
     private fun callWhisperLike(url: String, key: String, body: okhttp3.MultipartBody): String {
