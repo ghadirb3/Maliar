@@ -231,6 +231,8 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         }
         val request = requestBuilder.post(body).build()
 
+        var parsedMessage: ChatMessage
+        
         client.newCall(request).execute().use { response ->
             val responseBody = response.body?.string()
             val responseSnippet = responseBody?.take(200) ?: "(empty)"
@@ -254,66 +256,68 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 android.util.Log.d("AIClient", "[$requestId] Raw GAPGPT response: $responseBody")
             }
 
-            // Handle streaming response for GAPGPT before try-catch
-            if (model.provider == AIProvider.GAPGPT && responseBody.contains("data:")) {
-                val result = parseGAPGPTStream(responseBody, requestId)
-                android.util.Log.d("AIClient", "[$requestId] Success: content length=${result.content.length}")
-                return result
-            }
-
-            try {
-                val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
-                    ?: throw Exception("Failed to parse response as ChatResponse")
-                
-                // Try multiple response formats
-                val content = when {
-                    // Standard OpenAI format
-                    !chatResponse.choices.isNullOrEmpty() -> {
-                        val choice = chatResponse.choices.firstOrNull()
-                        choice?.message?.content 
-                            ?: choice?.text 
-                            ?: choice?.content
-                    }
-                    // Alternative direct response field
-                    !chatResponse.response.isNullOrBlank() -> chatResponse.response
-                    // Alternative text field
-                    !chatResponse.text.isNullOrBlank() -> chatResponse.text
-                    // Alternative content field
-                    !chatResponse.content.isNullOrBlank() -> chatResponse.content
-                    // Last resort: try to parse as plain text or different JSON structure
-                    else -> {
-                        try {
-                            val json = gson.fromJson(responseBody, JsonObject::class.java)
-                            json.get("response")?.asString 
-                                ?: json.get("text")?.asString
-                                ?: json.get("content")?.asString
-                                ?: json.get("message")?.asString
-                                ?: json.get("answer")?.asString
-                        } catch (e: Exception) {
-                            null
+            // Parse response (streaming for GAPGPT, JSON for others)
+            parsedMessage = if (model.provider == AIProvider.GAPGPT && responseBody.contains("data:")) {
+                // Handle streaming response for GAPGPT
+                parseGAPGPTStream(responseBody, requestId)
+            } else {
+                // Handle standard JSON response
+                try {
+                    val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
+                        ?: throw Exception("Failed to parse response as ChatResponse")
+                    
+                    // Try multiple response formats
+                    val content = when {
+                        // Standard OpenAI format
+                        !chatResponse.choices.isNullOrEmpty() -> {
+                            val choice = chatResponse.choices.firstOrNull()
+                            choice?.message?.content 
+                                ?: choice?.text 
+                                ?: choice?.content
+                        }
+                        // Alternative direct response field
+                        !chatResponse.response.isNullOrBlank() -> chatResponse.response
+                        // Alternative text field
+                        !chatResponse.text.isNullOrBlank() -> chatResponse.text
+                        // Alternative content field
+                        !chatResponse.content.isNullOrBlank() -> chatResponse.content
+                        // Last resort: try to parse as plain text or different JSON structure
+                        else -> {
+                            try {
+                                val json = gson.fromJson(responseBody, JsonObject::class.java)
+                                json.get("response")?.asString 
+                                    ?: json.get("text")?.asString
+                                    ?: json.get("content")?.asString
+                                    ?: json.get("message")?.asString
+                                    ?: json.get("answer")?.asString
+                            } catch (e: Exception) {
+                                null
+                            }
                         }
                     }
+                    
+                    if (!content.isNullOrBlank()) {
+                        android.util.Log.d("AIClient", "[$requestId] Success: content length=${content.length}")
+                        ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = content,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    } else {
+                        throw Exception("پاسخ خالی از API")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("AIClient", "[$requestId] Parse error: ${e.message}, response was: $responseSnippet")
+                    // Log full response for debugging GAPGPT format issues
+                    if (model.provider == AIProvider.GAPGPT) {
+                        android.util.Log.e("AIClient", "[$requestId] Full GAPGPT response: $responseBody")
+                    }
+                    throw Exception("خطا در پردازش پاسخ API: ${e.message}")
                 }
-                
-                if (!content.isNullOrBlank()) {
-                    android.util.Log.d("AIClient", "[$requestId] Success: content length=${content.length}")
-                    ChatMessage(
-                        role = MessageRole.ASSISTANT,
-                        content = content,
-                        timestamp = System.currentTimeMillis()
-                    )
-                } else {
-                    throw Exception("پاسخ خالی از API")
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("AIClient", "[$requestId] Parse error: ${e.message}, response was: $responseSnippet")
-                // Log full response for debugging GAPGPT format issues
-                if (model.provider == AIProvider.GAPGPT) {
-                    android.util.Log.e("AIClient", "[$requestId] Full GAPGPT response: $responseBody")
-                }
-                throw Exception("خطا در پردازش پاسخ API: ${e.message}")
             }
         }
+        
+        return parsedMessage
     }
 
     /**
