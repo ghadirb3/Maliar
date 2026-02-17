@@ -678,12 +678,15 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 }
                 
                 val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
-                val choice = chatResponse.choices.firstOrNull()
+                val choice = chatResponse.choices?.firstOrNull()
                     ?: throw Exception("No choices in response")
                 
                 ChatMessage(
                     role = MessageRole.ASSISTANT,
-                    content = choice.message.content,
+                    content = choice.message?.content 
+                        ?: choice.text 
+                        ?: choice.content
+                        ?: throw Exception("Empty content in choice"),
                     timestamp = System.currentTimeMillis()
                 )
             }
