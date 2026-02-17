@@ -6,9 +6,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.persianai.assistant.R
 import com.persianai.assistant.activities.DashboardActivity
 import com.persianai.assistant.utils.PreferencesManager
@@ -104,48 +106,66 @@ class AIAssistantService : Service() {
             .setCategory(Notification.CATEGORY_SERVICE)
 
         if (prefs.isPersistentNotificationActionsEnabled()) {
-            val commandIntent = Intent(this, VoiceCommandService::class.java).apply {
-                action = VoiceCommandService.ACTION_RECORD_COMMAND
-                putExtra(VoiceCommandService.EXTRA_MODE, VoiceCommandService.MODE_GENERAL)
-            }
-            val commandPendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                PendingIntent.getForegroundService(
-                    this,
-                    1,
-                    commandIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            } else {
-                PendingIntent.getService(
-                    this,
-                    1,
-                    commandIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            }
-            builder.addAction(android.R.drawable.ic_btn_speak_now, "فرمان صوتی", commandPendingIntent)
+            // Check permission before creating pending intents
+            val hasPermission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            
+            if (hasPermission) {
+                val commandIntent = Intent(this, VoiceCommandService::class.java).apply {
+                    action = VoiceCommandService.ACTION_RECORD_COMMAND
+                    putExtra(VoiceCommandService.EXTRA_MODE, VoiceCommandService.MODE_GENERAL)
+                }
+                val commandPendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    PendingIntent.getForegroundService(
+                        this,
+                        1,
+                        commandIntent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+                } else {
+                    PendingIntent.getService(
+                        this,
+                        1,
+                        commandIntent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+                }
+                builder.addAction(android.R.drawable.ic_btn_speak_now, "فرمان صوتی", commandPendingIntent)
 
-            val reminderVoiceIntent = Intent(this, VoiceCommandService::class.java).apply {
-                action = VoiceCommandService.ACTION_RECORD_REMINDER
-                putExtra(VoiceCommandService.EXTRA_MODE, VoiceCommandService.MODE_REMINDER)
-                putExtra(VoiceCommandService.EXTRA_HINT, "مثلاً بگو: فردا ساعت ۸ یادم بنداز...")
-            }
-            val reminderVoicePendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                PendingIntent.getForegroundService(
-                    this,
-                    2,
-                    reminderVoiceIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
+                val reminderVoiceIntent = Intent(this, VoiceCommandService::class.java).apply {
+                    action = VoiceCommandService.ACTION_RECORD_REMINDER
+                    putExtra(VoiceCommandService.EXTRA_MODE, VoiceCommandService.MODE_REMINDER)
+                    putExtra(VoiceCommandService.EXTRA_HINT, "مثلاً بگو: فردا ساعت ۸ یادم بنداز...")
+                }
+                val reminderVoicePendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    PendingIntent.getForegroundService(
+                        this,
+                        2,
+                        reminderVoiceIntent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+                } else {
+                    PendingIntent.getService(
+                        this,
+                        2,
+                        reminderVoiceIntent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+                }
+                builder.addAction(android.R.drawable.ic_menu_my_calendar, "یادآوری صوتی", reminderVoicePendingIntent)
             } else {
-                PendingIntent.getService(
+                // If no permission, add action to request permission
+                val requestPermissionIntent = Intent(this, com.persianai.assistant.activities.DashboardActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("request_permission", "RECORD_AUDIO")
+                }
+                val requestPermissionPendingIntent = PendingIntent.getActivity(
                     this,
-                    2,
-                    reminderVoiceIntent,
+                    3,
+                    requestPermissionIntent,
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
+                builder.addAction(android.R.drawable.ic_btn_speak_now, "درخواست مجوز میکروفن", requestPermissionPendingIntent)
             }
-            builder.addAction(android.R.drawable.ic_menu_my_calendar, "یادآوری صوتی", reminderVoicePendingIntent)
         }
 
         return builder.build()

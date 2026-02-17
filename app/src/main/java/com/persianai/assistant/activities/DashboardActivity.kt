@@ -825,8 +825,8 @@ class DashboardActivity : AppCompatActivity() {
                 }
                 "RECORD_AUDIO" -> {
                     MaterialAlertDialogBuilder(this)
-                        .setTitle("🎤 درخواست مجوز ضبط صدا")
-                        .setMessage("برای دستورات صوتی، نیاز به مجوز ضبط صدا داریم.")
+                        .setTitle("🎤 درخواست مجوز میکروفن")
+                        .setMessage("برای دستورات صوتی و ضبط صدا، نیاز به مجوز میکروفن داریم.")
                         .setPositiveButton("اجازه دادن") { _, _ ->
                             ActivityCompat.requestPermissions(
                                 this,
