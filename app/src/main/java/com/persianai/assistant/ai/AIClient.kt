@@ -257,7 +257,9 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             try {
                 // Handle streaming response for GAPGPT
                 if (model.provider == AIProvider.GAPGPT && responseBody.contains("data:")) {
-                    return parseGAPGPTStream(responseBody, requestId)
+                    val result = parseGAPGPTStream(responseBody, requestId)
+                    android.util.Log.d("AIClient", "[$requestId] Success: content length=${result.content.length}")
+                    return result
                 }
 
                 val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
