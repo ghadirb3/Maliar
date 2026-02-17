@@ -167,6 +167,13 @@ enum class AIModel(
         "مدل GPT-5 Nano از GAPGPT",
         32000
     ),
+    GAPGPT_GPT_5_2_CHAT_LATEST(
+        "gpt-5.2-chat-latest",
+        "GPT-5.2 Chat Latest (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل GPT-5.2 Chat Latest از GAPGPT",
+        32000
+    ),
     GAPGPT_DEEPSEEK_V3(
         "gapgpt-deepseek-v3",
         "DeepSeek V3 (GAPGPT)",
