@@ -883,6 +883,12 @@ class DashboardActivity : AppCompatActivity() {
             RECORD_AUDIO_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(this, "مجوز ضبط صدا داده شد", Toast.LENGTH_SHORT).show()
+                    
+                    // Refresh AIAssistantService notification to show voice actions
+                    val refreshIntent = Intent(this, com.persianai.assistant.services.AIAssistantService::class.java).apply {
+                        putExtra("refresh_notification", true)
+                    }
+                    startService(refreshIntent)
                 } else {
                     Toast.makeText(this, "مجوز ضبط صدا رد شد", Toast.LENGTH_SHORT).show()
                 }

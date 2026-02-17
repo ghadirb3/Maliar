@@ -58,9 +58,9 @@ class QueryRouter(private val context: Context) {
                 )
             }
 
-            // 2) تلاش آنلاین Ivira (token-based) پیش از کلیدهای سنتی
-            val iviraResult = tryIviraOnline(query)
-            if (iviraResult != null) return@withContext iviraResult
+            // 2) Ivira disabled for text chat - skip to online models per user request
+            // val iviraResult = tryIviraOnline(query)
+            // if (iviraResult != null) return@withContext iviraResult
 
             // 3) حالت آفلاین یا بدون کلید → اول تلاش با مدل آفلاین GGUF (در صورت موجود) سپس پاسخ ساده
             if (workingMode == PreferencesManager.WorkingMode.OFFLINE || activeKeys.isEmpty()) {
@@ -219,37 +219,36 @@ class QueryRouter(private val context: Context) {
 
             val activeProviders = activeKeys.map { it.provider }.toSet()
 
-            // Get priority list from remote config via ModelSelector
-            val preferredOrder = ModelSelector.getAvailableAIModels(context, activeKeys)
-                .filter { model ->
-                    model.provider != AIProvider.LOCAL &&
-                        model.provider != AIProvider.IVIRA
-                }
-                .ifEmpty {
-                    AIModel.values()
-                        .filter { activeProviders.contains(it.provider) && it.provider != AIProvider.LOCAL && it.provider != AIProvider.IVIRA }
-                        .ifEmpty { listOf(AIModel.getDefaultModel()) }
-                }
+            // Fixed priority: Liara (openai/gpt-5-nano) -> GAPGPT (gpt-5-nano) -> GAPGPT (gapgpt-deepseek-v3)
+            val preferredOrder = mutableListOf<AIModel>()
+            
+            if (activeProviders.contains(AIProvider.LIARA)) {
+                preferredOrder += AIModel.LIARA_GPT_5_NANO
+            }
+            if (activeProviders.contains(AIProvider.GAPGPT)) {
+                preferredOrder += AIModel.GAPGPT_GPT_5_NANO
+                preferredOrder += AIModel.GAPGPT_DEEPSEEK_V3
+            }
+            
+            if (preferredOrder.isEmpty()) {
+                Log.w(TAG, "No Liara/GAPGPT provider active, skipping online in QueryRouter")
+                return null
+            }
 
-            // FIX: Limit retries to 1 per model to speed up fallback (was trying all providers, causing 30+ sec delays)
-            val maxRetries = 1
-            var retryCount = 0
+            // Allow retries for GAPGPT fallback
+            var attempts = 0
             
             for (model in preferredOrder) {
-                if (retryCount >= maxRetries) {
-                    Log.w(TAG, "⚠️ Max retries reached ($maxRetries), falling back to offline")
-                    break
-                }
-                
                 try {
-                    Log.d(TAG, "🌐 Trying online model: ${model.displayName}")
+                    Log.d(TAG, "🌐 Trying online model: ${model.displayName} (${model.modelId})")
                     val response = aiClient.sendMessage(model, messages)
                     Log.d(TAG, "✅ Got online response from ${model.displayName}")
                     return OnlineResult(response.content, model.displayName)
                 } catch (e: Exception) {
                     Log.w(TAG, "⚠️ ${model.displayName} failed: ${e.message}")
-                    retryCount++
+                    // Continue to next model (e.g., GAPGPT fallback)
                 }
+                attempts++
             }
 
             Log.e(TAG, "❌ All online providers failed (retries exhausted), falling back to offline")

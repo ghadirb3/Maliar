@@ -42,6 +42,13 @@ class AIAssistantService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Handle notification refresh request
+        if (intent?.getBooleanExtra("refresh_notification", false) == true) {
+            android.util.Log.d("AIAssistantService", "🔄 Refreshing notification due to permission change")
+            maybeNotify()
+            return START_STICKY
+        }
+        
         val ok = ensureForeground(intent)
         return if (ok) START_STICKY else START_NOT_STICKY
     }
