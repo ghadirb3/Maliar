@@ -317,7 +317,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             }
         }
         
-        return parsedMessage
+        return@withContext parsedMessage
     }
 
     /**
