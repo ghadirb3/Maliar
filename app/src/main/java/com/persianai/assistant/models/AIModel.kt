@@ -238,28 +238,40 @@ data class ChatRequest(
     val temperature: Double = 0.7,
     @SerializedName("max_tokens")
     val maxTokens: Int = 4096,
-    val stream: Boolean = false
+    val stream: Boolean = false,
+    // Add optional fields that some APIs might expect
+    val top_p: Double? = null,
+    val frequency_penalty: Double? = null,
+    val presence_penalty: Double? = null
 )
 
 /**
  * پاسخ چت
  */
 data class ChatResponse(
-    val id: String,
-    val model: String,
-    val choices: List<Choice>,
-    val usage: Usage? = null
+    val id: String? = null,
+    val model: String? = null,
+    val choices: List<Choice>? = null,
+    val usage: Usage? = null,
+    // Allow alternative response formats
+    val response: String? = null,  // Some APIs might use this field
+    val text: String? = null,      // Some APIs might use this field
+    val content: String? = null    // Some APIs might use this field
 )
 
 data class Choice(
-    val index: Int,
-    val message: Message,
-    val finishReason: String? = null
+    val index: Int? = null,
+    val message: Message? = null,
+    @SerializedName("finish_reason")
+    val finishReason: String? = null,
+    // Alternative formats
+    val text: String? = null,
+    val content: String? = null
 )
 
 data class Message(
-    val role: String,
-    val content: String
+    val role: String? = null,
+    val content: String? = null
 )
 
 data class Usage(

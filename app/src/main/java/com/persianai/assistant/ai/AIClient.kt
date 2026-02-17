@@ -125,19 +125,8 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 val errorMsg = e.message ?: ""
                 android.util.Log.w("AIClient", "❌ Key failed for ${model.provider.name}: ${formatExceptionForLog(e)}")
                 
-                // For GAPGPT, try alternative model names on specific errors
-                if (model.provider == AIProvider.GAPGPT && (errorMsg.contains("model", ignoreCase = true) || errorMsg.contains("404"))) {
-                    try {
-                        android.util.Log.d("AIClient", "🔄 Trying fallback model for GAPGPT")
-                        // Use GPT_4O_MINI as fallback with GAPGPT provider by creating a temporary APIKey
-                        val fallbackApiKey = APIKey(AIProvider.GAPGPT, apiKey.key, apiKey.baseUrl, apiKey.isActive)
-                        val result = sendToOpenAI(AIModel.GPT_4O_MINI, messages, systemPrompt, fallbackApiKey)
-                        failedKeys.remove(apiKey.key)
-                        return@withContext result
-                    } catch (fallbackError: Exception) {
-                        android.util.Log.w("AIClient", "❌ GAPGPT fallback also failed: ${formatExceptionForLog(fallbackError)}")
-                    }
-                }
+                // GAPGPT fallback disabled - only use specified models (gpt-5-nano, gapgpt-deepseek-v3)
+                // Per user request: do not fall back to gpt-4o-mini
                 
                 // Disable problematic key temporarily
                 failedKeys.add(apiKey.key)
@@ -207,6 +196,15 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         val jsonBody = gson.toJson(requestBody)
         val body = jsonBody.toRequestBody(mediaType)
 
+        // Log request details for debugging
+        val requestId = "req_${System.currentTimeMillis()}"
+        android.util.Log.d("AIClient", "[$requestId] Sending to ${model.provider.name}: url=$apiUrl, model=${model.modelId}")
+        
+        // Log full request for GAPGPT debugging
+        if (model.provider == AIProvider.GAPGPT) {
+            android.util.Log.d("AIClient", "[$requestId] GAPGPT request body: $jsonBody")
+        }
+
         val requestBuilder = Request.Builder()
             .url(apiUrl)
             .addHeader("Authorization", "Bearer ${apiKey.key}")
@@ -218,10 +216,6 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             requestBuilder.addHeader("X-Title", "Persian AI Assistant")
         }
         val request = requestBuilder.post(body).build()
-
-        // Log request details for debugging
-        val requestId = "req_${System.currentTimeMillis()}"
-        android.util.Log.d("AIClient", "[$requestId] Sending to ${model.provider.name}: url=$apiUrl, model=${model.modelId}")
 
         client.newCall(request).execute().use { response ->
             val responseBody = response.body?.string()
@@ -235,19 +229,67 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 throw Exception(errorDetail)
             }
 
+            // Check for empty response body before parsing
+            if (responseBody.isNullOrBlank()) {
+                android.util.Log.e("AIClient", "[$requestId] Empty response body from ${model.provider.name}")
+                throw Exception("پاسخ خالی از API ${model.provider.name}")
+            }
+
+            // Log raw response for GAPGPT debugging
+            if (model.provider == AIProvider.GAPGPT) {
+                android.util.Log.d("AIClient", "[$requestId] Raw GAPGPT response: $responseBody")
+            }
+
             try {
                 val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
-                val content = chatResponse.choices.firstOrNull()?.message?.content
-                    ?: throw Exception("پاسخ خالی از API")
-
-                android.util.Log.d("AIClient", "[$requestId] Success: content length=${content.length}")
-                ChatMessage(
-                    role = MessageRole.ASSISTANT,
-                    content = content,
-                    timestamp = System.currentTimeMillis()
-                )
+                    ?: throw Exception("Failed to parse response as ChatResponse")
+                
+                // Try multiple response formats
+                val content = when {
+                    // Standard OpenAI format
+                    !chatResponse.choices.isNullOrEmpty() -> {
+                        val choice = chatResponse.choices.firstOrNull()
+                        choice?.message?.content 
+                            ?: choice?.text 
+                            ?: choice?.content
+                    }
+                    // Alternative direct response field
+                    !chatResponse.response.isNullOrBlank() -> chatResponse.response
+                    // Alternative text field
+                    !chatResponse.text.isNullOrBlank() -> chatResponse.text
+                    // Alternative content field
+                    !chatResponse.content.isNullOrBlank() -> chatResponse.content
+                    // Last resort: try to parse as plain text or different JSON structure
+                    else -> {
+                        try {
+                            val json = gson.fromJson(responseBody, JsonObject::class.java)
+                            json.get("response")?.asString 
+                                ?: json.get("text")?.asString
+                                ?: json.get("content")?.asString
+                                ?: json.get("message")?.asString
+                                ?: json.get("answer")?.asString
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                
+                if (!content.isNullOrBlank()) {
+                    android.util.Log.d("AIClient", "[$requestId] Success: content length=${content.length}")
+                    ChatMessage(
+                        role = MessageRole.ASSISTANT,
+                        content = content,
+                        timestamp = System.currentTimeMillis()
+                    )
+                } else {
+                    throw Exception("پاسخ خالی از API")
+                }
             } catch (e: Exception) {
                 android.util.Log.e("AIClient", "[$requestId] Parse error: ${e.message}, response was: $responseSnippet")
+                // Log full response for debugging GAPGPT format issues
+                if (model.provider == AIProvider.GAPGPT) {
+                    android.util.Log.e("AIClient", "[$requestId] Full GAPGPT response: $responseBody")
+                }
                 throw Exception("خطا در پردازش پاسخ API: ${e.message}")
             }
         }
