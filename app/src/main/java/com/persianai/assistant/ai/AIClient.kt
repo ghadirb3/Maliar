@@ -186,26 +186,12 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             ))
         }
 
-        val requestBody = when (model.provider) {
-            AIProvider.GAPGPT -> {
-                // GAPGPT request - explicitly disable streaming
-                mapOf(
-                    "model" to model.modelId,
-                    "messages" to messageList,
-                    "temperature" to 0.0,
-                    "stream" to false
-                )
-            }
-            else -> {
-                // Standard request for other providers
-                ChatRequest(
-                    model = model.modelId,
-                    messages = messageList,
-                    temperature = 0.0,  // صفر برای خروجی کاملاً قطعی
-                    maxTokens = 500     // کوتاه برای JSON
-                )
-            }
-        }
+        val requestBody = ChatRequest(
+            model = model.modelId,
+            messages = messageList,
+            temperature = 0.0,  // صفر برای خروجی کاملاً قطعی
+            maxTokens = 500     // کوتاه برای JSON
+        )
 
         val jsonBody = gson.toJson(requestBody)
         val body = jsonBody.toRequestBody(mediaType)
