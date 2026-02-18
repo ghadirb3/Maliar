@@ -87,7 +87,9 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             AIProvider.LOCAL
         )
         val availableKeys = apiKeys.filter {
-            it.provider == model.provider && it.isActive && it.key.isNotBlank() && !failedKeys.contains(it.key)
+            // Check if this specific key-model combination has failed
+            val keyModelPair = "${it.key}_${model.modelId}"
+            it.provider == model.provider && it.isActive && it.key.isNotBlank() && !failedKeys.contains(keyModelPair)
         }.sortedBy { k ->
             priority.indexOf(k.provider).let { if (it == -1) Int.MAX_VALUE else it }
         }.filter {
@@ -117,8 +119,9 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                     }
                     else -> throw IllegalStateException("Provider پشتیبانی نشده: ${model.provider}")
                 }
-                // Remove from failed keys on success
-                failedKeys.remove(apiKey.key)
+                // Remove from failed keys on success for this specific key-model combination
+                val keyModelPair = "${apiKey.key}_${model.modelId}"
+                failedKeys.remove(keyModelPair)
                 return@withContext result
             } catch (e: Exception) {
                 lastError = e
@@ -128,8 +131,10 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 // GAPGPT fallback disabled - only use specified models (gpt-5-nano, gapgpt-deepseek-v3)
                 // Per user request: do not fall back to gpt-4o-mini
                 
-                // Disable problematic key temporarily
-                failedKeys.add(apiKey.key)
+                // Disable problematic key temporarily only for this specific model
+                // This allows other models from the same provider to try the same key
+                val keyModelPair = "${apiKey.key}_${model.modelId}"
+                failedKeys.add(keyModelPair)
             }
         }
 
