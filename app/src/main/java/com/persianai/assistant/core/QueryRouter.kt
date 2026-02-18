@@ -219,7 +219,7 @@ class QueryRouter(private val context: Context) {
 
             val activeProviders = activeKeys.map { it.provider }.toSet()
 
-            // Fixed priority: Liara (openai/gpt-5-nano) -> GAPGPT (gpt-5-nano) -> GAPGPT (gpt-5.2-chat-latest) -> GAPGPT (gapgpt-deepseek-v3)
+            // Fixed priority: Liara -> GAPGPT (gpt-5-nano) -> GAPGPT (gpt-4o-mini) -> GAPGPT (deepseek-chat) -> GAPGPT (grok-3-mini) -> GAPGPT (gemini-2.0-flash) -> GAPGPT (gpt-5.2-chat-latest) -> GAPGPT (gapgpt-deepseek-v3)
             val preferredOrder = mutableListOf<AIModel>()
             
             if (activeProviders.contains(AIProvider.LIARA)) {
@@ -227,6 +227,10 @@ class QueryRouter(private val context: Context) {
             }
             if (activeProviders.contains(AIProvider.GAPGPT)) {
                 preferredOrder += AIModel.GAPGPT_GPT_5_NANO
+                preferredOrder += AIModel.GAPGPT_GPT_4O_MINI_TEST
+                preferredOrder += AIModel.GAPGPT_DEEPSEEK_CHAT
+                preferredOrder += AIModel.GAPGPT_GROK_3_MINI
+                preferredOrder += AIModel.GAPGPT_GEMINI_2_FLASH
                 preferredOrder += AIModel.GAPGPT_GPT_5_2_CHAT_LATEST
                 preferredOrder += AIModel.GAPGPT_DEEPSEEK_V3
             }

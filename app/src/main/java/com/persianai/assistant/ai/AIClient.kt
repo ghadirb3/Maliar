@@ -191,12 +191,21 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             ))
         }
 
-        val requestBody = ChatRequest(
-            model = model.modelId,
-            messages = messageList,
-            temperature = 0.0,  // صفر برای خروجی کاملاً قطعی
-            maxTokens = 500     // کوتاه برای JSON
-        )
+        val requestBody: Any = if (model.provider == AIProvider.GAPGPT) {
+            mapOf(
+                "model" to model.modelId,
+                "messages" to messageList,
+                "temperature" to 0.0,
+                "max_tokens" to 500
+            )
+        } else {
+            ChatRequest(
+                model = model.modelId,
+                messages = messageList,
+                temperature = 0.0,
+                maxTokens = 500
+            )
+        }
 
         val jsonBody = gson.toJson(requestBody)
         val body = jsonBody.toRequestBody(mediaType)
@@ -210,11 +219,18 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             android.util.Log.d("AIClient", "[$requestId] GAPGPT request body: $jsonBody")
         }
 
+        // Remove prefix from API key (e.g., "gapgpt:" or "liara:")
+        val cleanKey = when {
+            apiKey.key.startsWith("gapgpt:") -> apiKey.key.removePrefix("gapgpt:")
+            apiKey.key.startsWith("liara:") -> apiKey.key.removePrefix("liara:")
+            else -> apiKey.key
+        }
+        
         val requestBuilder = Request.Builder()
             .url(apiUrl)
-            .addHeader("Authorization", "Bearer ${apiKey.key}")
+            .addHeader("Authorization", "Bearer $cleanKey")
             .addHeader("Content-Type", "application/json")
-            .addHeader("Accept", "application/json")
+            .addHeader("Accept", if (model.provider == AIProvider.GAPGPT) "text/event-stream, application/json" else "application/json")
         if (apiKey.provider == AIProvider.OPENROUTER) {
             // OpenRouter نیاز به Referer و X-Title دارد
             requestBuilder.addHeader("HTTP-Referer", "https://openrouter.ai/")
@@ -225,7 +241,19 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         var parsedMessage: ChatMessage
         
         client.newCall(request).execute().use { response ->
-            val responseBody = response.body?.string()
+            // Log response headers for debugging GAPGPT
+            if (model.provider == AIProvider.GAPGPT) {
+                android.util.Log.d("AIClient", "[$requestId] GAPGPT response headers: content-type=${response.header("content-type")}, content-length=${response.header("content-length")}, transfer-encoding=${response.header("transfer-encoding")}")
+            }
+            
+            var responseBody = response.body?.string()
+            if (responseBody.isNullOrBlank()) {
+                val peek = try { response.peekBody(1024 * 1024).string() } catch (_: Exception) { null }
+                if (!peek.isNullOrBlank()) {
+                    responseBody = peek
+                    android.util.Log.d("AIClient", "[$requestId] Used peekBody for GAPGPT: ${peek.take(100)}")
+                }
+            }
             val responseSnippet = responseBody?.take(200) ?: "(empty)"
             
             android.util.Log.d("AIClient", "[$requestId] Response: code=${response.code}, success=${response.isSuccessful}, body=$responseSnippet")

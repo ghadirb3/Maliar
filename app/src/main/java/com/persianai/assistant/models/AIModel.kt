@@ -167,6 +167,34 @@ enum class AIModel(
         "مدل GPT-5 Nano از GAPGPT",
         32000
     ),
+    GAPGPT_GPT_4O_MINI_TEST(
+        "gpt-4o-mini",
+        "GPT-4o Mini Test (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل تست GPT-4o Mini از GAPGPT",
+        16000
+    ),
+    GAPGPT_DEEPSEEK_CHAT(
+        "deepseek-chat",
+        "DeepSeek Chat (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل DeepSeek Chat از GAPGPT",
+        8000
+    ),
+    GAPGPT_GROK_3_MINI(
+        "grok-3-mini",
+        "Grok 3 Mini (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل Grok 3 Mini از GAPGPT",
+        8000
+    ),
+    GAPGPT_GEMINI_2_FLASH(
+        "gemini-2.0-flash",
+        "Gemini 2.0 Flash (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل Gemini 2.0 Flash از GAPGPT",
+        8000
+    ),
     GAPGPT_GPT_5_2_CHAT_LATEST(
         "gpt-5.2-chat-latest",
         "GPT-5.2 Chat Latest (GAPGPT)",
