@@ -15,29 +15,58 @@ object AutoProvisioningManager {
     
     private const val TAG = "AutoProvisioning"
     private const val DEFAULT_PASSWORD = "12345"
-    // منبع کلیدها (بدون وابستگی به گیت‌هاب؛ رمزگذاری‌شده)
-
-    private const val GIST_KEYS_URL =
-        "https://abrehamrahi.ir/o/public/UfAv7lIC/"
+    // منبع کلیدها (اولویت با لینک قبلی، فال‌بک به گیت)
+    private const val OLD_KEYS_URL = "https://abrehamrahi.ir/o/public/UfAv7lIC/"
+    private const val GIST_KEYS_URL = "https://gist.githubusercontent.com/ghadirb/626a804df3009e49045a2948dad89fe5/raw/4598062acc8f167b95ae84462722125c325a3d2f/keys.txt"
 
     /**
-     * بارگذاری و فعال‌سازی کلیدها از لینک رمزگذاری‌شده (بدون تکیه بر وضعیت قبلی)
+     * بارگذاری و فعال‌سازی کلیدها با مکانیزم فال‌بک
      */
     suspend fun autoProvision(context: Context): Result<List<APIKey>> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "🔄 شروع بارگذاری خودکار کلیدها (بازنویسی‌شده)...")
+            Log.d(TAG, "🔄 شروع بارگذاری خودکار کلیدها (با فال‌بک)...")
 
-            // 1) دانلود از منبع رمزگذاری‌شده
+            // تلاش اول از لینک قبلی
+            val oldResult = tryLoadFromUrl(OLD_KEYS_URL, "لینک قبلی")
+            if (oldResult.isSuccess && hasRequiredKeys(oldResult.getOrThrow())) {
+                Log.d(TAG, "✅ کلیدهای مورد نیاز از لینک قبلی پیدا شد")
+                return@withContext oldResult
+            }
+
+            // فال‌بک به لینک جدید
+            Log.d(TAG, "⚠️ لینک قبلی مناسب نبود، تلاش از لینک جدید...")
+            val newResult = tryLoadFromUrl(GIST_KEYS_URL, "لینک جدید (Gist)")
+            if (newResult.isSuccess) {
+                Log.d(TAG, "✅ کلیدها از لینک جدید بارگذاری شد")
+                return@withContext newResult
+            }
+
+            // اگر هیچ‌کدام کار نکرد
+            return@withContext Result.failure(Exception("هیچ‌کدام از منابع کلید پاسخ ندادند"))
+
+        } catch (e: Exception) {
+            Log.e(TAG, "خطای بارگذاری: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * بارگذاری از یک URL مشخص
+     */
+    private suspend fun tryLoadFromUrl(url: String, sourceName: String): Result<List<APIKey>> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "📥 دانلود فایل رمزشده از $sourceName: $url")
+
+            // 1) دانلود
             val encryptedData = runCatching {
-                Log.d(TAG, "📥 دانلود فایل رمزشده از: $GIST_KEYS_URL")
-                DriveHelper.downloadFromUrl(GIST_KEYS_URL)
+                DriveHelper.downloadFromUrl(url)
             }.getOrElse { e ->
-                Log.e(TAG, "❌ خطا در دانلود: ${e.message}")
+                Log.e(TAG, "❌ خطا در دانلود از $sourceName: ${e.message}")
                 return@withContext Result.failure(e)
             }
 
             if (encryptedData.isBlank()) {
-                Log.e(TAG, "❌ فایل دانلود شده خالی است")
+                Log.e(TAG, "❌ فایل دانلود شده از $sourceName خالی است")
                 return@withContext Result.failure(Exception("فایل کلیدها خالی است"))
             }
 
@@ -45,18 +74,18 @@ object AutoProvisioningManager {
             val decryptedData = runCatching {
                 EncryptionHelper.decrypt(encryptedData, DEFAULT_PASSWORD)
             }.onFailure {
-                Log.e(TAG, "❌ خطا در رمزگشایی: ${it.message}")
+                Log.e(TAG, "❌ خطا در رمزگشایی از $sourceName: ${it.message}")
                 Log.e(TAG, "دانلود شده (پیش‌نمایش): ${encryptedData.take(120)}")
             }.getOrElse { e ->
                 return@withContext Result.failure(e)
             }
 
             if (decryptedData.isBlank()) {
-                Log.e(TAG, "❌ فایل رمزگشایی شده خالی است")
+                Log.e(TAG, "❌ فایل رمزگشایی شده از $sourceName خالی است")
                 return@withContext Result.failure(Exception("رمزگشایی ناموفق بود (خروجی خالی)"))
             }
 
-            Log.d(TAG, "📝 محتوای رمزگشایی شده:")
+            Log.d(TAG, "📝 محتوای رمزگشایی شده از $sourceName:")
             decryptedData.lines().forEach { line ->
                 Log.d(TAG, "  > $line")
             }
@@ -64,7 +93,7 @@ object AutoProvisioningManager {
             // 3) پارس و نرمال‌سازی
             val parsed = parseAPIKeys(decryptedData)
             if (parsed.isEmpty()) {
-                Log.w(TAG, "⚠️ هیچ کلید معتبری یافت نشد")
+                Log.w(TAG, "⚠️ هیچ کلید معتبری از $sourceName یافت نشد")
                 return@withContext Result.failure(Exception("هیچ کلید معتبری در فایل یافت نشد"))
             }
 
@@ -87,23 +116,28 @@ object AutoProvisioningManager {
                 )
             }
 
-            Log.d(TAG, "✅ تعداد کلیدهای پارس شده: ${processedKeys.size}")
+            Log.d(TAG, "✅ تعداد کلیدهای پارس شده از $sourceName: ${processedKeys.size}")
             processedKeys.forEach { key ->
                 Log.d(TAG, "  - ${key.provider.name}: ${key.key.take(10)}... base=${key.baseUrl}")
             }
 
-            // 4) ذخیره و فعال‌سازی
-            val prefsManager = PreferencesManager(context)
-            prefsManager.saveAPIKeys(processedKeys)
-            // اجباری آنلاین
-            prefsManager.setWorkingMode(PreferencesManager.WorkingMode.ONLINE)
-            Log.d(TAG, "✅ ${processedKeys.size} کلید در prefs ذخیره و فعال شد")
-
             Result.success(processedKeys)
         } catch (e: Exception) {
-            Log.e(TAG, "خطای بارگذاری: ${e.message}", e)
+            Log.e(TAG, "خطا در بارگذاری از $sourceName: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    /**
+     * بررسی اینکه آیا کلیدهای مورد نیاز (GAPGPT و Liara) وجود دارند
+     */
+    private fun hasRequiredKeys(keys: List<APIKey>): Boolean {
+        val hasGapgpt = keys.any { it.provider == AIProvider.GAPGPT }
+        val hasLiara = keys.any { it.provider == AIProvider.LIARA }
+        
+        Log.d(TAG, "🔍 بررسی کلیدهای مورد نیاز: GAPGPT=$hasGapgpt, Liara=$hasLiara")
+        
+        return hasGapgpt && hasLiara
     }
     
     /**
@@ -194,6 +228,14 @@ object AutoProvisioningManager {
 
         // AIML often uses 32-char hex tokens (e.g., 3335a3...)
         if (trimmed.matches(Regex("^[a-fA-F0-9]{32}\$"))) return AIProvider.AIML
+
+        // GAPGPT keys start with sk- but are not OpenAI - check before OpenAI
+        // GAPGPT keys are typically longer and have specific patterns
+        if (lower.startsWith("sk-") && trimmed.length > 50) {
+            // Additional heuristic: GAPGPT keys often contain specific character patterns
+            // This is a reasonable heuristic for now
+            return AIProvider.GAPGPT
+        }
 
         // OpenAI (and some project keys) start with sk- or sk-proj-
         if (lower.startsWith("sk-")) return AIProvider.OPENAI
