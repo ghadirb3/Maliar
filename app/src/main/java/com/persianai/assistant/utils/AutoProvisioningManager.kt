@@ -27,7 +27,7 @@ object AutoProvisioningManager {
             Log.d(TAG, "🔄 شروع بارگذاری خودکار کلیدها (با فال‌بک)...")
 
             // تلاش اول از لینک قبلی
-            val oldResult = tryLoadFromUrl(OLD_KEYS_URL, "لینک قبلی")
+            val oldResult = tryLoadFromUrl(OLD_KEYS_URL, "لینک قبلی", context)
             if (oldResult.isSuccess && hasRequiredKeys(oldResult.getOrThrow())) {
                 Log.d(TAG, "✅ کلیدهای مورد نیاز از لینک قبلی پیدا شد")
                 return@withContext oldResult
@@ -35,7 +35,7 @@ object AutoProvisioningManager {
 
             // فال‌بک به لینک جدید
             Log.d(TAG, "⚠️ لینک قبلی مناسب نبود، تلاش از لینک جدید...")
-            val newResult = tryLoadFromUrl(GIST_KEYS_URL, "لینک جدید (Gist)")
+            val newResult = tryLoadFromUrl(GIST_KEYS_URL, "لینک جدید (Gist)", context)
             if (newResult.isSuccess) {
                 Log.d(TAG, "✅ کلیدها از لینک جدید بارگذاری شد")
                 return@withContext newResult
@@ -53,7 +53,7 @@ object AutoProvisioningManager {
     /**
      * بارگذاری از یک URL مشخص
      */
-    private suspend fun tryLoadFromUrl(url: String, sourceName: String): Result<List<APIKey>> = withContext(Dispatchers.IO) {
+    private suspend fun tryLoadFromUrl(url: String, sourceName: String, context: Context): Result<List<APIKey>> = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "📥 دانلود فایل رمزشده از $sourceName: $url")
 
@@ -120,6 +120,13 @@ object AutoProvisioningManager {
             processedKeys.forEach { key ->
                 Log.d(TAG, "  - ${key.provider.name}: ${key.key.take(10)}... base=${key.baseUrl}")
             }
+
+            // 4) ذخیره و فعال‌سازی در Preferences
+            val prefsManager = PreferencesManager(context)
+            prefsManager.saveAPIKeys(processedKeys)
+            // اجباری آنلاین
+            prefsManager.setWorkingMode(PreferencesManager.WorkingMode.ONLINE)
+            Log.d(TAG, "✅ ${processedKeys.size} کلید در prefs ذخیره و فعال شد")
 
             Result.success(processedKeys)
         } catch (e: Exception) {
