@@ -14,9 +14,11 @@ import com.persianai.assistant.activities.DashboardActivity
 import com.persianai.assistant.utils.NotificationHelper
 import com.persianai.assistant.utils.SmartCallManager
 import com.persianai.assistant.utils.PreferencesManager
+import com.persianai.assistant.utils.ContactInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * BroadcastReceiver برای مدیریت اکشن‌های نوتیفیکیشن تماس

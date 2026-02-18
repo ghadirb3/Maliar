@@ -18,6 +18,8 @@ import com.persianai.assistant.activities.DashboardActivity
 import com.persianai.assistant.receivers.CallNotificationReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * مدیر تماس هوشمند با نوتیفیکیشن‌های تعاملی
@@ -361,7 +363,7 @@ object SmartCallManager {
         // Intent برای باز کردن صفحه انتخاب مخاطب
         val selectIntent = Intent(context, CallNotificationReceiver::class.java).apply {
             action = "SELECT_CONTACT"
-            putExtra("contacts_json", kotlinx.serialization.json.encodeToString(kotlinx.serialization.builtins.ListSerializer(ContactInfo.serializer()), contacts))
+            putExtra("contacts_json", Json.encodeToString(contacts))
         }
         
         val selectPendingIntent = PendingIntent.getBroadcast(
