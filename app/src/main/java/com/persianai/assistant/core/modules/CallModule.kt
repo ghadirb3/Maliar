@@ -1,17 +1,13 @@
 package com.persianai.assistant.core.modules
 
-import android.Manifest
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.util.Log
-import androidx.core.content.ContextCompat
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.persianai.assistant.core.AIIntentRequest
 import com.persianai.assistant.core.AIIntentResult
 import com.persianai.assistant.core.intent.AIIntent
 import com.persianai.assistant.core.intent.CallSmartIntent
+import com.persianai.assistant.utils.SmartCallManager
+import kotlinx.coroutines.runBlocking
 
 class CallModule(context: Context) : BaseModule(context) {
     override val moduleName: String = "Call"
@@ -40,22 +36,58 @@ class CallModule(context: Context) : BaseModule(context) {
         }
         
         return try {
-            val phoneNumbers = findContactNumbers(contactName)
+            // استفاده از SmartCallManager برای پردازش هوشمند تماس
+            val result = SmartCallManager.processCallRequest(context, contactName)
             
-            if (phoneNumbers.isNotEmpty()) {
-                val numbersText = phoneNumbers.joinToString(separator = "\n") { "• $it" }
-                return createResult(
-                    text = "☎️ آماده تماس با $contactName\n$numbersText\n\nیک شماره را انتخاب و تأیید کنید.",
-                    intentName = intent.name,
-                    actionType = "confirm_call",
-                    actionData = phoneNumbers.joinToString(separator = "|")
-                )
-            } else {
-                return createResult(
-                    text = "❌ مخاطب '$contactName' در لیست تماس‌های شما یافت نشد.",
-                    intentName = intent.name,
-                    success = false
-                )
+            when (result) {
+                is com.persianai.assistant.utils.CallResult.SingleContact -> {
+                    createResult(
+                        text = "📞 مخاطب پیدا شد: «${result.contact.name}»\n" +
+                                "شماره: ${result.contact.phoneNumber} (${result.contact.phoneType})\n\n" +
+                                "🔔 نوتیفیکیشن تماس ارسال شد. برای تماس روی نوتیفیکیشن ضربه بزنید.",
+                        intentName = intent.name,
+                        success = true
+                    )
+                }
+                is com.persianai.assistant.utils.CallResult.MultipleContacts -> {
+                    createResult(
+                        text = "📞 ${result.contacts.size} مخاطب مشابه پیدا شد:\n" +
+                                result.contacts.take(5).joinToString("\n") { 
+                                    "• ${it.name}: ${it.phoneNumber}" 
+                                } +
+                                (if (result.contacts.size > 5) "\n... و ${result.contacts.size - 5} مخاطب دیگر" else "") +
+                                "\n\n🔔 نوتیفیکیشن انتخاب مخاطب ارسال شد.",
+                        intentName = intent.name,
+                        success = true
+                    )
+                }
+                is com.persianai.assistant.utils.CallResult.NotFound -> {
+                    createResult(
+                        text = "❌ مخاطب '${result.contactName}' در لیست تماس‌های شما یافت نشد.\n\n" +
+                                "💡 پیشنهاد:\n" +
+                                "• نام مخاطب را کامل و صحیح بگویید\n" +
+                                "• از کلمات اضافی مثل «آقا»، «خانم» استفاده نکنید\n" +
+                                "• مطمئن شوید مخاطب در دفترچه تلفن شما ذخیره شده",
+                        intentName = intent.name,
+                        success = false
+                    )
+                }
+                is com.persianai.assistant.utils.CallResult.NeedPermission -> {
+                    createResult(
+                        text = "🔒 برای تماس با '${result.contactName}' به مجوز دسترسی به مخاطبین نیاز داریم.\n\n" +
+                                "🔔 نوتیفیکیشن درخواست مجوز ارسال شد.\n" +
+                                "روی نوتیفیکیشن ضربه بزنید تا مجوز داده شود.",
+                        intentName = intent.name,
+                        success = false
+                    )
+                }
+                is com.persianai.assistant.utils.CallResult.Error -> {
+                    createResult(
+                        text = "❌ خطا در جستجوی مخاطب: ${result.message}",
+                        intentName = intent.name,
+                        success = false
+                    )
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling smart call", e)
@@ -85,59 +117,5 @@ class CallModule(context: Context) : BaseModule(context) {
         }
         
         return text.trim()
-    }
-
-    private fun findContactNumbers(contactName: String): List<String> {
-        // Check READ_CONTACTS permission
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            Log.w(TAG, "READ_CONTACTS permission not granted")
-            return emptyList()
-        }
-        
-        return try {
-            val projection = arrayOf(
-                android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
-            )
-            
-            val selection = "${android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?"
-            val selectionArgs = arrayOf("%$contactName%")
-            
-            val cursor = context.contentResolver.query(
-                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                projection,
-                selection,
-                selectionArgs,
-                null
-            )
-            
-            val results = mutableListOf<String>()
-            cursor?.use {
-                val numberIndex = it.getColumnIndex(
-                    android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
-                )
-                while (it.moveToNext()) {
-                    val num = it.getString(numberIndex)?.trim()
-                    if (!num.isNullOrBlank() && !results.contains(num)) {
-                        results.add(num)
-                    }
-                }
-            }
-            results
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding contact", e)
-            emptyList()
-        }
-    }
-
-    fun initiateCall(phoneNumber: String) {
-        try {
-            val callIntent = Intent(Intent.ACTION_CALL).apply {
-                data = Uri.parse("tel:$phoneNumber")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(callIntent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initiating call", e)
-        }
     }
 }

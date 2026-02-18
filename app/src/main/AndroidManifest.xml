@@ -515,6 +515,18 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".receivers.CallNotificationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="MAKE_CALL" />
+                <action android:name="OPEN_DIALER" />
+                <action android:name="CHANGE_CONTACT" />
+                <action android:name="SELECT_CONTACT" />
+                <action android:name="REQUEST_CONTACTS_PERMISSION" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

@@ -32,6 +32,7 @@ import com.persianai.assistant.utils.DefaultApiKeys
 import com.persianai.assistant.utils.DriveHelper
 import com.persianai.assistant.utils.EncryptionHelper
 import com.persianai.assistant.utils.NotificationHelper
+import com.persianai.assistant.utils.SmartCallManager
 import com.persianai.assistant.utils.AutoProvisioningManager
 import com.persianai.assistant.utils.PersianDateConverter
 import com.persianai.assistant.config.RemoteAIConfigManager
@@ -65,6 +66,7 @@ class DashboardActivity : AppCompatActivity() {
         
         // ایجاد کانال‌های نوتیفیکیشن
         NotificationHelper.createNotificationChannels(this)
+        SmartCallManager.createCallNotificationChannel(this)
         
         // راه‌اندازی WorkManager برای بررسی یادآوری‌های پس‌زمینه
         scheduleReminderWorker()

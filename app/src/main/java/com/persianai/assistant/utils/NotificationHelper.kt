@@ -18,6 +18,7 @@ object NotificationHelper {
     private const val CHANNEL_ID_REMINDERS = "reminders_channel"
     private const val CHANNEL_ID_WEATHER = "weather_channel"
     private const val CHANNEL_ID_GENERAL = "general_channel"
+    private const val CHANNEL_ID_CALLS = "calls_channel"
     
     /**
      * ایجاد کانال‌های نوتیفیکیشن
@@ -55,9 +56,22 @@ object NotificationHelper {
                 description = "نوتیفیکیشن‌های عمومی"
             }
             
+            // کانال تماس‌ها
+            val callsChannel = NotificationChannel(
+                CHANNEL_ID_CALLS,
+                "تماس‌ها",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "نوتیفیکیشن‌های تماس هوشمند"
+                enableVibration(true)
+                enableLights(true)
+                setShowBadge(true)
+            }
+            
             notificationManager.createNotificationChannel(remindersChannel)
             notificationManager.createNotificationChannel(weatherChannel)
             notificationManager.createNotificationChannel(generalChannel)
+            notificationManager.createNotificationChannel(callsChannel)
         }
     }
     

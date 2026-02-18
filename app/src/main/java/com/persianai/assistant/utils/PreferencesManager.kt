@@ -48,6 +48,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_REMOTE_AI_CONFIG_URL = "remote_ai_config_url"
         private const val KEY_REMOTE_AI_CONFIG_JSON = "remote_ai_config_json"
         private const val KEY_REMOTE_AI_CONFIG_TS = "remote_ai_config_ts"
+        private const val KEY_DIRECT_CALL_ENABLED = "direct_call_enabled"
         
         const val DEFAULT_SYSTEM_PROMPT = """OUTPUT ONLY JSON. NO TEXT.
 
@@ -413,5 +414,14 @@ JSON ONLY."""
      */
     fun getDouble(key: String, defaultValue: Double): Double {
         return prefs.getFloat(key, defaultValue.toFloat()).toDouble()
+    }
+    
+    // Direct Call Settings
+    fun setDirectCallEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DIRECT_CALL_ENABLED, enabled).apply()
+    }
+    
+    fun getDirectCallEnabled(): Boolean {
+        return prefs.getBoolean(KEY_DIRECT_CALL_ENABLED, false) // پیش‌فرض: صفحه شماره‌گیر
     }
 }
