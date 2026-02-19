@@ -102,7 +102,7 @@ class GapGPTTTS(private val context: Context) {
     private fun getGapGPTApiKey(): String {
         return try {
             // استفاده از همان سیستم مدیریت کلیدهای Ivira
-            if (IviraProcessingHelper.hasValidTokens(context)) {
+            if (iviraManager.isIviraEnabled()) {
                 // دریافت کلید از IviraIntegrationManager
                 val iviraTokens = iviraManager.getIviraTokens()
                 // جستجو برای کلید GapGPT

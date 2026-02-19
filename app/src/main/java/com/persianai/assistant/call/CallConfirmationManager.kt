@@ -6,9 +6,10 @@ import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.*
 import com.persianai.assistant.utils.TTSHelper
-import com.persianai.assistant.utils.SpeechToTextPipeline
 import com.persianai.assistant.models.Contact
 import com.persianai.assistant.activities.CallConfirmationActivity
+import com.persianai.assistant.integration.IviraIntegrationManager
+import java.io.File
 
 /**
  * مدیر سیستم تأیید تماس مالیار
@@ -19,6 +20,7 @@ class CallConfirmationManager(private val context: Context) {
     private val TAG = "CallConfirmationManager"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val ttsHelper = TTSHelper(context)
+    private val iviraManager = IviraIntegrationManager(context)
     
     // کلمات کلیدی برای تأیید و لغو
     private val positiveKeywords = listOf(
@@ -114,14 +116,30 @@ class CallConfirmationManager(private val context: Context) {
             
             return withContext(Dispatchers.IO) {
                 try {
-                    val pipeline = SpeechToTextPipeline(context)
-                    val result = pipeline.startListening(7000) // ۷ ثانیه زمان شناسایی
-                    result ?: ""
+                    // استفاده از IviraIntegrationManager برای شناسایی صدا
+                    val result = iviraManager.speechToTextViaIvira(
+                        audioFile = createTempAudioFile(),
+                        onSuccess = { response ->
+                            Log.d(TAG, "✅ پاسخ شناسایی شد: $response")
+                        },
+                        onError = { error ->
+                            Log.e(TAG, "❌ خطا در شناسایی صدا: $error")
+                        }
+                    )
+                    
+                    // فعلاً خالی برمی‌گردانیم چون این بخش نیاز به پیاده‌سازی کامل دارد
+                    ""
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ خطا در شناسایی صدا", e)
                     ""
                 }
             }
+        }
+        
+        private fun createTempAudioFile(): File {
+            val tempDir = File(context.cacheDir, "temp_audio")
+            if (!tempDir.exists()) tempDir.mkdirs()
+            return File(tempDir, "temp_recording_${System.currentTimeMillis()}.wav")
         }
         
         private suspend fun processResponse(response: String) {
