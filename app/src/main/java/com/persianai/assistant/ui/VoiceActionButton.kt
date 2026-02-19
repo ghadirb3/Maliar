@@ -15,8 +15,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.persianai.assistant.R
-import com.persianai.assistant.core.voice.SpeechToTextPipeline
+// import com.persianai.assistant.core.voice.SpeechToTextPipeline
 import com.persianai.assistant.services.UnifiedVoiceEngine
+import com.persianai.assistant.stt.OnlineSTTService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,7 +44,8 @@ class VoiceActionButton @JvmOverloads constructor(
     private val TAG = "VoiceActionButton"
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val engine = UnifiedVoiceEngine(context)
-    private val sttPipeline = SpeechToTextPipeline(context)
+    private val onlineSTT = OnlineSTTService(context)
+    // private val sttPipeline = SpeechToTextPipeline(context)
 
     init {
         val view = LayoutInflater.from(context).inflate(R.layout.view_voice_action_button, this, true)
@@ -119,12 +121,13 @@ class VoiceActionButton @JvmOverloads constructor(
 
                 listener?.onRecordingCompleted(result.file, result.duration)
 
-                val transcription = withContext(Dispatchers.IO) { sttPipeline.transcribe(result.file) }
-                val text = transcription.getOrNull()?.trim().orEmpty()
-                if (text.isNotBlank()) {
-                    listener?.onTranscript(text)
+                // Use OnlineSTTService with Liara priority and GapGPT fallback
+                val sttResult = onlineSTT.transcribeAudio(result.file)
+                
+                if (sttResult.isSuccess && sttResult.text.isNotBlank()) {
+                    listener?.onTranscript(sttResult.text)
                 } else {
-                    val err = transcription.exceptionOrNull()?.message ?: "متنی دریافت نشد"
+                    val err = sttResult.error ?: "متنی دریافت نشد"
                     listener?.onRecordingError(err)
                 }
             } catch (e: Exception) {

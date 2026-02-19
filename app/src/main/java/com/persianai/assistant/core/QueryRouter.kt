@@ -11,7 +11,7 @@ import com.persianai.assistant.models.AIModel
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.ChatMessage
 import com.persianai.assistant.models.MessageRole
-import com.persianai.assistant.utils.ModelDownloadManager
+// import com.persianai.assistant.utils.ModelDownloadManager
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.ModelSelector
 import com.persianai.assistant.utils.IviraTokenManager
@@ -32,7 +32,7 @@ class QueryRouter(private val context: Context) {
     private val actionExecutor = ActionExecutor(context)
     private val prefs = PreferencesManager(context)
     private val offlineAssistant = AdvancedPersianAssistant(context)
-    private val modelDownloadManager = ModelDownloadManager(context)
+    // private val modelDownloadManager = ModelDownloadManager(context)
     private val iviraClient = IviraAPIClient(context)
     private val iviraTokenManager = IviraTokenManager(context)
 
@@ -155,6 +155,9 @@ class QueryRouter(private val context: Context) {
      * Try running downloaded GGUF model via local_llama (if native backend is present).
      */
     private suspend fun tryLocalModel(query: String): String? {
+        // Local LLM disabled - always return null
+        return null
+        /*
         return try {
             if (!localLlama.isAvailable()) {
                 Log.w(TAG, "Local llama backend not available (native stub or missing build)")
@@ -176,12 +179,16 @@ class QueryRouter(private val context: Context) {
             Log.w(TAG, "Local model inference failed: ${e.message}")
             null
         }
+        */
     }
 
     /**
      * Locate downloaded GGUF model based on user selection or any available model.
      */
     private fun findOfflineModelPath(): File? {
+        // Offline models disabled - always return null
+        return null
+        /*
         return try {
             val preferred = prefs.getOfflineModelType()
             val info = modelDownloadManager.findDownloadedModel(preferred)
@@ -193,6 +200,7 @@ class QueryRouter(private val context: Context) {
         } catch (_: Exception) {
             null
         }
+        */
     }
 
     private suspend fun tryOnlineModel(query: String, activeKeys: List<APIKey>): OnlineResult? {

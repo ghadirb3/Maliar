@@ -16,7 +16,8 @@ import androidx.core.content.ContextCompat
 import com.persianai.assistant.R
 import com.persianai.assistant.receivers.VoiceCommandReceiver
 import com.persianai.assistant.core.AIIntentController
-import com.persianai.assistant.core.voice.SpeechToTextPipeline
+// import com.persianai.assistant.core.voice.SpeechToTextPipeline
+import com.persianai.assistant.stt.OnlineSTTService
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -153,7 +154,8 @@ class VoiceCommandService : Service() {
     private suspend fun runOneShotCommand(hint: String?, mode: String) {
         val engine = UnifiedVoiceEngine(this)
         val controller = AIIntentController(this)
-        val stt = SpeechToTextPipeline(this)
+        // val stt = SpeechToTextPipeline(this)
+        val onlineSTT = OnlineSTTService(this)
 
         try {
             // Step 1: Check permissions
@@ -185,8 +187,8 @@ class VoiceCommandService : Service() {
             // Step 3: Transcribe audio
             notifyUpdate("📝 تبدیل گفتار به متن...", "لطفاً صبر کنید...")
 
-            val sttResult = stt.transcribe(recording.file)
-            val transcribedText = sttResult.getOrNull()?.trim().orEmpty()
+            val sttResult = onlineSTT.transcribeAudio(recording.file)
+            val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
 
             // Cleanup audio file
             try { recording.file.delete() } catch (_: Exception) {}

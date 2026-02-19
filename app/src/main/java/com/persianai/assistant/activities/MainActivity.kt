@@ -494,7 +494,9 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, InstallmentsManagementActivity::class.java))
             }
             com.persianai.assistant.ai.AdvancedPersianAssistant.ActionType.OPEN_TRAVEL -> {
-                startActivity(Intent(this, NavigationActivity::class.java))
+                // Navigation activities removed - show toast instead
+                Toast.makeText(this, "ویژگی ناوبری در حال حاضر غیرفعال است", Toast.LENGTH_SHORT).show()
+                // startActivity(Intent(this, NavigationActivity::class.java))
             }
             else -> {}
         }

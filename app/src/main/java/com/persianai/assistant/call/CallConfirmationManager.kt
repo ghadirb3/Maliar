@@ -9,6 +9,7 @@ import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.models.Contact
 import com.persianai.assistant.activities.CallConfirmationActivity
 import com.persianai.assistant.integration.IviraIntegrationManager
+import com.persianai.assistant.stt.OnlineSTTService
 import java.io.File
 
 /**
@@ -21,6 +22,7 @@ class CallConfirmationManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val ttsHelper = TTSHelper(context)
     private val iviraManager = IviraIntegrationManager(context)
+    private val onlineSTT = OnlineSTTService(context)
     
     // کلمات کلیدی برای تأیید و لغو
     private val positiveKeywords = listOf(
@@ -116,19 +118,14 @@ class CallConfirmationManager(private val context: Context) {
             
             return withContext(Dispatchers.IO) {
                 try {
-                    // استفاده از IviraIntegrationManager برای شناسایی صدا
-                    val result = iviraManager.speechToTextViaIvira(
-                        audioFile = createTempAudioFile(),
-                        onSuccess = { response ->
-                            Log.d(TAG, "✅ پاسخ شناسایی شد: $response")
-                        },
-                        onError = { error ->
-                            Log.e(TAG, "❌ خطا در شناسایی صدا: $error")
-                        }
-                    )
+                    // استفاده از OnlineSTTService برای شناسایی صدا (Liara → GapGPT)
+                    val audioFile = createTempAudioFile()
+                    val sttResult = onlineSTT.transcribeAudio(audioFile)
                     
-                    // فعلاً خالی برمی‌گردانیم چون این بخش نیاز به پیاده‌سازی کامل دارد
-                    ""
+                    val response = if (sttResult.isSuccess) sttResult.text else ""
+                    Log.d(TAG, "✅ پاسخ شناسایی شد: $response")
+                    
+                    response
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ خطا در شناسایی صدا", e)
                     ""

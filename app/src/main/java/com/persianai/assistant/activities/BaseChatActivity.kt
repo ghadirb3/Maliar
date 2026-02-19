@@ -35,14 +35,15 @@ import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.utils.PreferencesManager.ProviderPreference
 import com.persianai.assistant.utils.AutoProvisioningManager
-import com.persianai.assistant.utils.ModelDownloadManager
+// import com.persianai.assistant.utils.ModelDownloadManager
 import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.utils.IviraProcessingHelper
 import com.persianai.assistant.services.VoiceRecordingHelper
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.core.AIIntentController
 import com.persianai.assistant.core.AIIntentRequest
-import com.persianai.assistant.core.voice.SpeechToTextPipeline
+// import com.persianai.assistant.core.voice.SpeechToTextPipeline
+import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.ai.SimpleOfflineResponder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,7 +69,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
     protected var aiClient: AIClient? = null
     protected var currentModel: AIModel = AIModel.TINY_LLAMA_OFFLINE
     protected val messages = mutableListOf<ChatMessage>()
-    protected lateinit var modelDownloadManager: ModelDownloadManager
+    // protected lateinit var modelDownloadManager: ModelDownloadManager
     private lateinit var speechRecognizer: SpeechRecognizer
     private var voiceRecorderView: VoiceRecorderView? = null
     protected lateinit var voiceHelper: VoiceRecordingHelper
@@ -86,7 +87,8 @@ abstract class BaseChatActivity : AppCompatActivity() {
     }
     private val httpClient = OkHttpClient()
     private val sttEngine by lazy { UnifiedVoiceEngine(this) }
-    private val sttPipeline by lazy { SpeechToTextPipeline(this) }
+    private val onlineSTT by lazy { OnlineSTTService(this) }
+    // private val sttPipeline by lazy { SpeechToTextPipeline(this) }
     private val hfApiKey: String by lazy {
         getSharedPreferences("api_keys", MODE_PRIVATE)
             .getString("hf_api_key", null)
@@ -140,7 +142,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
         
         // Initialize critical components first
         prefsManager = PreferencesManager(this)
-        modelDownloadManager = ModelDownloadManager(this)
+        // modelDownloadManager = ModelDownloadManager(this)
         ttsHelper = TTSHelper(this)
         ttsHelper.initialize()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
@@ -523,8 +525,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
                         }
 
                         statusText.text = "📝 تبدیل گفتار به متن..."
-                        val analysis = sttPipeline.transcribe(recording.file)
-                        val userText = analysis.getOrNull()?.trim().orEmpty()
+                        // Use OnlineSTTService with Liara priority and GapGPT fallback
+                        val sttResult = onlineSTT.transcribeAudio(recording.file)
+                        val userText = if (sttResult.isSuccess) sttResult.text else ""
                         if (userText.isBlank()) {
                             statusText.text = "⚠️ متن تشخیص داده نشد"
                             kotlinx.coroutines.delay(600)
@@ -776,6 +779,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
      * یافتن مسیر مدل tinyllama دانلود‌شده (دستی یا از طریق OfflineModelManager)
      */
     private fun findOfflineModelPath(): String? {
+        // Offline models disabled - always return null
+        return null
+        /*
         return try {
             // اولویت با مدل انتخاب‌شده کاربر؛ در غیر اینصورت هر مدل دانلودشده
             val preferred = prefsManager.getOfflineModelType()
@@ -789,6 +795,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
         } catch (_: Exception) {
             null
         }
+        */
     }
 
     protected open fun shouldUseOnlinePriority(): Boolean = false
@@ -942,8 +949,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val text = try {
-                    val res = withContext(Dispatchers.IO) { sttPipeline.transcribe(audioFile) }
-                    res.getOrNull()?.trim().orEmpty()
+                    // Use OnlineSTTService with Liara priority and GapGPT fallback
+                    val sttResult = onlineSTT.transcribeAudio(audioFile)
+                    if (sttResult.isSuccess) sttResult.text else ""
                 } catch (e: Exception) {
                     Log.e("BaseChatActivity", "STT failed: ${e.message}")
                     ""

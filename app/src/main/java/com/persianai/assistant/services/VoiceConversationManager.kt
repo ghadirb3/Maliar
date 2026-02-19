@@ -11,7 +11,8 @@ import com.persianai.assistant.core.AIIntentController
 import com.persianai.assistant.core.AIIntentRequest
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.tts.BeepFallback
-import com.persianai.assistant.core.voice.SpeechToTextPipeline
+// import com.persianai.assistant.core.voice.SpeechToTextPipeline
+import com.persianai.assistant.stt.OnlineSTTService
 
 /**
  * Voice Conversation Manager - Complete voice-to-voice AI assistant
@@ -46,7 +47,8 @@ class VoiceConversationManager(
     private var amplitudeThreshold = 1000
     private var lastVoiceTime = 0L
 
-    private val sttPipeline by lazy { SpeechToTextPipeline(context) }
+    // private val sttPipeline by lazy { SpeechToTextPipeline(context) }
+    private val onlineSTT by lazy { OnlineSTTService(context) }
     
     // Callbacks
     private var conversationListener: ConversationListener? = null
@@ -328,9 +330,9 @@ class VoiceConversationManager(
         try {
             Log.d(TAG, "🔍 Processing user speech...")
 
-            // Offline-first with online fallback
-            val stt = sttPipeline.transcribe(audioFile)
-            val text = stt.getOrNull().orEmpty().trim()
+            // Offline-first with online fallback - now using OnlineSTTService
+            val sttResult = onlineSTT.transcribeAudio(audioFile)
+            val text = if (sttResult.isSuccess) sttResult.text else ""
             if (text.isNotBlank()) {
                 Log.d(TAG, "✅ Speech processed: $text")
                 return@withContext text

@@ -12,9 +12,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.persianai.assistant.activities.DashboardActivity
 import com.persianai.assistant.utils.NotificationHelper
-import com.persianai.assistant.utils.SmartCallManager
+// import com.persianai.assistant.utils.SmartCallManager
 import com.persianai.assistant.utils.PreferencesManager
-import com.persianai.assistant.utils.ContactInfo
+// import com.persianai.assistant.utils.ContactInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -84,7 +84,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
         }
         
         // لغو نوتیفیکیشن تماس
-        SmartCallManager.cancelCallNotification(context)
+        // SmartCallManager.cancelCallNotification(context)
     }
     
     /**
@@ -107,7 +107,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
             showErrorNotification(context, "خطا در باز کردن شماره‌گیر: ${e.message}")
         }
         
-        SmartCallManager.cancelCallNotification(context)
+        // SmartCallManager.cancelCallNotification(context)
     }
     
     /**
@@ -124,7 +124,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
         }
         context.startActivity(mainIntent)
         
-        SmartCallManager.cancelCallNotification(context)
+        // SmartCallManager.cancelCallNotification(context)
     }
     
     /**
@@ -148,7 +148,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
             showErrorNotification(context, "خطا در انتخاب مخاطب: ${e.message}")
         }
         
-        SmartCallManager.cancelCallNotification(context)
+        // SmartCallManager.cancelCallNotification(context)
     }
     
     /**
@@ -173,7 +173,7 @@ class CallNotificationReceiver : BroadcastReceiver() {
             showErrorNotification(context, "خطا در درخواست مجوز: ${e.message}")
         }
         
-        SmartCallManager.cancelCallNotification(context)
+        // SmartCallManager.cancelCallNotification(context)
     }
     
     /**
