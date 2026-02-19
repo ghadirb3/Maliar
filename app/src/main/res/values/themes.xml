@@ -16,9 +16,6 @@
         <item name="colorAccent">@color/accentColor</item>
         <item name="android:windowBackground">@color/backgroundColor</item>
         <item name="android:forceDarkAllowed">true</item>
-        <item name="android:windowShowWhenLocked">true</item>
-        <item name="android:windowTurnScreenOn">true</item>
-        <item name="android:windowExcludeFromRecents">true</item>
     </style>
 
     <style name="Theme.PersianAIAssistant.Transparent" parent="Theme.Material3.Light.NoActionBar">
