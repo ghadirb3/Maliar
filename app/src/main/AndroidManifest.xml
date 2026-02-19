@@ -403,6 +403,18 @@
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:windowSoftInputMode="stateHidden" />
 
+        <!-- Call Confirmation Activity -->
+        <activity
+            android:name=".activities.CallConfirmationActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:theme="@style/Theme.PersianAIAssistant.NoActionBar"
+            android:windowSoftInputMode="stateHidden" />
+
         <service
             android:name=".services.FullScreenAlarmService"
             android:enabled="true"

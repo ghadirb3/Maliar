@@ -1,24 +1,74 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <group
-        android:scaleX="0.5"
-        android:scaleY="0.5"
-        android:translateX="27"
-        android:translateY="27">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M54,27m-27,0a27,27 0,1 1,54 0a27,27 0,1 1,-54 0" />
-        <path
-            android:fillColor="#6200EE"
-            android:pathData="M40,35c0,-1.1 0.9,-2 2,-2h6c1.1,0 2,0.9 2,2v6c0,1.1 -0.9,2 -2,2h-6c-1.1,0 -2,-0.9 -2,-2V35z" />
-        <path
-            android:fillColor="#6200EE"
-            android:pathData="M58,35c0,-1.1 0.9,-2 2,-2h6c1.1,0 2,0.9 2,2v6c0,1.1 -0.9,2 -2,2h-6c-1.1,0 -2,-0.9 -2,-2V35z" />
-        <path
-            android:fillColor="#6200EE"
-            android:pathData="M40,50h28c2.2,0 4,1.8 4,4v2c0,6.6 -5.4,12 -12,12h-12c-6.6,0 -12,-5.4 -12,-12v-2c0,-2.2 1.8,-4 4,-4z" />
-    </group>
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    
+    <!-- Background gradient circle -->
+    <path
+        android:fillColor="#1e3c72"
+        android:pathData="M256,6 C389,6 496,113 496,246 C496,379 389,486 256,486 C123,486 16,379 16,246 C16,113 123,6 256,6 Z"/>
+    
+    <!-- Inner circle for depth -->
+    <path
+        android:fillColor="#2a5298"
+        android:fillAlpha="0.8"
+        android:pathData="M256,36 C369,36 460,127 460,240 C460,353 369,444 256,444 C143,444 52,353 52,240 C52,127 143,36 256,36 Z"/>
+    
+    <!-- Letter M stylized for Maliar -->
+    <path
+        android:fillColor="#ffffff"
+        android:fillAlpha="0.95"
+        android:pathData="M140,180 L200,180 L200,220 L240,160 L280,220 L280,180 L340,180 L340,340 L300,340 L300,280 L260,340 L220,280 L220,340 L140,340 Z"/>
+    
+    <!-- Dollar symbol - representing finance -->
+    <circle
+        android:fillColor="#ffd700"
+        android:fillAlpha="0.9"
+        android:pathData="M170,150 a25,25 0 1,0 0,0.1"/>
+    <path
+        android:fillColor="#1e3c72"
+        android:strokeWidth="2"
+        android:strokeColor="#1e3c72"
+        android:pathData="M170,160 m-8,0 a8,8 0 1,1 16,0 a8,8 0 1,1 -16,0"/>
+    <path
+        android:fillColor="#1e3c72"
+        android:strokeWidth="2"
+        android:strokeColor="#1e3c72"
+        android:pathData="M165,150 L165,170 M175,150 L175,170"/>
+    
+    <!-- Growth arrow - representing financial growth -->
+    <path
+        android:fillColor="#4caf50"
+        android:pathData="M360,140 L400,120 L400,160 Z"/>
+    <path
+        android:fillColor="#4caf50"
+        android:strokeWidth="4"
+        android:strokeColor="#4caf50"
+        android:pathData="M360,140 L400,140"/>
+    
+    <!-- Bitcoin symbol - representing crypto -->
+    <circle
+        android:fillColor="#f7931a"
+        android:fillAlpha="0.9"
+        android:pathData="M390,200 a20,20 0 1,0 0,0.1"/>
+    <path
+        android:fillColor="#ffffff"
+        android:strokeWidth="1.5"
+        android:strokeColor="#ffffff"
+        android:pathData="M390,208 m-6,0 a6,6 0 1,1 12,0 a6,6 0 1,1 -12,0"/>
+    <path
+        android:fillColor="#ffffff"
+        android:strokeWidth="1.5"
+        android:strokeColor="#ffffff"
+        android:pathData="M387,195 L387,210 M393,195 L393,210 M384,198 L396,198 M384,207 L396,207"/>
+    
+    <!-- Growth chart line -->
+    <path
+        android:fillColor="none"
+        android:strokeColor="#4caf50"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M120,320 L170,300 L220,280 L270,260 L320,240 L370,220 L420,200"/>
+    
 </vector>

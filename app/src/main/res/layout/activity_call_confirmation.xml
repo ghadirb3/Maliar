@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_background"
+    android:layoutDirection="rtl"
+    android:padding="24dp">
+
+    <!-- کارت اصلی تأیید تماس -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/confirmationCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="12dp"
+        app:cardBackgroundColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:gravity="center">
+
+            <!-- آیکون تماس -->
+            <ImageView
+                android:id="@+id/callIcon"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_call_green"
+                android:layout_marginBottom="24dp"
+                android:contentDescription="آیکون تماس" />
+
+            <!-- سوال تأیید -->
+            <TextView
+                android:id="@+id/confirmationQuestion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="تماس برقرار شود؟"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:layout_marginBottom="16dp"
+                android:gravity="center" />
+
+            <!-- نام مخاطب -->
+            <TextView
+                android:id="@+id/contactNameText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="مریم همسر"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary_color"
+                android:layout_marginBottom="8dp"
+                android:gravity="center"
+                tools:text="مریم همسر" />
+
+            <!-- شماره تلفن -->
+            <TextView
+                android:id="@+id/phoneNumberText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+98 912 345 6789"
+                android:textSize="16sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="32dp"
+                android:gravity="center"
+                tools:text="+98 912 345 6789" />
+
+            <!-- دکمه‌های تأیید و لغو -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <!-- دکمه تماس -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/callButton"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    app:cardCornerRadius="30dp"
+                    app:cardElevation="6dp"
+                    app:cardBackgroundColor="@color/green_success"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_call_white"
+                            android:layout_marginEnd="8dp"
+                            android:contentDescription="تماس" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="تماس"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white" />
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <!-- دکمه لغو -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cancelButton"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    app:cardCornerRadius="30dp"
+                    app:cardElevation="6dp"
+                    app:cardBackgroundColor="@color/red_danger"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_cancel_white"
+                            android:layout_marginEnd="8dp"
+                            android:contentDescription="لغو" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="لغو"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white" />
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- راهنمای صوتی -->
+            <TextView
+                android:id="@+id/voiceHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎤 میکروفون فعال است - بگویید: «بله» یا «لغو»"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:drawablePadding="8dp"
+                android:drawableStart="@drawable/ic_mic_small" />
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- وضعیت میکروفون -->
+    <LinearLayout
+        android:id="@+id/micStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/confirmationCard">
+
+        <ImageView
+            android:id="@+id/micIndicator"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_mic_active"
+            android:contentDescription="میکروفون فعال" />
+
+        <TextView
+            android:id="@+id/micStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="در حال شنیدن..."
+            android:textSize="12sp"
+            android:textColor="@color/white"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

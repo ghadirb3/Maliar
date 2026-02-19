@@ -4,9 +4,11 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import android.media.MediaPlayer
 import java.util.*
 import com.persianai.assistant.services.HaaniyeManager
 import com.persianai.assistant.config.RemoteAIConfigManager
+import com.persianai.assistant.tts.GapGPTTTS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -20,6 +22,7 @@ class TTSHelper(private val context: Context) {
     private var isInitialized = false
     private val prefsManager = PreferencesManager(context)
     private val remoteConfigManager = RemoteAIConfigManager.getInstance(context)
+    private val gapgptTTS = GapGPTTTS(context)
 
     companion object {
         private const val TAG = "TTSHelper"
@@ -94,7 +97,21 @@ class TTSHelper(private val context: Context) {
         // Try online TTS providers based on remote config priority
         for (provider in ttsPriority) {
             when (provider.lowercase()) {
-                "openai", "liara", "gapgpt" -> {
+                "gapgpt" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT...")
+                        val audioFile = gapgptTTS.synthesizeSpeech(cleanText)
+                        if (audioFile != null && audioFile.exists()) {
+                            // پخش فایل صوتی
+                            playAudioFile(audioFile)
+                            Log.d(TAG, "✅ TTS با موفقیت از GapGPT اجرا شد")
+                            return@withContext
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "GapGPT TTS failed: ${e.message}")
+                    }
+                }
+                "openai", "liara" -> {
                     // TODO: Implement online TTS calls for these providers
                     Log.d(TAG, "Online TTS provider $provider not yet implemented, skipping")
                 }
@@ -155,6 +172,39 @@ class TTSHelper(private val context: Context) {
 
         Log.d(TAG, "Speaking (Android TTS): $cleanText")
         tts?.speak(cleanText, queueMode, null, "tts_${System.currentTimeMillis()}")
+    }
+    
+    /**
+     * پخش فایل صوتی MP3 از GapGPT TTS
+     */
+    private fun playAudioFile(audioFile: File) {
+        try {
+            val mediaPlayer = MediaPlayer().apply {
+                setDataSource(audioFile.absolutePath)
+                prepare()
+                setOnCompletionListener {
+                    release()
+                    // پاک کردن فایل بعد از پخش
+                    audioFile.delete()
+                }
+                setOnErrorListener { _, _, _ ->
+                    release()
+                    audioFile.delete()
+                    true
+                }
+                start()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در پخش فایل صوتی", e)
+            audioFile.delete()
+        }
+    }
+    
+    /**
+     * پاک کردن منابع
+     */
+    fun cleanup() {
+        gapgptTTS.cleanupOldAudioFiles()
     }
 
     private fun runOnUiThread(action: () -> Unit) {

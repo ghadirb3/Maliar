@@ -6,8 +6,12 @@ import com.persianai.assistant.core.AIIntentRequest
 import com.persianai.assistant.core.AIIntentResult
 import com.persianai.assistant.core.intent.AIIntent
 import com.persianai.assistant.core.intent.CallSmartIntent
-import com.persianai.assistant.utils.SmartCallManager
-import kotlinx.coroutines.runBlocking
+import com.persianai.assistant.call.CallIntentProcessor
+import com.persianai.assistant.call.CallConfirmationManager
+import com.persianai.assistant.activities.CallConfirmationActivity
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 class CallModule(context: Context) : BaseModule(context) {
     override val moduleName: String = "Call"
@@ -36,34 +40,39 @@ class CallModule(context: Context) : BaseModule(context) {
         }
         
         return try {
-            // استفاده از SmartCallManager برای پردازش هوشمند تماس
-            val result = SmartCallManager.processCallRequest(context, contactName)
+            // استفاده از سیستم جدید تماس هوشمند
+            val callProcessor = CallIntentProcessor(context)
+            val result = callProcessor.processCallIntent(contactName)
             
             when (result) {
-                is com.persianai.assistant.utils.CallResult.SingleContact -> {
+                is CallIntentProcessor.CallIntentResult.SingleContact -> {
+                    // شروع فرآیند تأیید تماس
+                    val confirmationManager = CallConfirmationManager(context)
+                    confirmationManager.startCallConfirmation(result.contact, result.contact.phoneNumber)
+                    
                     createResult(
                         text = "📞 مخاطب پیدا شد: «${result.contact.name}»\n" +
-                                "شماره: ${result.contact.phoneNumber} (${result.contact.phoneType})\n\n" +
-                                "🔔 نوتیفیکیشن تماس ارسال شد. برای تماس روی نوتیفیکیشن ضربه بزنید.",
+                                "صفحه تأیید تماس نمایش داده شد.\n" +
+                                "بگویید «بله» برای تماس یا «لغو» برای انصراف.",
                         intentName = intent.name,
                         success = true
                     )
                 }
-                is com.persianai.assistant.utils.CallResult.MultipleContacts -> {
+                is CallIntentProcessor.CallIntentResult.MultipleContacts -> {
+                    // خواندن صوتی لیست مخاطبین و انتخاب
+                    val contactsText = result.contacts.take(3).joinToString("، ") { it.name }
+                    
                     createResult(
                         text = "📞 ${result.contacts.size} مخاطب مشابه پیدا شد:\n" +
-                                result.contacts.take(5).joinToString("\n") { 
-                                    "• ${it.name}: ${it.phoneNumber}" 
-                                } +
-                                (if (result.contacts.size > 5) "\n... و ${result.contacts.size - 5} مخاطب دیگر" else "") +
-                                "\n\n🔔 نوتیفیکیشن انتخاب مخاطب ارسال شد.",
+                                "$contactsText\n\n" +
+                                "لطفاً نام مخاطب مورد نظر را بگویید.",
                         intentName = intent.name,
                         success = true
                     )
                 }
-                is com.persianai.assistant.utils.CallResult.NotFound -> {
+                is CallIntentProcessor.CallIntentResult.ContactNotFound -> {
                     createResult(
-                        text = "❌ مخاطب '${result.contactName}' در لیست تماس‌های شما یافت نشد.\n\n" +
+                        text = "❌ ${result.message}\n\n" +
                                 "💡 پیشنهاد:\n" +
                                 "• نام مخاطب را کامل و صحیح بگویید\n" +
                                 "• از کلمات اضافی مثل «آقا»، «خانم» استفاده نکنید\n" +
@@ -72,18 +81,32 @@ class CallModule(context: Context) : BaseModule(context) {
                         success = false
                     )
                 }
-                is com.persianai.assistant.utils.CallResult.NeedPermission -> {
+                is CallIntentProcessor.CallIntentResult.PermissionRequired -> {
                     createResult(
-                        text = "🔒 برای تماس با '${result.contactName}' به مجوز دسترسی به مخاطبین نیاز داریم.\n\n" +
-                                "🔔 نوتیفیکیشن درخواست مجوز ارسال شد.\n" +
-                                "روی نوتیفیکیشن ضربه بزنید تا مجوز داده شود.",
+                        text = "🔒 ${result.message}\n\n" +
+                                "لطفاً به تنظیمات بروید و دسترسی مخاطبین را فعال کنید.",
                         intentName = intent.name,
                         success = false
                     )
                 }
-                is com.persianai.assistant.utils.CallResult.Error -> {
+                is CallIntentProcessor.CallIntentResult.Error -> {
                     createResult(
-                        text = "❌ خطا در جستجوی مخاطب: ${result.message}",
+                        text = "❌ ${result.message}",
+                        intentName = intent.name,
+                        success = false
+                    )
+                }
+                is CallIntentProcessor.CallIntentResult.Cancel -> {
+                    createResult(
+                        text = "❌ درخواست تماس لغو شد.",
+                        intentName = intent.name,
+                        success = false
+                    )
+                }
+                is CallIntentProcessor.CallIntentResult.NotRecognized -> {
+                    createResult(
+                        text = "⚠️ ${result.message}\n\n" +
+                                "مثال: «تماس با علی» یا «با مریم تماس بگیر»",
                         intentName = intent.name,
                         success = false
                     )

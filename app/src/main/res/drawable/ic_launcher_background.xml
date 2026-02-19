@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background gradient -->
+    <path
+        android:fillColor="#1e3c72"
+        android:pathData="M54,6 C83,6 106,29 106,58 C106,87 83,110 54,110 C25,110 2,87 2,58 C2,29 25,6 54,6 Z"/>
+    
+    <!-- Inner circle -->
+    <path
+        android:fillColor="#2a5298"
+        android:fillAlpha="0.8"
+        android:pathData="M54,16 C77,16 96,35 96,58 C96,81 77,100 54,100 C31,100 12,81 12,58 C12,35 31,16 54,16 Z"/>
+    
+    <!-- Letter M -->
+    <path
+        android:fillColor="#ffffff"
+        android:fillAlpha="0.95"
+        android:pathData="M30,35 L40,35 L40,42 L45,30 L50,42 L50,35 L60,35 L60,65 L55,65 L55,52 L50,65 L45,52 L45,65 L30,65 Z"/>
+    
+    <!-- Dollar symbol -->
+    <circle
+        android:fillColor="#ffd700"
+        android:fillAlpha="0.9"
+        android:pathData="M35,25 a5,5 0 1,0 0,0.1"/>
+    <path
+        android:fillColor="#1e3c72"
+        android:strokeWidth="1"
+        android:strokeColor="#1e3c72"
+        android:pathData="M35,28 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0"/>
+    <path
+        android:fillColor="#1e3c72"
+        android:strokeWidth="1"
+        android:strokeColor="#1e3c72"
+        android:pathData="M33,25 L33,30 M37,25 L37,30"/>
+    
+    <!-- Growth arrow -->
+    <path
+        android:fillColor="#4caf50"
+        android:pathData="M70,25 L75,20 L75,30 Z"/>
+    <path
+        android:fillColor="#4caf50"
+        android:strokeWidth="2"
+        android:strokeColor="#4caf50"
+        android:pathData="M70,25 L75,25"/>
+    
+    <!-- Chart line -->
+    <path
+        android:fillColor="none"
+        android:strokeColor="#4caf50"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M20,75 L30,70 L40,65 L50,60 L60,55 L70,50 L80,45"/>
+    
+</vector>

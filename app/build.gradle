@@ -5,8 +5,8 @@ plugins {
     id 'kotlin-parcelize'
 }
 
-// To disable native build in CI use -PskipNativeBuild=true (offline native inference disabled)
-def enableNativeBuild = !project.hasProperty("skipNativeBuild")
+// Online-only build: disable native/offline inference packaging for smaller APK
+def enableNativeBuild = false
 // مسیر resolve شده llama.cpp
 def resolvedLlamaDir = null
 
@@ -39,113 +39,10 @@ task copyHaaniye(type: Copy) {
     into "$projectDir/src/main/assets/tts/haaniye"
 }
 
-// Copy offline Coqui TTS model into app assets if developer provided it under project root or via env var
-def coquiHost = System.getenv('COQUI_TTS_HOST_PATH') ?: file(rootDir.toString() + '/coqui_tts').toString()
-task copyCoqui(type: Copy) {
-    def src = file(coquiHost)
-    if (src.exists()) {
-        from src
-        into "$projectDir/src/main/assets/tts/coqui"
-    } else {
-        doFirst {
-            println "Coqui host path not found: ${coquiHost} — skipping copyCoqui"
-        }
-    }
-}
 
-// Copy offline Vosk STT model into app assets if developer provided it under project root or via env var
-def voskHost = System.getenv('VOSK_MODEL_PATH') ?: file(rootDir.toString() + '/vosk-model').toString()
-task copyVosk(type: Copy) {
-    def src = file(voskHost)
-    if (src.exists()) {
-        from src
-        into "$projectDir/src/main/assets/vosk"
-    } else {
-        doFirst {
-            println "Vosk model not found at ${voskHost} — skipping copyVosk"
-        }
-    }
-}
-
-// Copy libc++_shared.so from locally installed NDK into jniLibs (needed for Whisper ggml deps)
-// Resolve NDK path without touching android.ndkDirectory during configuration (some environments throw if NDK missing).
-def ndkRoot = {
-    def fromEnv = System.getenv('ANDROID_NDK_HOME') ?: System.getenv('ANDROID_NDK_ROOT') ?: System.getenv('NDK_HOME')
-    if (fromEnv) return fromEnv
-    // Fallback to AGP ndkDirectory only if available and non-null (after plugin wiring)
-    def androidExt = project.extensions.findByName("android")
-    if (androidExt != null && androidExt.hasProperty("ndkDirectory")) {
-        def dir = androidExt.ndkDirectory
-        if (dir != null && dir.exists()) return dir.absolutePath
-    }
-    return null
-}.call()
-
-task copyLibcxxShared {
-    doLast {
-        if (!ndkRoot || !file(ndkRoot).exists()) {
-            throw new GradleException("NDK not found (set ANDROID_NDK_HOME or install ndkVersion=${android.ndkVersion}). libc++_shared.so cannot be copied; Whisper will crash.")
-        }
-
-        // NDK r25+ keeps libs under toolchains/llvm/prebuilt/<host>/sysroot/usr/lib/<triple>/
-        def hostTags = ["linux-x86_64", "windows-x86_64", "darwin-x86_64", "darwin-arm64"]
-        def abiTriples = [
-                "arm64-v8a": "aarch64-linux-android",
-                "armeabi-v7a": "arm-linux-androideabi",
-                "x86_64"   : "x86_64-linux-android"
-        ]
-        def abis = ["arm64-v8a", "armeabi-v7a"]
-
-        abis.each { abi ->
-            File src = null
-            // Try modern path
-            hostTags.each { host ->
-                def candidate = file("${ndkRoot}/toolchains/llvm/prebuilt/${host}/sysroot/usr/lib/${abiTriples[abi]}/libc++_shared.so")
-                if (candidate.exists()) {
-                    src = candidate
-                }
-            }
-            // Fallback to legacy path (older NDKs)
-            if (src == null) {
-                def legacy = file("${ndkRoot}/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so")
-                if (legacy.exists()) src = legacy
-            }
-
-            if (src == null || !src.exists()) {
-                throw new GradleException("Missing libc++_shared.so for ${abi} under ${ndkRoot}. Install NDK ${android.ndkVersion} and ensure toolchains/llvm/prebuilt/<host>/sysroot/usr/lib/... exists.")
-            }
-
-            def dstDir = file("$projectDir/src/main/jniLibs/${abi}")
-            dstDir.mkdirs()
-            copy {
-                from src
-                into dstDir
-            }
-            println "Copied libc++_shared.so for ${abi} from ${src}"
-        }
-    }
-}
-
-task verifyLibcxxShared {
-    dependsOn copyLibcxxShared
-    doLast {
-        def abis = ["arm64-v8a", "armeabi-v7a"]
-        abis.each { abi ->
-            def f = file("$projectDir/src/main/jniLibs/${abi}/libc++_shared.so")
-            if (!f.exists() || f.length() == 0L) {
-                throw new GradleException("libc++_shared.so missing for ${abi} (needed for Whisper). Ensure ANDROID_NDK_HOME is set to a valid NDK.")
-            }
-        }
-        println "✅ Verified libc++_shared.so exists for all ABIs"
-    }
-}
+// Online-only: Skip libc++ and Whisper dependencies
 
 preBuild.dependsOn copyHaaniye
-preBuild.dependsOn copyCoqui
-// Always package Vosk offline STT assets so runtime never downloads/fails
-preBuild.dependsOn copyVosk
-preBuild.dependsOn verifyLibcxxShared
-preBuild.dependsOn copyLibcxxShared
 
 // If PREBUILT_LIBS_URL is provided in CI environment, run fetch script to populate prebuilt_libs
 def prebuiltUrl = System.getenv('PREBUILT_LIBS_URL')
@@ -177,21 +74,7 @@ android {
         // Enable multidex if needed
         multiDexEnabled true
 
-        if (enableNativeBuild) {
-            externalNativeBuild {
-                cmake {
-                    // در صورت نیاز به فلگ‌های اضافی می‌توان اینجا اضافه کرد
-                    cppFlags "-std=c++17"
-                    // مسیر llama.cpp را می‌توان با متغیر محیطی LLAMA_CPP_DIR یا مسیر پیش‌فرض مشخص کرد
-                    arguments "-DLLAMA_CPP_DIR=${resolvedLlamaDir}"
-                }
-            }
-
-            ndk {
-                // پشتیبانی از دستگاه‌های قدیمی‌تر 32بیتی
-                abiFilters "arm64-v8a", "armeabi-v7a"
-            }
-        }
+        // Online-only: Native build disabled
     }
 
     buildTypes {
@@ -212,15 +95,6 @@ android {
             
             // Faster builds
             shrinkResources false
-        }
-    }
-
-    if (enableNativeBuild) {
-        externalNativeBuild {
-            cmake {
-                // فایل CMake برای اتصال به llama.cpp
-                path "src/main/cpp/CMakeLists.txt"
-            }
         }
     }
 
@@ -367,18 +241,8 @@ dependencies {
     // SLF4J for logging
     implementation 'org.slf4j:slf4j-simple:1.7.25'
     
-    // ONNX Runtime for offline Haaniye TTS
+    // ONNX Runtime for Haaniye TTS (lightweight)
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.16.0'
-    
-    // OpenStreetMap (OSM) - Alternative navigation
-    implementation 'org.osmdroid:osmdroid-android:6.1.17'
-    implementation 'org.osmdroid:osmdroid-mapsforge:6.1.17'
-    
-    // Offline STT (Vosk) + JNA native bindings (exclude jar to avoid duplicates)
-    implementation('com.alphacephei:vosk-android:0.3.38') {
-        exclude group: 'net.java.dev.jna', module: 'jna'
-    }
-    implementation 'net.java.dev.jna:jna:5.13.0@aar'
     
     // Testing
     testImplementation 'junit:junit:4.13.2'

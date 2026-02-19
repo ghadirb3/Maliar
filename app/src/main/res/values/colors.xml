@@ -37,4 +37,10 @@
     <color name="error_red">#F44336</color>
     <!-- General error color used across layouts -->
     <color name="errorColor">#F44336</color>
+    
+    <!-- Call confirmation colors -->
+    <color name="primary_color">#6200EE</color>
+    <color name="green_success">#4CAF50</color>
+    <color name="red_danger">#F44336</color>
+    <color name="text_secondary">#757575</color>
 </resources>

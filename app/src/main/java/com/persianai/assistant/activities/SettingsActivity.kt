@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.persianai.assistant.utils.ModelDownloadManager
 
 /**
  * صفحه تنظیمات
@@ -28,7 +27,6 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var prefsManager: PreferencesManager
-    private lateinit var modelDownloadManager: ModelDownloadManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,10 +38,9 @@ class SettingsActivity : AppCompatActivity() {
         supportActionBar?.title = "تنظیمات"
 
         prefsManager = PreferencesManager(this)
-        modelDownloadManager = ModelDownloadManager(this)
         
-        // نمایش کارت مدل آفلاین و انتخاب مقصد شروع
-        binding.offlineModelCard.visibility = View.VISIBLE
+        // Online-only: Hide offline model card
+        binding.offlineModelCard.visibility = View.GONE
         binding.coquiTtsCard.visibility = View.GONE
         binding.changeModeButton.visibility = View.VISIBLE
         binding.currentModeText.text = "صفحه شروع: ${prefsManager.getStartDestination().name}"
@@ -84,7 +81,6 @@ class SettingsActivity : AppCompatActivity() {
         // مقصد شروع
         binding.currentModeText.text = "صفحه شروع: ${if (prefsManager.getStartDestination() == PreferencesManager.StartDestination.DASHBOARD) "داشبورد" else "دستیار"}"
         refreshRecordingModeUI()
-        updateOfflineModelSection()
     }
 
     private fun updateCurrentModeText() {
@@ -108,15 +104,6 @@ class SettingsActivity : AppCompatActivity() {
         // انتخاب صفحه شروع (داشبورد/دستیار)
         binding.changeModeButton.setOnClickListener {
             showStartDestinationDialog()
-        }
-        binding.selectModelTypeButton.setOnClickListener {
-            showModelChoiceDialog()
-        }
-        binding.downloadModelButton.setOnClickListener {
-            startSelectedModelDownload()
-        }
-        binding.deleteModelButton.setOnClickListener {
-            deleteCurrentModel()
         }
 
         // دکمه مدیریت برنامه‌های متصل
@@ -326,74 +313,6 @@ class SettingsActivity : AppCompatActivity() {
                 binding.currentModeText.text = "صفحه شروع: ${options[which]}"
                 dialog.dismiss()
             }
-            .setNegativeButton("بستن", null)
-            .show()
-    }
-
-    private fun updateOfflineModelSection() {
-        val recommended = ModelDownloadManager.detectRecommendedModel(this)
-        val selected = prefsManager.getOfflineModelType()
-        val info = modelDownloadManager.getModelInfo(selected)
-        val downloadedInfo = modelDownloadManager.findDownloadedModel(selected)
-        binding.offlineModelType.text = "${info.name} (${info.sizeHint})\nپیشنهاد دستگاه: ${modelDownloadManager.getModelInfo(recommended).name}"
-        val downloaded = downloadedInfo != null && modelDownloadManager.isModelDownloaded(downloadedInfo)
-        if (downloaded) {
-            prefsManager.setOfflineModelDownloaded(true)
-            binding.offlineModelStatus.text = "✅ مدل دانلود شده (${downloadedInfo!!.name})"
-            binding.deleteModelButton.visibility = View.VISIBLE
-        } else {
-            prefsManager.setOfflineModelDownloaded(false)
-            binding.offlineModelStatus.text = "❌ مدل دانلود نشده"
-            binding.deleteModelButton.visibility = View.GONE
-        }
-    }
-
-    private fun startRecommendedModelDownload() {
-        val recommended = ModelDownloadManager.detectRecommendedModel(this)
-        prefsManager.setOfflineModelType(recommended)
-        val info = modelDownloadManager.getModelInfo(recommended)
-        val id = modelDownloadManager.enqueueDownload(info)
-        Toast.makeText(this, "دانلود '${info.name}' شروع شد (آی‌دی: $id)", Toast.LENGTH_LONG).show()
-        binding.offlineModelStatus.text = "⬇️ در حال دانلود..."
-    }
-
-    /**
-     * دانلود بر اساس مدل انتخاب‌شده کاربر (نه فقط پیشنهادی)
-     */
-    private fun startSelectedModelDownload() {
-        val selected = prefsManager.getOfflineModelType()
-        val info = modelDownloadManager.getModelInfo(selected)
-        val id = modelDownloadManager.enqueueDownload(info)
-        Toast.makeText(this, "دانلود '${info.name}' شروع شد (آی‌دی: $id)", Toast.LENGTH_LONG).show()
-        binding.offlineModelStatus.text = "⬇️ در حال دانلود..."
-    }
-
-    private fun deleteCurrentModel() {
-        val info = modelDownloadManager.findDownloadedModel(prefsManager.getOfflineModelType())
-            ?: modelDownloadManager.getModelInfo(prefsManager.getOfflineModelType())
-        modelDownloadManager.deleteModel(info)
-        prefsManager.setOfflineModelDownloaded(false)
-        updateOfflineModelSection()
-        Toast.makeText(this, "مدل حذف شد", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun showModelChoiceDialog() {
-        val items = arrayOf("TinyLlama (سبک)", "Qwen 0.5B (متوسط)", "Qwen 1.5B (قوی)")
-        MaterialAlertDialogBuilder(this)
-            .setTitle("انتخاب مدل آفلاین")
-            .setItems(items) { dialog, which ->
-                val type = when (which) {
-                    0 -> PreferencesManager.OfflineModelType.BASIC
-                    1 -> PreferencesManager.OfflineModelType.LITE
-                    else -> PreferencesManager.OfflineModelType.FULL
-                }
-                prefsManager.setOfflineModelType(type)
-                val info = modelDownloadManager.getModelInfo(type)
-                binding.offlineModelType.text = "${info.name} (${info.sizeHint})"
-                updateOfflineModelSection()
-                dialog.dismiss()
-            }
-            .setNegativeButton("بستن", null)
             .show()
     }
     

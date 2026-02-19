@@ -11,7 +11,6 @@ import com.persianai.assistant.models.AIModel
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.ChatMessage
 import com.persianai.assistant.models.MessageRole
-import com.persianai.assistant.offline.LocalLlamaRunner
 import com.persianai.assistant.utils.ModelDownloadManager
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.ModelSelector
@@ -34,7 +33,6 @@ class QueryRouter(private val context: Context) {
     private val prefs = PreferencesManager(context)
     private val offlineAssistant = AdvancedPersianAssistant(context)
     private val modelDownloadManager = ModelDownloadManager(context)
-    private val localLlama = LocalLlamaRunner()
     private val iviraClient = IviraAPIClient(context)
     private val iviraTokenManager = IviraTokenManager(context)
 
@@ -62,18 +60,8 @@ class QueryRouter(private val context: Context) {
             // val iviraResult = tryIviraOnline(query)
             // if (iviraResult != null) return@withContext iviraResult
 
-            // 3) حالت آفلاین یا بدون کلید → اول تلاش با مدل آفلاین GGUF (در صورت موجود) سپس پاسخ ساده
+            // 3) حالت آفلاین یا بدون کلید → فقط پاسخ ساده
             if (workingMode == PreferencesManager.WorkingMode.OFFLINE || activeKeys.isEmpty()) {
-                val local = tryLocalModel(query)
-                if (local != null) {
-                    return@withContext QueryResult(
-                        success = true,
-                        response = local,
-                        source = "offline",
-                        actionExecuted = false,
-                        model = "local-gguf"
-                    )
-                }
                 val offline = offlineAssistant.processRequest(query)
                 val response = resolveOfflineResponse(query, offline, workingMode)
                 return@withContext QueryResult(
