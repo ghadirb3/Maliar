@@ -79,7 +79,7 @@ class CallConfirmationManager(private val context: Context) {
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ خطا در جلسه تأیید تماس", e)
                     scope.launch {
-                        ttsHelper.speakAsync("خطا در تأیید تماس")
+                        ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
                     }
                 } finally {
                     isActive = false
@@ -99,7 +99,7 @@ class CallConfirmationManager(private val context: Context) {
             Log.d(TAG, "📢 پرسش تأیید: $message")
             
             // استفاده از TTSHelper با اولویت GapGPT آنلاین
-            ttsHelper.speakAsync(message)
+            ttsHelper.speakOnlineFirst(message)
             
             // نمایش صفحه تأیید تماس
             showConfirmationOverlay()
@@ -135,7 +135,7 @@ class CallConfirmationManager(private val context: Context) {
                 positiveKeywords.any { it in normalizedResponse } -> {
                     Log.d(TAG, "✅ پاسخ مثبت دریافت شد - برقراری تماس")
                     scope.launch {
-                        ttsHelper.speakAsync("در حال برقراری تماس...")
+                        ttsHelper.speakOnlineFirst("در حال برقراری تماس...")
                     }
                     makePhoneCall()
                 }
@@ -143,21 +143,21 @@ class CallConfirmationManager(private val context: Context) {
                 negativeKeywords.any { it in normalizedResponse } -> {
                     Log.d(TAG, "❌ پاسخ منفی دریافت شد - لغو تماس")
                     scope.launch {
-                        ttsHelper.speakAsync("تماس لغو شد")
+                        ttsHelper.speakOnlineFirst("تماس لغو شد")
                     }
                 }
                 
                 normalizedResponse.isEmpty() -> {
                     Log.d(TAG, "⏹️ سکوت کاربر - لغو تماس")
                     scope.launch {
-                        ttsHelper.speakAsync("تماس لغو شد")
+                        ttsHelper.speakOnlineFirst("تماس لغو شد")
                     }
                 }
                 
                 else -> {
                     Log.d(TAG, "❓ پاسخ نامفهوم - لغو تماس")
                     scope.launch {
-                        ttsHelper.speakAsync("متوجه نشدم، تماس لغو شد")
+                        ttsHelper.speakOnlineFirst("متوجه نشدم، تماس لغو شد")
                     }
                 }
             }
@@ -176,7 +176,7 @@ class CallConfirmationManager(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "❌ خطا در برقراری تماس", e)
                 scope.launch {
-                    ttsHelper.speakAsync("خطا در برقراری تماس")
+                    ttsHelper.speakOnlineFirst("خطا در برقراری تماس")
                 }
             }
         }

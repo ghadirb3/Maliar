@@ -104,12 +104,12 @@ class GapGPTTTS(private val context: Context) {
             // استفاده از همان سیستم مدیریت کلیدهای Ivira
             if (IviraProcessingHelper.hasValidTokens(context)) {
                 // دریافت کلید از IviraIntegrationManager
-                val iviraKeys = iviraManager.getValidTokens()
+                val iviraTokens = iviraManager.getIviraTokens()
                 // جستجو برای کلید GapGPT
-                iviraKeys.find { 
-                    it.provider.contains("gapgpt", ignoreCase = true) || 
-                    it.name.contains("gapgpt", ignoreCase = true) 
-                }?.key ?: ""
+                iviraTokens.entries.find { 
+                    it.key.contains("gapgpt", ignoreCase = true) || 
+                    it.key.contains("tts", ignoreCase = true)
+                }?.value ?: ""
             } else {
                 Log.w(TAG, "⚠️ توکن‌های معتبر Ivira موجود نیست")
                 ""

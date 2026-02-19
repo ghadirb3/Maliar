@@ -9,6 +9,18 @@
         <item name="android:forceDarkAllowed">true</item>
     </style>
 
+    <!-- NoActionBar theme for CallConfirmationActivity -->
+    <style name="Theme.PersianAIAssistant.NoActionBar" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorPrimaryDark">@color/primaryDarkColor</item>
+        <item name="colorAccent">@color/accentColor</item>
+        <item name="android:windowBackground">@color/backgroundColor</item>
+        <item name="android:forceDarkAllowed">true</item>
+        <item name="android:windowShowWhenLocked">true</item>
+        <item name="android:windowTurnScreenOn">true</item>
+        <item name="android:windowExcludeFromRecents">true</item>
+    </style>
+
     <style name="Theme.PersianAIAssistant.Transparent" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
