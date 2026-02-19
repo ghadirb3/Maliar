@@ -84,12 +84,10 @@ class OnlineSTTService(private val context: Context) {
             // Liara API Keys
             tokens.entries.filter { 
                 it.key.contains("liara", ignoreCase = true) 
-            }.forEach { (name, key) ->
+            }.forEach { (_, key) ->
                 apiKeys.add(APIKey(
-                    id = name,
-                    name = name,
-                    key = key,
                     provider = AIProvider.LIARA,
+                    key = key,
                     isActive = true
                 ))
             }
@@ -97,12 +95,10 @@ class OnlineSTTService(private val context: Context) {
             // GapGPT API Keys
             tokens.entries.filter { 
                 it.key.contains("gapgpt", ignoreCase = true) 
-            }.forEach { (name, key) ->
+            }.forEach { (_, key) ->
                 apiKeys.add(APIKey(
-                    id = name,
-                    name = name,
-                    key = key,
                     provider = AIProvider.GAPGPT,
+                    key = key,
                     isActive = true
                 ))
             }
@@ -110,12 +106,10 @@ class OnlineSTTService(private val context: Context) {
             // OpenAI API Keys (برای Whisper)
             tokens.entries.filter { 
                 it.key.contains("openai", ignoreCase = true) 
-            }.forEach { (name, key) ->
+            }.forEach { (_, key) ->
                 apiKeys.add(APIKey(
-                    id = name,
-                    name = name,
-                    key = key,
                     provider = AIProvider.OPENAI,
+                    key = key,
                     isActive = true
                 ))
             }
@@ -260,8 +254,9 @@ class OnlineSTTService(private val context: Context) {
      * STT با OpenAI Whisper (fallback)
      */
     private suspend fun transcribeWithOpenAI(audioFile: File, apiKey: String): STTResult {
-        val audioRequestBody = audioFile.readBytes()
-            .toRequestBody("audio/wav".toMediaType(), 0, audioFile.readBytes().size)
+        val audioBytes = audioFile.readBytes()
+        val audioRequestBody = audioBytes
+            .toRequestBody("audio/wav".toMediaType(), 0, audioBytes.size)
         
         val multipartBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)

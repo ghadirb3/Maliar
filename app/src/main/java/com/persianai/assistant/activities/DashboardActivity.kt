@@ -216,9 +216,9 @@ class DashboardActivity : AppCompatActivity() {
                 AnimationHelper.clickAnimation(it)
                 it.postDelayed({
                     try {
-                        val intent = Intent(this, NavigationActivity::class.java)
-                        startActivity(intent)
-                        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+                        // val intent = Intent(this, NavigationActivity::class.java)
+                        // startActivity(intent)
+                        // overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
                     } catch (e: Exception) {
                         android.util.Log.e("DashboardActivity", "Error opening navigation", e)
                         Toast.makeText(this, "خطا در باز کردن مسیریابی", Toast.LENGTH_SHORT).show()

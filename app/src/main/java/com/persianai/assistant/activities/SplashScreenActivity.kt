@@ -102,8 +102,8 @@ class SplashScreenActivity : AppCompatActivity() {
         val incoming = intent
         if (incoming != null && (Intent.ACTION_SEND == incoming.action || Intent.ACTION_VIEW == incoming.action)) {
             try {
-                val forward = Intent(incoming).setClass(this, VoiceNavigationAssistantActivity::class.java)
-                startActivity(forward)
+                // val forward = Intent(incoming).setClass(this, VoiceNavigationAssistantActivity::class.java)
+                // startActivity(forward)
                 finish()
                 return
             } catch (e: Exception) {

@@ -25,7 +25,7 @@ import java.nio.channels.FileChannel
 class UnifiedVoiceEngine(private val context: Context) {
 
     private val TAG = "UnifiedVoiceEngine"
-    private val recorder = NewHybridVoiceRecorder(context)
+    private val recorder = SimpleVoiceRecorder(context)
 
     suspend fun startRecording(): Result<Unit> = withContext(Dispatchers.Main) {
         return@withContext try {

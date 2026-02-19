@@ -54,7 +54,7 @@ class AIChatActivity : BaseChatActivity() {
         chatBinding.btnCalendar.setOnClickListener { startActivity(Intent(this, CalendarActivity::class.java)) }
         chatBinding.btnAccountingAdvanced.setOnClickListener { startActivity(Intent(this, AccountingAdvancedActivity::class.java)) }
         chatBinding.btnRemindersAdvanced.setOnClickListener { startActivity(Intent(this, AdvancedRemindersActivity::class.java)) }
-        chatBinding.btnVoiceNav.setOnClickListener { startActivity(Intent(this, VoiceNavigationAssistantActivity::class.java)) }
+        chatBinding.btnVoiceNav.setOnClickListener { /* startActivity(Intent(this, VoiceNavigationAssistantActivity::class.java)) */ }
         chatBinding.btnPsychology.setOnClickListener { startActivity(Intent(this, PsychologyChatActivity::class.java)) }
         chatBinding.btnCareer.setOnClickListener { startActivity(Intent(this, CareerChatActivity::class.java)) }
         chatBinding.btnCultural.setOnClickListener { startActivity(Intent(this, CulturalChatActivity::class.java)) }
@@ -111,7 +111,7 @@ class AIChatActivity : BaseChatActivity() {
             startActivity(Intent(this, AdvancedRemindersActivity::class.java)) 
         }
         chatBinding.btnVoiceNav.setOnClickListener { 
-            startActivity(Intent(this, VoiceNavigationAssistantActivity::class.java)) 
+            // startActivity(Intent(this, VoiceNavigationAssistantActivity::class.java)) 
         }
         chatBinding.btnPsychology.setOnClickListener { 
             startActivity(Intent(this, PsychologyChatActivity::class.java)) 

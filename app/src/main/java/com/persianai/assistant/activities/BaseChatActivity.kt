@@ -213,7 +213,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
                 true
             }
             R.id.action_voice_nav -> {
-                startActivity(Intent(this, VoiceNavigationAssistantActivity::class.java))
+                // startActivity(Intent(this, VoiceNavigationAssistantActivity::class.java))
                 true
             }
             R.id.action_psychology -> {
