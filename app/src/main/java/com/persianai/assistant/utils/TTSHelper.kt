@@ -5,6 +5,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.media.MediaPlayer
+import java.io.File
 import java.util.*
 import com.persianai.assistant.services.HaaniyeManager
 import com.persianai.assistant.config.RemoteAIConfigManager
