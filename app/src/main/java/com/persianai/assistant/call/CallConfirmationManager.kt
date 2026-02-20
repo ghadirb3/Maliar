@@ -68,7 +68,7 @@ class CallConfirmationManager(private val context: Context) {
         private var isActive = false
         
         fun start() {
-            isActive = true
+            this@CallSession.isActive = true
             job = scope.launch {
                 try {
                     // مرحله ۱: پرسش تأیید
@@ -86,18 +86,18 @@ class CallConfirmationManager(private val context: Context) {
                         ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
                     }
                 } finally {
-                    isActive = false
+                    this@CallSession.isActive = false
                 }
             }
         }
         
         fun cancel() {
-            isActive = false
+            this@CallSession.isActive = false
             job?.cancel()
         }
         
         private suspend fun askForConfirmation() {
-            if (!isActive) return
+            if (!this@CallSession.isActive) return
             
             val message = "با ${contact.name} تماس بگیرم؟"
             Log.d(TAG, "📢 پرسش تأیید: $message")
@@ -110,7 +110,7 @@ class CallConfirmationManager(private val context: Context) {
         }
         
         private suspend fun listenForResponse(): String {
-            if (!isActive) return ""
+            if (!this@CallSession.isActive) return ""
             
             delay(1000) // کمی صبر برای تمام شدن TTS
             
@@ -140,7 +140,7 @@ class CallConfirmationManager(private val context: Context) {
         }
         
         private suspend fun processResponse(response: String) {
-            if (!isActive) return
+            if (!this@CallSession.isActive) return
             
             Log.d(TAG, "📝 پاسخ کاربر: '$response'")
             
@@ -170,9 +170,14 @@ class CallConfirmationManager(private val context: Context) {
                 }
                 
                 else -> {
-                    Log.d(TAG, "❓ پاسخ نامفهوم - لغو تماس")
+                    Log.d(TAG, "❓ پاسخ نامشخص، تلاش مجدد")
                     scope.launch {
-                        ttsHelper.speakOnlineFirst("متوجه نشدم، تماس لغو شد")
+                        ttsHelper.speakOnlineFirst("لطفاً بله یا خیر بگویید")
+                    }
+                    delay(2000)
+                    if (this@CallSession.isActive) {
+                        val newResponse = listenForResponse()
+                        processResponse(newResponse)
                     }
                 }
             }
@@ -197,7 +202,7 @@ class CallConfirmationManager(private val context: Context) {
         }
         
         private fun showConfirmationOverlay() {
-            if (!isActive) return
+            if (!this@CallSession.isActive) return
             
             try {
                 Log.d(TAG, "📱 نمایش صفحه تأیید تماس")
