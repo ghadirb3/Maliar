@@ -31,10 +31,10 @@ class NavigationModule(context: Context) : BaseModule(context) {
 
         return try {
             // val i = Intent(context, VoiceNavigationAssistantActivity::class.java).apply {
-                putExtra("prefill_text", dest)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            // context.startActivity(i)
+//                putExtra("prefill_text", dest)
+//                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//            }
+//            context.startActivity(i)
 
             createResult(
                 text = if (dest.isBlank()) "🗺️ دستیار مسیریابی باز شد" else "🗺️ دستیار مسیریابی باز شد برای: $dest",

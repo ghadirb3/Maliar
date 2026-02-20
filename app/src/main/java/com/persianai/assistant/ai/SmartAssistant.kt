@@ -62,11 +62,11 @@ object SmartAssistant {
         }
         
         // val intent = Intent(context, NavigationActivity::class.java).apply {
-            putExtra("AI_DESTINATION", dest)
-            putExtra("AI_VOICE", true)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        // context.startActivity(intent)
+//                putExtra("AI_DESTINATION", dest)
+//                putExtra("AI_VOICE", true)
+//                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//            }
+//            context.startActivity(intent)
         
         return "🗺️ مسیریابی به $dest شروع شد"
     }

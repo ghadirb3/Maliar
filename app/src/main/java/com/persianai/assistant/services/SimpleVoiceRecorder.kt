@@ -58,7 +58,7 @@ class SimpleVoiceRecorder(private val context: Context) {
             mediaRecorder = null
             
             val duration = System.currentTimeMillis() - startTime
-            val result = RecordingResult(file, duration)
+            val result = RecordingResult(file, duration, startTime)
             
             Log.d(TAG, "Recording stopped: ${file.absolutePath}, duration: ${duration}ms")
             Result.success(result)
@@ -123,11 +123,3 @@ class SimpleVoiceRecorder(private val context: Context) {
         currentFile = null
     }
 }
-
-/**
- * نتیجه ضبط صدا
- */
-data class RecordingResult(
-    val file: File,
-    val duration: Long
-)

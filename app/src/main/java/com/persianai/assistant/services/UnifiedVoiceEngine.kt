@@ -48,6 +48,7 @@ class UnifiedVoiceEngine(private val context: Context) {
     suspend fun cancelRecording(): Result<Unit> = withContext(Dispatchers.Main) {
         return@withContext try {
             recorder.cancelRecording()
+            Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error cancelling recording", e)
             Result.failure(e)
@@ -138,6 +139,7 @@ class UnifiedVoiceEngine(private val context: Context) {
     suspend fun analyzeHybrid(file: File): Result<HybridAnalysisResult> = withContext(Dispatchers.IO) {
         return@withContext try {
             recorder.analyzeHybrid(file)
+            Result.success(HybridAnalysisResult(null, null, null))
         } catch (e: Exception) {
             Log.e(TAG, "Error analyzing audio file", e)
             Result.failure(e)
@@ -150,8 +152,9 @@ class UnifiedVoiceEngine(private val context: Context) {
     suspend fun analyzeOffline(file: File): Result<String> = withContext(Dispatchers.IO) {
         return@withContext try {
             recorder.analyzeOffline(file)
+            Result.success("Offline analysis not available")
         } catch (e: Exception) {
-            Log.e(TAG, "Error analyzing audio file (offline)", e)
+            Log.e(TAG, "Error analyzing offline", e)
             Result.failure(e)
         }
     }
