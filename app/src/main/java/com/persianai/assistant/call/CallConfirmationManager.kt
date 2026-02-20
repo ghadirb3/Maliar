@@ -122,10 +122,10 @@ class CallConfirmationManager(private val context: Context) {
                     val audioFile = createTempAudioFile()
                     val sttResult = onlineSTT.transcribeAudio(audioFile)
                     
-                    val response = if (sttResult.isSuccess) sttResult.text else ""
-                    Log.d(TAG, "✅ پاسخ شناسایی شد: $response")
+                    val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
+                    Log.d(TAG, "✅ پاسخ شناسایی شد: $transcribedText")
                     
-                    response
+                    transcribedText
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ خطا در شناسایی صدا", e)
                     ""

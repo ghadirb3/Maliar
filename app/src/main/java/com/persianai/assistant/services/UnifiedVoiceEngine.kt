@@ -139,7 +139,14 @@ class UnifiedVoiceEngine(private val context: Context) {
     suspend fun analyzeHybrid(file: File): Result<HybridAnalysisResult> = withContext(Dispatchers.IO) {
         return@withContext try {
             recorder.analyzeHybrid(file)
-            Result.success(HybridAnalysisResult(null, null, null))
+            val currentTime = System.currentTimeMillis()
+            Result.success(HybridAnalysisResult(
+                offlineText = null,
+                onlineText = null,
+                primaryText = "Hybrid analysis not available",
+                confidence = 0.0,
+                timestamp = currentTime
+            ))
         } catch (e: Exception) {
             Log.e(TAG, "Error analyzing audio file", e)
             Result.failure(e)
