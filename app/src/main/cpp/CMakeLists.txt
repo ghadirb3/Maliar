@@ -4,6 +4,9 @@ project(local_llama)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Add dummy library to force libc++_shared.so inclusion
+add_library(dummy SHARED dummy.cpp)
+
 # متغیر پیکربندی برای مسیر llama.cpp (می‌توانید در gradle.properties مقدار دهی کنید)
 set(LLAMA_CPP_DIR "$ENV{LLAMA_CPP_DIR}" CACHE PATH "Path to llama.cpp source")
 
