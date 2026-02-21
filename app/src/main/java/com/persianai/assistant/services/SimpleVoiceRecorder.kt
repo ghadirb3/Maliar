@@ -24,13 +24,15 @@ class SimpleVoiceRecorder(private val context: Context) {
             val outputDir = File(context.cacheDir, "audio_recordings")
             if (!outputDir.exists()) outputDir.mkdirs()
             
-            currentFile = File(outputDir, "recording_${System.currentTimeMillis()}.wav")
+            currentFile = File(outputDir, "recording_${System.currentTimeMillis()}.m4a")
             
-            // تنظیم MediaRecorder
+            // تنظیم MediaRecorder با فرمت صحیح M4A
             mediaRecorder = MediaRecorder().apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)     // ← فرمت MP4 (پشتیبانی شده)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)        // ← encoder AAC (کیفیت بالا)
+                setAudioEncodingBitRate(128000)                        // ← 128kbps bitrate
+                setAudioSamplingRate(44100)                           // ← 44.1kHz sampling rate
                 setOutputFile(currentFile?.absolutePath)
                 
                 prepare()
