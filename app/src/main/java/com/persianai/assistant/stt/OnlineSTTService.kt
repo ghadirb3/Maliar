@@ -23,11 +23,11 @@ class OnlineSTTService(private val context: Context) {
     
     private val TAG = "OnlineSTTService"
     
-    // HttpClient با تنظیمات کوتاه‌تر برای جلوگیری از انتظار طولانی
+    // HttpClient با تنظیمات خیلی کوتاه برای جلوگیری از انتظار طولانی
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)   // کاهش از ۱۲۰ به ۱۰ ثانیه
-        .readTimeout(20, TimeUnit.SECONDS)      // کاهش از ۱۲۰ به ۲۰ ثانیه
-        .writeTimeout(20, TimeUnit.SECONDS)     // کاهش از ۱۲۰ به ۲۰ ثانیه
+        .connectTimeout(5, TimeUnit.SECONDS)    // کاهش به ۵ ثانیه
+        .readTimeout(10, TimeUnit.SECONDS)       // کاهش به ۱۰ ثانیه
+        .writeTimeout(10, TimeUnit.SECONDS)      // کاهش به ۱۰ ثانیه
         .retryOnConnectionFailure(true)
         .build()
     
@@ -96,19 +96,16 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی providers برای STT: Liara → GapGPT → OpenAI
+     * اولویت‌بندی providers برای STT: GapGPT → Liara (فقط GapGPT و Liara موجود)
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val priority = mutableListOf<APIKey>()
         
-        // 1) Liara اول
-        apiKeys.filter { it.provider == AIProvider.LIARA }.forEach { priority.add(it) }
-        
-        // 2) GapGPT دوم
+        // 1) GapGPT اول (API key موجود و تست شده)
         apiKeys.filter { it.provider == AIProvider.GAPGPT }.forEach { priority.add(it) }
         
-        // 3) OpenAI سوم (fallback)
-        apiKeys.filter { it.provider == AIProvider.OPENAI }.forEach { priority.add(it) }
+        // 2) Liara دوم (بعد از اصلاح فرمت صدا)
+        apiKeys.filter { it.provider == AIProvider.LIARA }.forEach { priority.add(it) }
         
         Log.d(TAG, "STT Provider Priority: ${priority.map { it.provider }}")
         return priority
