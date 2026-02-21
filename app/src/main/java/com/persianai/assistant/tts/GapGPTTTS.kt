@@ -97,21 +97,21 @@ class GapGPTTTS(private val context: Context) {
     }
     
     /**
-     * دریافت API key از سیستم Ivira (همان سیستم سایر بخش‌های اپ)
+     * دریافت API key از PreferencesManager (همان سیستم STT و چت متنی)
      */
     private fun getGapGPTApiKey(): String {
         return try {
-            // استفاده از همان سیستم مدیریت کلیدهای Ivira
-            if (iviraManager.isIviraEnabled()) {
-                // دریافت کلید از IviraIntegrationManager
-                val iviraTokens = iviraManager.getIviraTokens()
-                // جستجو برای کلید GapGPT
-                iviraTokens.entries.find { 
-                    it.key.contains("gapgpt", ignoreCase = true) || 
-                    it.key.contains("tts", ignoreCase = true)
-                }?.value ?: ""
+            // استفاده از PreferencesManager که کلیدها را از لینک abrehamrahi بارگیری می‌کند
+            val apiKeys = prefsManager.getAPIKeys()
+            
+            // جستجو برای کلید GapGPT
+            val gapgptKey = apiKeys.find { it.provider == com.persianai.assistant.models.AIProvider.GAPGPT }
+            
+            if (gapgptKey != null && gapgptKey.isActive) {
+                Log.d(TAG, "✅ Found GapGPT API key")
+                gapgptKey.key
             } else {
-                Log.w(TAG, "⚠️ توکن‌های معتبر Ivira موجود نیست")
+                Log.w(TAG, "⚠️ No active GapGPT API key found")
                 ""
             }
         } catch (e: Exception) {

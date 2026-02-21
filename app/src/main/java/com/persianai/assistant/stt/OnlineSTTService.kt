@@ -96,32 +96,20 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی providers مانند AIClient
+     * اولویت‌بندی providers برای STT: GapGPT → OpenAI (Liara skipped - no STT endpoint)
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val priority = mutableListOf<APIKey>()
         
-        // اولویت اول: Liara (مانند چت آنلاین)
-        apiKeys.filter { it.provider == AIProvider.LIARA }.let { keys ->
-            if (keys.isNotEmpty()) {
-                priority.addAll(keys)
-            }
-        }
+        // GapGPT اولویت اول برای STT
+        apiKeys.filter { it.provider == AIProvider.GAPGPT }.forEach { priority.add(it) }
         
-        // اولویت دوم: GapGPT (مانند چت آنلاین)
-        apiKeys.filter { it.provider == AIProvider.GAPGPT }.let { keys ->
-            if (keys.isNotEmpty()) {
-                priority.addAll(keys)
-            }
-        }
+        // OpenAI به عنوان fallback
+        apiKeys.filter { it.provider == AIProvider.OPENAI }.forEach { priority.add(it) }
         
-        // اولویت سوم: OpenAI (اگر برای Whisper استفاده شود)
-        apiKeys.filter { it.provider == AIProvider.OPENAI }.let { keys ->
-            if (keys.isNotEmpty()) {
-                priority.addAll(keys)
-            }
-        }
+        // Liara را نادیده می‌گیریم چون endpoint STT جداگانه ندارد
         
+        Log.d(TAG, "STT Provider Priority: ${priority.map { it.provider }}")
         return priority
     }
     
@@ -130,54 +118,10 @@ class OnlineSTTService(private val context: Context) {
      */
     private suspend fun transcribeWithProvider(audioFile: File, apiKey: APIKey): STTResult {
         return when (apiKey.provider) {
-            AIProvider.LIARA -> transcribeWithLiara(audioFile, apiKey.key)
+            // Liara doesn't have dedicated STT endpoint - skip to next provider
             AIProvider.GAPGPT -> transcribeWithGapGPT(audioFile, apiKey.key)
             AIProvider.OPENAI -> transcribeWithOpenAI(audioFile, apiKey.key)
             else -> STTResult.error("Provider ${apiKey.provider} not supported for STT")
-        }
-    }
-    
-    /**
-     * STT با استفاده از Liara (google/gemini-2.0-flash-001)
-     */
-    private suspend fun transcribeWithLiara(audioFile: File, apiKey: String): STTResult {
-        
-        // تبدیل فایل صوتی به base64
-        val audioBase64 = audioFile.readBytes().let { 
-            android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP)
-        }
-        
-        val requestBody = JSONObject().apply {
-            put("model", "google/gemini-2.0-flash-001")
-            put("audio", audioBase64)
-            put("language", "fa")
-        }.toString().toRequestBody("application/json".toMediaType())
-        
-        val request = Request.Builder()
-            .url("https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1/audio/transcriptions")
-            .addHeader("Authorization", "Bearer $apiKey")
-            .addHeader("Content-Type", "application/json")
-            .post(requestBody)
-            .build()
-        
-        return try {
-            val response = httpClient.newCall(request).execute()
-            val responseBody = response.body?.string() ?: ""
-            
-            if (response.isSuccessful) {
-                val json = JSONObject(responseBody)
-                val text = json.optString("text", "")
-                if (text.isNotBlank()) {
-                    STTResult.success(text)
-                } else {
-                    STTResult.error("Empty response from Liara")
-                }
-            } else {
-                STTResult.error("Liara API error: ${response.code}")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Liara STT error", e)
-            STTResult.error("Liara STT failed: ${e.message}")
         }
     }
     
