@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import java.io.File
 
 class VoiceActionButton @JvmOverloads constructor(
@@ -39,6 +40,7 @@ class VoiceActionButton @JvmOverloads constructor(
     }
 
     private var isListening = false
+    private var isAutoStopEnabled = true // VAD auto-stop for chat activities
     private var btn: MaterialButton
     private var listener: Listener? = null
     private val TAG = "VoiceActionButton"
@@ -89,9 +91,33 @@ class VoiceActionButton @JvmOverloads constructor(
                 }
 
                 isListening = true
-                btn.text = "⏹️ توقف"
+                btn.text = "🎤 ضبط می‌شود..."
                 listener?.onRecordingStarted()
-                Log.d(TAG, "✅ UnifiedVoiceEngine recording")
+                Log.d(TAG, "✅ UnifiedVoiceEngine recording with VAD auto-stop")
+                
+                // VAD-based auto-stop for chat activities
+                if (isAutoStopEnabled) {
+                    val result = recordWithVad()
+                    if (result != null) {
+                        isListening = false
+                        btn.text = "🎤 صحبت کن"
+                        listener?.onRecordingCompleted(result.file, result.duration)
+                        
+                        // Use OnlineSTTService with Liara priority and GapGPT fallback
+                        val sttResult = onlineSTT.transcribeAudio(result.file)
+                        
+                        if (sttResult.isSuccess && sttResult.text.isNotBlank()) {
+                            listener?.onTranscript(sttResult.text)
+                        } else {
+                            val err = sttResult.error ?: "متنی دریافت نشد"
+                            listener?.onRecordingError(err)
+                        }
+                    } else {
+                        isListening = false
+                        btn.text = "🎤 صحبت کن"
+                        listener?.onRecordingError("ضبط لغو شد یا چیزی شنیده نشد")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception starting recording", e)
                 isListening = false
@@ -136,4 +162,52 @@ class VoiceActionButton @JvmOverloads constructor(
             }
         }
     }
- }
+
+    /**
+     * Record with Voice Activity Detection (VAD) - auto-stop on silence
+     */
+    private suspend fun recordWithVad(): com.persianai.assistant.services.RecordingResult? = withContext(Dispatchers.IO) {
+        return@withContext try {
+            if (!engine.hasRequiredPermissions()) return@withContext null
+
+            val startTime = System.currentTimeMillis()
+            var hasSpeech = false
+            var lastSpeechTime = 0L
+            val maxTotalMs = 10_000L
+            val maxWaitForSpeechMs = 4_000L
+            val silenceStopMs = 1_200L
+            val threshold = 900
+
+            // Wait for speech or timeout
+            while (engine.isRecordingInProgress()) {
+                val now = System.currentTimeMillis()
+                val amp = engine.getCurrentAmplitude()
+                if (amp > threshold) {
+                    hasSpeech = true
+                    lastSpeechTime = now
+                }
+
+                val total = now - startTime
+                if (!hasSpeech && total > maxWaitForSpeechMs) break
+                if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) break
+                if (total > maxTotalMs) break
+
+                delay(120)
+            }
+
+            val stop = engine.stopRecording()
+            stop.getOrNull()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in VAD recording", e)
+            try { engine.cancelRecording() } catch (_: Exception) {}
+            null
+        }
+    }
+
+    /**
+     * Enable/disable VAD auto-stop (for manual control if needed)
+     */
+    fun setAutoStopEnabled(enabled: Boolean) {
+        isAutoStopEnabled = enabled
+    }
+}

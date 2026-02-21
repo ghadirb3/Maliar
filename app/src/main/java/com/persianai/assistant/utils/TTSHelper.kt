@@ -100,7 +100,7 @@ class TTSHelper(private val context: Context) {
             when (provider.lowercase()) {
                 "gapgpt" -> {
                     try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT...")
+                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT gpt-4o-mini-tts...")
                         val audioFile = gapgptTTS.synthesizeSpeech(cleanText)
                         if (audioFile != null && audioFile.exists()) {
                             // پخش فایل صوتی
@@ -112,9 +112,23 @@ class TTSHelper(private val context: Context) {
                         Log.w(TAG, "GapGPT TTS failed: ${e.message}")
                     }
                 }
-                "openai", "liara" -> {
-                    // TODO: Implement online TTS calls for these providers
-                    Log.d(TAG, "Online TTS provider $provider not yet implemented, skipping")
+                "liara" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با Liara...")
+                        // TODO: Implement Liara TTS call
+                        Log.d(TAG, "Liara TTS not yet implemented, skipping")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Liara TTS failed: ${e.message}")
+                    }
+                }
+                "openai" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با OpenAI...")
+                        // TODO: Implement OpenAI TTS call
+                        Log.d(TAG, "OpenAI TTS not yet implemented, skipping")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "OpenAI TTS failed: ${e.message}")
+                    }
                 }
                 // Skip "haaniye" and "android" here; they will be tried as fallbacks
             }

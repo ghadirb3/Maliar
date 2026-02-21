@@ -545,6 +545,14 @@ abstract class BaseChatActivity : AppCompatActivity() {
                         addMessage(ChatMessage(role = MessageRole.ASSISTANT, content = reply, isError = !result.success))
                         lastText.text = "دستیار: ${reply.take(300)}"
 
+                        // TTS playback with GapGPT -> Haaniye priority
+                        statusText.text = "🔊 در حال پخش پاسخ..."
+                        try {
+                            ttsHelper.speakOnlineFirst(reply)
+                        } catch (e: Exception) {
+                            android.util.Log.w("BaseChatActivity", "TTS playback failed: ${e.message}")
+                        }
+
                         statusText.text = "🎤 دوباره گوش می‌دم..."
                         kotlinx.coroutines.delay(500)
                     } catch (e: Exception) {

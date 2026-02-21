@@ -48,8 +48,8 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
             AIModel.CLAUDE_SONNET,
             AIModel.AIML_GPT_35
         )
-        private val FALLBACK_STT_PRIORITY = listOf("gapgpt", "liara", "openai")
-        private val FALLBACK_TTS_PRIORITY = listOf("haaniye", "android")
+        private val FALLBACK_STT_PRIORITY = listOf("liara", "gapgpt", "openai")
+        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "haaniye", "android")
     }
 
     data class RemoteAIConfig(

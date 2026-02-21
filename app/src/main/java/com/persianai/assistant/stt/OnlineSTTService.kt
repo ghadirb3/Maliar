@@ -5,6 +5,7 @@ import android.util.Log
 import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.AIProvider
+import com.persianai.assistant.utils.PreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
@@ -31,6 +32,7 @@ class OnlineSTTService(private val context: Context) {
         .build()
     
     private val iviraManager = IviraIntegrationManager(context)
+    private val prefsManager = PreferencesManager(context)
     
     /**
      * تبدیل گفتار به متن با معماری مشابه AIClient چت آنلاین
@@ -70,51 +72,23 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * دریافت API Keys برای STT از Ivira مانند AIClient
+     * دریافت API Keys برای STT از PreferencesManager (همان سیستم چت آنلاین)
      */
     private fun getSTTApiKeys(): List<APIKey> {
         return try {
-            if (!iviraManager.isIviraEnabled()) {
-                return emptyList()
-            }
+            // استفاده از PreferencesManager که کلیدها را از لینک abrehamrahi بارگیری می‌کند
+            val apiKeys = prefsManager.getAPIKeys()
             
-            val tokens = iviraManager.getIviraTokens()
-            val apiKeys = mutableListOf<APIKey>()
+            // فیلتر فقط provider های STT معتبر
+            val sttKeys = apiKeys.filter { it.provider in setOf(
+                AIProvider.LIARA,
+                AIProvider.GAPGPT,
+                AIProvider.OPENAI
+            ) }
             
-            // Liara API Keys
-            tokens.entries.filter { 
-                it.key.contains("liara", ignoreCase = true) 
-            }.forEach { (_, key) ->
-                apiKeys.add(APIKey(
-                    provider = AIProvider.LIARA,
-                    key = key,
-                    isActive = true
-                ))
-            }
+            Log.d(TAG, "✅ Found ${sttKeys.size} STT API keys: ${sttKeys.map { it.provider }}")
+            return sttKeys
             
-            // GapGPT API Keys
-            tokens.entries.filter { 
-                it.key.contains("gapgpt", ignoreCase = true) 
-            }.forEach { (_, key) ->
-                apiKeys.add(APIKey(
-                    provider = AIProvider.GAPGPT,
-                    key = key,
-                    isActive = true
-                ))
-            }
-            
-            // OpenAI API Keys (برای Whisper)
-            tokens.entries.filter { 
-                it.key.contains("openai", ignoreCase = true) 
-            }.forEach { (_, key) ->
-                apiKeys.add(APIKey(
-                    provider = AIProvider.OPENAI,
-                    key = key,
-                    isActive = true
-                ))
-            }
-            
-            apiKeys
         } catch (e: Exception) {
             Log.e(TAG, "Error getting STT API keys", e)
             emptyList()
@@ -180,7 +154,7 @@ class OnlineSTTService(private val context: Context) {
         }.toString().toRequestBody("application/json".toMediaType())
         
         val request = Request.Builder()
-            .url("https://api.liara.ir/v1/audio/speech-to-text")
+            .url("https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1/audio/transcriptions")
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Content-Type", "application/json")
             .post(requestBody)
