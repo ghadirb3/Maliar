@@ -240,12 +240,12 @@ class OnlineSTTService(private val context: Context) {
             
             if (response.isSuccessful) {
                 val json = JSONObject(responseBody)
-                val text = json.optJSONObject("choices")
+                val text = json.optJSONArray("choices")
                     ?.optJSONObject(0)
                     ?.optJSONObject("message")
                     ?.optString("content", "")
                 
-                return if (text.isNotBlank()) {
+                return if (!text.isNullOrBlank()) {
                     STTResult.success(text)
                 } else {
                     STTResult.error("Empty response from Liara")
