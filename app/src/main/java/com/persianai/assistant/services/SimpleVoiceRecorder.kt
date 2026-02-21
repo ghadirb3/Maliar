@@ -24,7 +24,7 @@ class SimpleVoiceRecorder(private val context: Context) {
             val outputDir = File(context.cacheDir, "audio_recordings")
             if (!outputDir.exists()) outputDir.mkdirs()
             
-            currentFile = File(outputDir, "recording_${System.currentTimeMillis()}.mp3")
+            currentFile = File(outputDir, "recording_${System.currentTimeMillis()}.m4a")
             
             // تنظیم MediaRecorder با فرمت MP3 (همانند مستندات GapGPT)
             mediaRecorder = MediaRecorder().apply {

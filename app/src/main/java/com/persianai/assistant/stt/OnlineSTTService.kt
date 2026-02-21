@@ -30,6 +30,12 @@ class OnlineSTTService(private val context: Context) {
         .writeTimeout(10, TimeUnit.SECONDS)      // کاهش به ۱۰ ثانیه
         .retryOnConnectionFailure(true)
         .build()
+
+    private val gapgptHttpClient = OkHttpClient.Builder()
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .protocols(listOf(Protocol.HTTP_1_1))
+        .build()
     
     private val iviraManager = IviraIntegrationManager(context)
     private val prefsManager = PreferencesManager(context)
@@ -140,6 +146,7 @@ class OnlineSTTService(private val context: Context) {
         
         // تابع داخلی برای ساختن درخواست با مدل دلخواه
         fun buildRequest(modelName: String): Request {
+            Log.d(TAG, "GapGPT STT request: file=${audioFile.name} bytes=${audioBytes.size} contentType=$contentType model=$modelName")
             val multipartBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("model", modelName)          // ← اینجا مدل را می‌فرستیم
@@ -157,7 +164,7 @@ class OnlineSTTService(private val context: Context) {
         // تلاش دوم: whisper-1 (اگر 504 بود)
         return try {
             var request = buildRequest("gapgpt/whisper-1")
-            var response = httpClient.newCall(request).execute()
+            var response = gapgptHttpClient.newCall(request).execute()
             var responseBody = response.body?.string() ?: ""
             
             if (response.isSuccessful) {
@@ -172,10 +179,9 @@ class OnlineSTTService(private val context: Context) {
             
             // اگر خطای 504 بود، با whisper-1 دوباره امتحان کن
             if (response.code == 504) {
-                Log.w(TAG, "GapGPT 504 with gapgpt/whisper-1, retrying with whisper-1")
-                
+                Log.w(TAG, "GapGPT returned 504, retrying with whisper-1")
                 request = buildRequest("whisper-1")
-                response = httpClient.newCall(request).execute()
+                response = gapgptHttpClient.newCall(request).execute()
                 responseBody = response.body?.string() ?: ""
                 
                 if (response.isSuccessful) {
