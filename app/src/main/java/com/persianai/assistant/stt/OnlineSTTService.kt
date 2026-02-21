@@ -31,11 +31,14 @@ class OnlineSTTService(private val context: Context) {
         .retryOnConnectionFailure(true)
         .build()
 
-    private val gapgptHttpClient = OkHttpClient.Builder()
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+    private val gapgptHttpClient = httpClient.newBuilder()
+        .callTimeout(60, TimeUnit.SECONDS)   // کل timeout درخواست
+        .readTimeout(60, TimeUnit.SECONDS)   // برای خواندن بدنه بزرگ
+        .writeTimeout(60, TimeUnit.SECONDS)  // برای آپلود فایل
         .protocols(listOf(Protocol.HTTP_1_1))
         .build()
+    
+    private var gapgptProbed = false
     
     private val iviraManager = IviraIntegrationManager(context)
     private val prefsManager = PreferencesManager(context)
@@ -130,9 +133,48 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
+     * تست اتصال به GapGPT با GET /v1/models (برای تشخیص مشکل شبکه vs endpoint)
+     */
+    private suspend fun probeGapGPTConnectivity(apiKey: String) {
+        try {
+            Log.d(TAG, "🔍 Probing GapGPT connectivity with /v1/models")
+            val request = Request.Builder()
+                .url("https://api.gapgpt.app/v1/models")
+                .addHeader("Authorization", "Bearer $apiKey")
+                .get()
+                .build()
+            
+            val response = gapgptHttpClient.newCall(request).execute()
+            val body = response.body?.string() ?: ""
+            
+            if (response.isSuccessful) {
+                Log.d(TAG, "✅ GapGPT connectivity OK: models endpoint succeeded (${response.code})")
+                // لاگ تعداد مدل‌ها برای اطمینان
+                try {
+                    val json = JSONObject(body)
+                    val data = json.optJSONArray("data")
+                    Log.d(TAG, "📊 GapGPT models count: ${data?.length() ?: 0}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not parse models response", e)
+                }
+            } else {
+                Log.w(TAG, "⚠️ GapGPT connectivity issue: models endpoint failed (${response.code}) $body")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ GapGPT connectivity probe failed", e)
+        }
+    }
+    
+    /**
      * STT با استفاده از GapGPT (gapgpt/whisper-1 -> whisper-1 on 504)
      */
     private suspend fun transcribeWithGapGPT(audioFile: File, apiKey: String): STTResult {
+        // Probe اتصال GapGPT (فقط یک بار)
+        if (!gapgptProbed) {
+            probeGapGPTConnectivity(apiKey)
+            gapgptProbed = true
+        }
+        
         // تبدیل فایل صوتی به multipart form
         val audioBytes = audioFile.readBytes()
         val contentType = when {
