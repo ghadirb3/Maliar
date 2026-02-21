@@ -271,7 +271,7 @@ class OnlineSTTService(private val context: Context) {
                                 put("type", "input_audio")
                                 put("input_audio", JSONObject().apply {
                                     put("data", audioBase64)
-                                    put("format", "wav")
+                                    put("format", "m4a")
                                 })
                             }
                         ))
