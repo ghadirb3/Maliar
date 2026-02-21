@@ -23,12 +23,12 @@ class OnlineSTTService(private val context: Context) {
     
     private val TAG = "OnlineSTTService"
     
-    // HttpClient با تنظیمات مشابه AIClient چت آنلاین
+    // HttpClient با تنظیمات کوتاه‌تر برای جلوگیری از انتظار طولانی
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(120, TimeUnit.SECONDS)  // مانند AIClient
-        .readTimeout(120, TimeUnit.SECONDS)     // مانند AIClient
-        .writeTimeout(120, TimeUnit.SECONDS)    // مانند AIClient
-        .retryOnConnectionFailure(true)         // مانند AIClient
+        .connectTimeout(10, TimeUnit.SECONDS)   // کاهش از ۱۲۰ به ۱۰ ثانیه
+        .readTimeout(20, TimeUnit.SECONDS)      // کاهش از ۱۲۰ به ۲۰ ثانیه
+        .writeTimeout(20, TimeUnit.SECONDS)     // کاهش از ۱۲۰ به ۲۰ ثانیه
+        .retryOnConnectionFailure(true)
         .build()
     
     private val iviraManager = IviraIntegrationManager(context)
@@ -96,18 +96,19 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی providers برای STT: GapGPT → OpenAI (Liara skipped - no STT endpoint)
+     * اولویت‌بندی providers برای STT: Liara → GapGPT → OpenAI
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val priority = mutableListOf<APIKey>()
         
-        // GapGPT اولویت اول برای STT
+        // 1) Liara اول
+        apiKeys.filter { it.provider == AIProvider.LIARA }.forEach { priority.add(it) }
+        
+        // 2) GapGPT دوم
         apiKeys.filter { it.provider == AIProvider.GAPGPT }.forEach { priority.add(it) }
         
-        // OpenAI به عنوان fallback
+        // 3) OpenAI سوم (fallback)
         apiKeys.filter { it.provider == AIProvider.OPENAI }.forEach { priority.add(it) }
-        
-        // Liara را نادیده می‌گیریم چون endpoint STT جداگانه ندارد
         
         Log.d(TAG, "STT Provider Priority: ${priority.map { it.provider }}")
         return priority
@@ -118,7 +119,7 @@ class OnlineSTTService(private val context: Context) {
      */
     private suspend fun transcribeWithProvider(audioFile: File, apiKey: APIKey): STTResult {
         return when (apiKey.provider) {
-            // Liara doesn't have dedicated STT endpoint - skip to next provider
+            AIProvider.LIARA -> transcribeWithLiara(audioFile, apiKey.key)
             AIProvider.GAPGPT -> transcribeWithGapGPT(audioFile, apiKey.key)
             AIProvider.OPENAI -> transcribeWithOpenAI(audioFile, apiKey.key)
             else -> STTResult.error("Provider ${apiKey.provider} not supported for STT")
@@ -126,46 +127,135 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * STT با استفاده از GapGPT (gapgpt/whisper-1)
+     * STT با استفاده از GapGPT (gapgpt/whisper-1 -> whisper-1 on 504)
      */
     private suspend fun transcribeWithGapGPT(audioFile: File, apiKey: String): STTResult {
-        
         // تبدیل فایل صوتی به multipart form
         val audioBytes = audioFile.readBytes()
         val audioRequestBody = audioBytes
             .toRequestBody("audio/wav".toMediaType(), 0, audioBytes.size)
         
-        val multipartBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("model", "gapgpt/whisper-1")
-            .addFormDataPart("language", "fa")
-            .addFormDataPart("file", audioFile.name, audioRequestBody)
-            .build()
+        // تابع داخلی برای ساختن درخواست با مدل دلخواه
+        fun buildRequest(modelName: String): Request {
+            val multipartBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("model", modelName)          // ← اینجا مدل را می‌فرستیم
+                .addFormDataPart("file", audioFile.name, audioRequestBody)
+                .build()
+            
+            return Request.Builder()
+                .url("https://api.gapgpt.app/v1/audio/transcriptions")
+                .addHeader("Authorization", "Bearer $apiKey")
+                .post(multipartBody)
+                .build()
+        }
         
-        val request = Request.Builder()
-            .url("https://api.gapgpt.app/v1/audio/transcriptions")
-            .addHeader("Authorization", "Bearer $apiKey")
-            .post(multipartBody)
-            .build()
-        
+        // تلاش اول: gapgpt/whisper-1
+        // تلاش دوم: whisper-1 (اگر 504 بود)
         return try {
+            var request = buildRequest("gapgpt/whisper-1")
+            var response = httpClient.newCall(request).execute()
+            var responseBody = response.body?.string() ?: ""
+            
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                val text = json.optString("text", "")
+                return if (text.isNotBlank()) {
+                    STTResult.success(text)
+                } else {
+                    STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
+                }
+            }
+            
+            // اگر خطای 504 بود، با whisper-1 دوباره امتحان کن
+            if (response.code == 504) {
+                Log.w(TAG, "GapGPT 504 with gapgpt/whisper-1, retrying with whisper-1")
+                
+                request = buildRequest("whisper-1")
+                response = httpClient.newCall(request).execute()
+                responseBody = response.body?.string() ?: ""
+                
+                if (response.isSuccessful) {
+                    val json = JSONObject(responseBody)
+                    val text = json.optString("text", "")
+                    return if (text.isNotBlank()) {
+                        STTResult.success(text)
+                    } else {
+                        STTResult.error("Empty response from GapGPT (whisper-1)")
+                    }
+                }
+                
+                return STTResult.error("GapGPT API error after retry: ${response.code}")
+            }
+            
+            // سایر خطاها
+            STTResult.error("GapGPT API error: ${response.code}")
+        } catch (e: Exception) {
+            Log.e(TAG, "GapGPT STT error", e)
+            STTResult.error("GapGPT STT failed: ${e.message}")
+        }
+    }
+    
+    /**
+     * STT با استفاده از Liara (google/gemini-2.0-flash-001) via chat completions
+     */
+    private suspend fun transcribeWithLiara(audioFile: File, apiKey: String): STTResult {
+        return try {
+            // تبدیل فایل صوتی به base64
+            val audioBytes = audioFile.readBytes()
+            val audioBase64 = android.util.Base64.encodeToString(audioBytes, android.util.Base64.NO_WRAP)
+            
+            // ساخت درخواست مطابق مستند لیارا
+            val requestBody = JSONObject().apply {
+                put("model", "google/gemini-2.0-flash-001")
+                put("messages", listOf(
+                    JSONObject().apply {
+                        put("role", "user")
+                        put("content", listOf(
+                            JSONObject().apply {
+                                put("type", "text")
+                                put("text", "What is the audio saying? Please transcribe the audio content in Persian.")
+                            },
+                            JSONObject().apply {
+                                put("type", "input_audio")
+                                put("input_audio", JSONObject().apply {
+                                    put("data", audioBase64)
+                                    put("format", "wav")
+                                })
+                            }
+                        ))
+                    }
+                ))
+            }.toString().toRequestBody("application/json".toMediaType())
+            
+            val request = Request.Builder()
+                .url("https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1/chat/completions")
+                .addHeader("Authorization", "Bearer $apiKey")
+                .addHeader("Content-Type", "application/json")
+                .post(requestBody)
+                .build()
+            
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
             
             if (response.isSuccessful) {
                 val json = JSONObject(responseBody)
-                val text = json.optString("text", "")
-                if (text.isNotBlank()) {
+                val text = json.optJSONObject("choices")
+                    ?.optJSONObject(0)
+                    ?.optJSONObject("message")
+                    ?.optString("content", "")
+                
+                return if (text.isNotBlank()) {
                     STTResult.success(text)
                 } else {
-                    STTResult.error("Empty response from GapGPT")
+                    STTResult.error("Empty response from Liara")
                 }
             } else {
-                STTResult.error("GapGPT API error: ${response.code}")
+                STTResult.error("Liara API error: ${response.code}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "GapGPT STT error", e)
-            STTResult.error("GapGPT STT failed: ${e.message}")
+            Log.e(TAG, "Liara STT error", e)
+            STTResult.error("Liara STT failed: ${e.message}")
         }
     }
     
