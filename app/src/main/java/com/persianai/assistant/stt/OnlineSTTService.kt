@@ -129,8 +129,14 @@ class OnlineSTTService(private val context: Context) {
     private suspend fun transcribeWithGapGPT(audioFile: File, apiKey: String): STTResult {
         // تبدیل فایل صوتی به multipart form
         val audioBytes = audioFile.readBytes()
+        val contentType = when {
+            audioFile.name.endsWith(".mp3") -> "audio/mpeg"
+            audioFile.name.endsWith(".wav") -> "audio/wav"
+            audioFile.name.endsWith(".m4a") -> "audio/mp4"
+            else -> "audio/wav"  // fallback
+        }
         val audioRequestBody = audioBytes
-            .toRequestBody("audio/wav".toMediaType(), 0, audioBytes.size)
+            .toRequestBody(contentType.toMediaType(), 0, audioBytes.size)
         
         // تابع داخلی برای ساختن درخواست با مدل دلخواه
         fun buildRequest(modelName: String): Request {
