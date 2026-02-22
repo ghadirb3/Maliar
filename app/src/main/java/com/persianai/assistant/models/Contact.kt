@@ -58,24 +58,27 @@ data class Contact(
         val cleanQuery = query.lowercase().trim()
         val cleanName = name.lowercase()
         
-        // تطابق کامل نام
+        // تطابق کامل نام - بالاترین اولویت
         if (cleanName == cleanQuery) return 1.0f
         
         // تطابق کامل شماره
         val cleanNumber = phoneNumber.replace("[^0-9]".toRegex(), "")
         val cleanQueryNumber = query.replace("[^0-9]".toRegex(), "")
-        if (cleanNumber == cleanQueryNumber) return 0.9f
+        if (cleanNumber == cleanQueryNumber) return 0.95f
         
-        // تطابق جزئی نام
+        // تطابق کامل نام با حذف فاصله‌های اضافی
+        if (cleanName.replace("\\s+".toRegex(), "") == cleanQuery.replace("\\s+".toRegex(), "")) return 0.9f
+        
+        // تطابق جزئی نام - امتیاز کمتر
         if (cleanName.contains(cleanQuery)) {
             val ratio = cleanQuery.length.toFloat() / cleanName.length
-            return 0.5f + ratio * 0.3f
+            return 0.6f + ratio * 0.2f
         }
         
         // تطابق جزئی شماره
         if (cleanNumber.contains(cleanQueryNumber) && cleanQueryNumber.isNotEmpty()) {
             val ratio = cleanQueryNumber.length.toFloat() / cleanNumber.length
-            return 0.4f + ratio * 0.3f
+            return 0.5f + ratio * 0.2f
         }
         
         return 0f

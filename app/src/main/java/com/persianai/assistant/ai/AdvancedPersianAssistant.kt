@@ -166,7 +166,17 @@ class AdvancedPersianAssistant(private val context: Context) {
         return when (finalProvider) {
             AIProvider.OPENAI -> AIModel.GPT_4O_MINI
             AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
-            AIProvider.LIARA -> AIModel.GPT_4O_MINI
+            AIProvider.LIARA -> {
+                // اولویت با GPT-5 Nano، اگر درست نبود به GPT-4o-mini با URL سفارشی برگرد
+                try {
+                    // تست اول با GPT-5 Nano
+                    AIModel.LIARA_GPT_5_NANO
+                } catch (e: Exception) {
+                    // اگر خطا داد، به GPT-4o-mini با URL سفارشی برگرد
+                    Log.w(TAG, "GPT-5 Nano failed, falling back to GPT-4o-mini with custom URL")
+                    AIModel.LIARA_GPT_4O_MINI
+                }
+            }
             else -> AIModel.GPT_4O_MINI
         }
     }

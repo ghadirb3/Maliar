@@ -49,9 +49,10 @@ class VoiceCommandReceiver : BroadcastReceiver() {
             return
         }
         
-        // Check RECORD_AUDIO permission for future voice commands
-        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            // Request microphone permission via VoicePermissionActivity trampoline
+        // Check RECORD_AUDIO and READ_CONTACTS permissions for voice commands
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED ||
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            // Request microphone and contacts permissions via VoicePermissionActivity trampoline
             val permIntent = Intent(context, com.persianai.assistant.activities.VoicePermissionActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 putExtra("extra_mode", mode)
@@ -60,7 +61,15 @@ class VoiceCommandReceiver : BroadcastReceiver() {
             }
             context.startActivity(permIntent)
             
-            showErrorNotification(context, "برای دستورات صوتی، اجازه دسترسی به میکروفون را بدهید", notificationId)
+            val missingPerms = mutableListOf<String>()
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                missingPerms.add("میکروفون")
+            }
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                missingPerms.add("مخاطبین")
+            }
+            
+            showErrorNotification(context, "برای دستورات صوتی، اجازه دسترسی به ${missingPerms.joinToString(" و ")} را بدهید", notificationId)
             return
         }
         

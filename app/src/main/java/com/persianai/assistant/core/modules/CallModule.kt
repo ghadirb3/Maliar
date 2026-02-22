@@ -8,6 +8,7 @@ import com.persianai.assistant.core.intent.AIIntent
 import com.persianai.assistant.core.intent.CallSmartIntent
 import com.persianai.assistant.call.CallIntentProcessor
 import com.persianai.assistant.call.CallConfirmationManager
+import com.persianai.assistant.call.CallContactSelectionDialogue
 import com.persianai.assistant.activities.CallConfirmationActivity
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
@@ -59,7 +60,12 @@ class CallModule(context: Context) : BaseModule(context) {
                     )
                 }
                 is CallIntentProcessor.CallIntentResult.MultipleContacts -> {
-                    // مکالمه صوتی برای انتخاب مخاطب
+                    // شروع مکالمه صوتی برای انتخاب مخاطب
+                    val dialogueManager = CallContactSelectionDialogue(context, result.contacts)
+                    scope.launch {
+                        dialogueManager.startSelectionDialogue()
+                    }
+                    
                     val contactsText = result.contacts.take(3).joinToString("، ") { it.name }
                     val contactsWithNumbers = result.contacts.take(3).joinToString("\n") { 
                         "• ${it.name} (${it.phoneNumber})" 

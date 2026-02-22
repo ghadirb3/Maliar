@@ -135,25 +135,17 @@ class CallIntentProcessor(private val context: Context) {
     
     /**
      * پاکسازی نام مخاطب از کلمات اضافی
+     * فقط کلمات پرت را حذف می‌کند، روابط را حفظ می‌کند
      */
     private fun cleanupContactName(name: String): String {
         return name
-            .replace("همسر", "").trim()
-            .replace("مادر", "").trim()
-            .replace("پدر", "").trim()
-            .replace("برادر", "").trim()
-            .replace("خواهر", "").trim()
-            .replace("دوست", "").trim()
-            .replace("همکار", "").trim()
-            .replace("مدیر", "").trim()
-            .replace("رئیس", "").trim()
-            .replace("دکتر", "").trim()
-            .replace("مهندس", "").trim()
-            .replace("استاد", "").trim()
             .replace("آقای", "").trim()
             .replace("خانم", "").trim()
             .replace("جناب", "").trim()
             .replace("سرکار", "").trim()
+            .replace("دکتر", "").trim()
+            .replace("مهندس", "").trim()
+            .replace("استاد", "").trim()
             .trim()
     }
     

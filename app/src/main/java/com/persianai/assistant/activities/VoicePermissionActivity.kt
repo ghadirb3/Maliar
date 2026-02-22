@@ -13,15 +13,19 @@ class VoicePermissionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // درخواست مجوز میکروفن
-        requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        // درخواست مجوز میکروفن و مخاطبین
+        requestPermissionLauncher.launch(arrayOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_CONTACTS
+        ))
     }
 
     private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            Toast.makeText(this, "✅ مجوز میکروفون داده شد", Toast.LENGTH_SHORT).show()
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.entries.all { it.value }
+        if (allGranted) {
+            Toast.makeText(this, "✅ مجوزهای میکروفون و مخاطبین داده شد", Toast.LENGTH_SHORT).show()
 
             // بعد از گرفتن مجوز، همان فرمان را دوباره اجرا کن
             val mode = intent.getStringExtra("extra_mode") ?: ""
@@ -38,9 +42,10 @@ class VoicePermissionActivity : AppCompatActivity() {
                 sendBroadcast(runIntent)
             }
         } else {
+            val missingPermissions = permissions.filter { !it.value }.keys.joinToString(", ")
             Toast.makeText(
                 this,
-                "❌ برای ضبط صدا به مجوز میکروفون نیاز است",
+                "❌ مجوزهای لازم داده نشد: $missingPermissions",
                 Toast.LENGTH_LONG
             ).show()
         }

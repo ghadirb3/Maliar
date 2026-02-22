@@ -100,16 +100,28 @@ class TTSHelper(private val context: Context) {
             when (provider.lowercase()) {
                 "gapgpt" -> {
                     try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT gpt-4o-mini-tts...")
+                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT gpt-4o-mini-tts (آنلاین)...")
                         val audioFile = gapgptTTS.synthesizeSpeech(cleanText)
                         if (audioFile != null && audioFile.exists()) {
                             // پخش فایل صوتی
                             playAudioFile(audioFile)
-                            Log.d(TAG, "✅ TTS با موفقیت از GapGPT اجرا شد")
+                            Log.d(TAG, "✅ TTS با موفقیت از GapGPT (آنلاین) اجرا شد")
                             return@withContext
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "GapGPT TTS failed: ${e.message}")
+                    }
+                }
+                "local" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
+                        val success = haaniyeTTS.speak(cleanText)
+                        if (success) {
+                            Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
+                            return@withContext
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Haaniye TTS failed: ${e.message}")
                     }
                 }
                 "liara" -> {
