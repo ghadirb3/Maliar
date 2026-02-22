@@ -13,9 +13,11 @@ import com.persianai.assistant.activities.CallConfirmationActivity
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class CallModule(context: Context) : BaseModule(context) {
     override val moduleName: String = "Call"
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override suspend fun canHandle(intent: AIIntent): Boolean {
         return intent is CallSmartIntent

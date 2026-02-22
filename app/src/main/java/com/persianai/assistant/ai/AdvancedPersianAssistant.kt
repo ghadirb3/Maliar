@@ -26,6 +26,7 @@ import java.util.*
  */
 class AdvancedPersianAssistant(private val context: Context) {
     
+    private val TAG = "AdvancedPersianAssistant"
     private val checkManager = CheckManager(context)
     private val installmentManager = InstallmentManager(context)
     private val financeManager = FinanceManager(context)

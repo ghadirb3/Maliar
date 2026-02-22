@@ -24,6 +24,7 @@ class TTSHelper(private val context: Context) {
     private val prefsManager = PreferencesManager(context)
     private val remoteConfigManager = RemoteAIConfigManager.getInstance(context)
     private val gapgptTTS = GapGPTTTS(context)
+    private val haaniyeTTS = HaaniyeManager(context)
 
     companion object {
         private const val TAG = "TTSHelper"
