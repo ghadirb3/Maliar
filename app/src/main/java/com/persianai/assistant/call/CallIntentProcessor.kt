@@ -71,7 +71,9 @@ class CallIntentProcessor(private val context: Context) {
             Log.d(TAG, "👤 نام مخاطب استخراج شد: '$contactName'")
             
             // مرحله ۳: جستجوی مخاطب
-            val contacts = contactSearcher.searchContacts(contactName, maxResults = 3)
+            val query = contactName
+            Log.d(TAG, "🔍 جستجوی مخاطب با عبارت: '$query'")
+            val contacts = contactSearcher.searchContacts(query, maxResults = 3)
             
             when {
                 contacts.isEmpty() -> {

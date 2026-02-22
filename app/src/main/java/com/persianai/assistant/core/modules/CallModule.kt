@@ -31,6 +31,7 @@ class CallModule(context: Context) : BaseModule(context) {
     }
 
     private suspend fun handleSmartCall(request: AIIntentRequest, intent: CallSmartIntent): AIIntentResult {
+        // اولویت با intent.contactName که توسط AI پردازش شده
         val contactName = intent.contactName ?: extractContactName(intent.rawText)
         
         logAction("SMART_CALL", "contact=$contactName")
@@ -55,8 +56,7 @@ class CallModule(context: Context) : BaseModule(context) {
                     
                     createResult(
                         text = "📞 مخاطب پیدا شد: «${result.contact.name}»\n" +
-                                "صفحه تأیید تماس نمایش داده شد.\n" +
-                                "بگویید «بله» برای تماس یا «لغو» برای انصراف.",
+                                "صفحه تأیید تماس نمایش داده شد.",
                         intentName = intent.name,
                         success = true
                     )
@@ -68,17 +68,18 @@ class CallModule(context: Context) : BaseModule(context) {
                         dialogueManager.startSelectionDialogue()
                     }
                     
-                    val contactsText = result.contacts.take(3).joinToString("، ") { it.name }
-                    val contactsWithNumbers = result.contacts.take(3).joinToString("\n") { 
-                        "• ${it.name} (${it.phoneNumber})" 
+                    // نمایش فقط نام و شماره مخاطبین
+                    val contactList = result.contacts.take(3).joinToString("\n") { contact ->
+                        val numbers = if (contact.phoneNumbers.size > 1) {
+                            contact.phoneNumbers.joinToString("، ") { it }
+                        } else {
+                            contact.phoneNumber
+                        }
+                        "• ${contact.name}: $numbers"
                     }
                     
                     createResult(
-                        text = "📞 ${result.contacts.size} مخاطب پیدا شد:\n" +
-                                "$contactsWithNumbers\n\n" +
-                                "🎤 لطفاً نام دقیق مخاطب مورد نظر را بگویید.\n" +
-                                "برای تأیید تماس، بگویید «بله».\n" +
-                                "برای لغو، بگویید «لغو» یا سکوت کنید.",
+                        text = "📞 ${result.contacts.size} مخاطب پیدا شد:\n$contactList",
                         intentName = intent.name,
                         success = true
                     )
