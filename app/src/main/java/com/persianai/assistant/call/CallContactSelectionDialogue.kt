@@ -7,6 +7,7 @@ import com.persianai.assistant.models.Contact
 import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.UnifiedVoiceEngine
+import com.persianai.assistant.services.RecordingResult
 import kotlinx.coroutines.*
 
 /**
@@ -135,17 +136,19 @@ class CallContactSelectionDialogue(
                 
                 // توقف ضبط و دریافت فایل
                 val stopResult = engine.stopRecording()
-                val recordedFile = if (stopResult.isSuccess) {
+                val recordingResult = if (stopResult.isSuccess) {
                     stopResult.getOrNull()
                 } else null
                 
-                if (recordedFile == null) {
+                if (recordingResult == null) {
                     Log.e(TAG, "❌ فایل صوتی ضبط نشد")
                     withContext(Dispatchers.Main) {
                         ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
                     }
                     return@withContext ""
                 }
+                
+                val recordedFile = recordingResult.file
                 
                 if (!recordedFile.exists()) {
                     Log.e(TAG, "❌ فایل صوتی وجود ندارد: ${recordedFile.absolutePath}")
