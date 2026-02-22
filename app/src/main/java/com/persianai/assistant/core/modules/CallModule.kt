@@ -142,12 +142,7 @@ class CallModule(context: Context) : BaseModule(context) {
                 
                 // نمایش فقط نام و شماره مخاطبین
                 val contactList = result.contacts.take(3).joinToString("\n") { contact ->
-                    val numbers = if (contact.phoneNumbers.size > 1) {
-                        contact.phoneNumbers.joinToString("، ") { it }
-                    } else {
-                        contact.phoneNumber
-                    }
-                    "• ${contact.name}: $numbers"
+                    "• ${contact.name}: ${contact.phoneNumber}"
                 }
                 
                 createResult(

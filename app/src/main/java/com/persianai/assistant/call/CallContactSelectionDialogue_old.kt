@@ -25,7 +25,7 @@ class CallContactSelectionDialogue(
     private val ttsHelper = TTSHelper(context)
     private val onlineSTT = OnlineSTTService(context)
     private val aiAssistant = AdvancedPersianAssistant(context)
-
+    
     /**
      * شروع مکالمه انتخاب مخاطب
      */
@@ -33,13 +33,13 @@ class CallContactSelectionDialogue(
         try {
             // مرحله ۱: خواندن لیست مخاطبین با TTS
             speakContactsList()
-
+            
             // مرحله ۲: شنود برای پاسخ کاربر
             val response = listenForUserResponse()
-
+            
             // مرحله ۳: تحلیل پاسخ با AI آنلاین
             processUserResponseWithAI(response)
-
+            
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در مکالمه انتخاب مخاطب", e)
             scope.launch {
@@ -47,7 +47,7 @@ class CallContactSelectionDialogue(
             }
         }
     }
-
+    
     /**
      * خواندن لیست مخاطبین با TTS - ساده شده
      */
@@ -55,116 +55,142 @@ class CallContactSelectionDialogue(
         val contactsText = contacts.take(3).joinToString("، ") { contact ->
             "${contact.name} با شماره ${contact.phoneNumber}"
         }
-
+        
         val message = "مخاطبین: $contactsText. لطفاً نام مخاطب را بگویید."
         Log.d(TAG, "📢 خواندن لیست مخاطبین: $message")
-
+        
         ttsHelper.speakOnlineFirst(message)
-
+        
         // کمی صبر برای تمام شدن TTS
         delay(1000)
     }
-
+    
     /**
      * شنود برای پاسخ کاربر
      */
-    private suspend fun listenForUserResponse(): String = withContext(Dispatchers.IO) {
-        try {
-            Log.d(TAG, "🎤 شروع ضبط صدا برای پاسخ کاربر")
-            
-            val engine = UnifiedVoiceEngine(context)
-            val tempFile = createTempAudioFile()
-            
-            // شروع ضبط با VAD
-            val startResult = engine.startRecording()
-            if (!startResult.isSuccess) {
-                Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
-                return@withContext ""
-            }
-            
-            Log.d(TAG, "✅ ضبط صدا شروع شد")
-            
-            // منتظر مکث یا timeout
-            val timeoutMs = 8000L // 8 ثانیه
-            val silenceStopMs = 2000L // 2 ثانیه سکوت
-            val startTime = System.currentTimeMillis()
-            var lastSpeechTime = startTime
-            var hasSpeech = false
-            
-            while (System.currentTimeMillis() - startTime < timeoutMs) {
-                val now = System.currentTimeMillis()
-                val amplitude = engine.getCurrentAmplitude()
+    private suspend fun listenForUserResponse(): String {
+        Log.d(TAG, "🎤 فعال کردن شنود برای پاسخ کاربر...")
+        
+        return withContext(Dispatchers.IO) {
+            try {
+                // استفاده از OnlineSTTService با ایجاد فایل صوتی واقعی
+                val tempDir = java.io.File(context.cacheDir, "temp_audio")
+                if (!tempDir.exists()) tempDir.mkdirs()
                 
-                if (amplitude > 0.1f) {
-                    hasSpeech = true
-                    lastSpeechTime = now
+                val audioFile = java.io.File(tempDir, "temp_recording_${System.currentTimeMillis()}.wav")
+                
+                // ضبط صدا با UnifiedVoiceEngine
+                val engine = UnifiedVoiceEngine(context)
+                
+                if (!engine.hasRequiredPermissions()) {
+                    Log.e(TAG, "❌ مجوز ضبط صدا وجود ندارد")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("برای ضبط صدا، مجوز میکروفون را بدهید")
+                    }
+                    return@withContext "PERMISSION_DENIED"
                 }
                 
-                if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
-                    Log.d(TAG, "🔇 سکوت تشخیص داده شد - توقف ضبط")
-                    break
+                Log.d(TAG, "🎤 شروع ضبط صدا...")
+                
+                // شروع ضبط
+                val startResult = engine.startRecording()
+                if (startResult.isFailure) {
+                    Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
+                    return@withContext ""
                 }
                 
-                delay(100)
-            }
-            
-            // توقف ضبط و دریافت فایل
-            val stopResult = engine.stopRecording()
-            val recordingResult = if (stopResult.isSuccess) {
-                stopResult.getOrNull()
-            } else null
-
-            if (recordingResult == null) {
-                Log.e(TAG, "❌ فایل صوتی ضبط نشد")
-                withContext(Dispatchers.Main) {
-                    ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
+                // ضبط با timeout
+                val timeoutMs = 8000L
+                val startTime = System.currentTimeMillis()
+                var hasSpeech = false
+                var lastSpeechTime = 0L
+                val silenceStopMs = 2000L
+                val threshold = 800
+                
+                while (engine.isRecordingInProgress()) {
+                    val now = System.currentTimeMillis()
+                    val elapsed = now - startTime
+                    
+                    // بررسی timeout
+                    if (elapsed > timeoutMs) {
+                        Log.d(TAG, "⏰ timeout - توقف ضبط")
+                        break
+                    }
+                    
+                    // بررسی صدا
+                    val amplitude = engine.getCurrentAmplitude()
+                    if (amplitude > threshold) {
+                        hasSpeech = true
+                        lastSpeechTime = now
+                    }
+                    
+                    // بررسی سکوت پس از صحبت
+                    if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
+                        Log.d(TAG, "🔇 سکوت تشخیص داده شد - توقف ضبط")
+                        break
+                    }
+                    
+                    delay(100)
                 }
-                return@withContext ""
-            }
-
-            val recordedFile = recordingResult.file
-
-            if (!recordedFile.exists()) {
-                Log.e(TAG, "❌ فایل صوتی وجود ندارد: ${recordedFile.absolutePath}")
-                withContext(Dispatchers.Main) {
-                    ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
+                
+                // توقف ضبط و دریافت فایل
+                val stopResult = engine.stopRecording()
+                val recordingResult = if (stopResult.isSuccess) {
+                    stopResult.getOrNull()
+                } else null
+                
+                if (recordingResult == null) {
+                    Log.e(TAG, "❌ فایل صوتی ضبط نشد")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
+                    }
+                    return@withContext ""
                 }
-                return@withContext ""
-            }
-
-            Log.d(TAG, "✅ فایل صوتی ضبط شد: ${recordedFile.absolutePath}")
-
-            // ارسال به STT
-            val sttResult = onlineSTT.transcribeAudio(recordedFile)
-            val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
-            
-            // بررسی سکوت یا timeout
-            if (transcribedText.isBlank()) {
-                Log.d(TAG, "⏰ کاربر سکوت کرد")
-                withContext(Dispatchers.Main) {
-                    ttsHelper.speakOnlineFirst("به دلیل سکوت، انتخاب لغو شد")
+                
+                val recordedFile = recordingResult.file
+                
+                if (!recordedFile.exists()) {
+                    Log.e(TAG, "❌ فایل صوتی وجود ندارد: ${recordedFile.absolutePath}")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
+                    }
+                    return@withContext ""
                 }
-                return@withContext "SILENCE_TIMEOUT"
+                
+                Log.d(TAG, "✅ فایل صوتی ضبط شد: ${recordedFile.absolutePath}")
+                
+                // ارسال به STT
+                val sttResult = onlineSTT.transcribeAudio(recordedFile)
+                val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
+                
+                // بررسی سکوت یا timeout
+                if (transcribedText.isBlank()) {
+                    Log.d(TAG, "⏰ کاربر سکوت کرد")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("به دلیل عدم پاسخ، انتخاب لغو شد")
+                    }
+                    return@withContext "SILENCE_TIMEOUT"
+                }
+                
+                Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
+                transcribedText
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ خطا در شناسایی صدا", e)
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("خطا در شناسایی صدا، لطفاً دوباره تلاش کنید")
+                }
+                ""
             }
-            
-            Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
-            transcribedText
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در شناسایی صدا", e)
-            withContext(Dispatchers.Main) {
-                ttsHelper.speakOnlineFirst("خطا در شناسایی صدا، لطفاً دوباره تلاش کنید")
-            }
-            ""
         }
     }
-
+    
     /**
      * تحلیل پاسخ کاربر با AI آنلاین
      */
     private suspend fun processUserResponseWithAI(response: String) {
         Log.d(TAG, "🤖 تحلیل پاسخ با AI: $response")
-
+        
         when {
             response == "SILENCE_TIMEOUT" -> {
                 Log.d(TAG, "⏰ لغو به دلیل سکوت کاربر")
@@ -173,39 +199,39 @@ class CallContactSelectionDialogue(
                 }
                 return
             }
-
+            
             response.isBlank() -> {
                 Log.d(TAG, "❌ پاسخ خالی")
                 return
             }
         }
-
+        
         try {
             // ساخت پرامپت برای AI
             val contactsList = contacts.joinToString("\n") { "${it.name}: ${it.phoneNumber}" }
             val prompt = """
                 کاربر گفت: "$response"
-
+                
                 مخاطبین موجود:
                 $contactsList
-
+                
                 لطفاً تحلیل کن:
                 1. آیا کاربر می‌خواهد لغو کند؟ (کلماتی مثل: لغو، نه، کنسل، انصراف)
                 2. اگر لغو نکرده، کدام مخاطب را انتخاب کرده؟
                 3. اگر نام دقیق نگفته، بهترین تطابق را پیدا کن
-
+                
                 فقط در یک کلمه پاسخ بده:
                 - "CANCEL" اگر لغو کرده
                 - نام دقیق مخاطب اگر انتخاب کرده
                 - "NONE" اگر مشخص نیست
             """.trimIndent()
-
+            
             // تحلیل با AI
             val aiResponse = aiAssistant.processRequestWithAI(prompt)
             val analysis = aiResponse.text.lowercase().trim()
-
+            
             Log.d(TAG, "🤖 پاسخ AI: $analysis")
-
+            
             when {
                 analysis.contains("cancel") -> {
                     Log.d(TAG, "❌ AI تشخیص داد: لغو")
@@ -213,14 +239,14 @@ class CallContactSelectionDialogue(
                         ttsHelper.speakOnlineFirst("انتخاب لغو شد")
                     }
                 }
-
+                
                 analysis.contains("none") -> {
                     Log.d(TAG, "❓ AI تشخیص داد: نامشخص")
                     withContext(Dispatchers.Main) {
                         ttsHelper.speakOnlineFirst("متوجه نشدم، لطفاً دوباره تلاش کنید")
                     }
                 }
-
+                
                 else -> {
                     // AI نام مخاطب را تشخیص داده
                     val selectedContact = findContactByName(analysis)
@@ -235,7 +261,7 @@ class CallContactSelectionDialogue(
                     }
                 }
             }
-
+            
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در تحلیل AI", e)
             withContext(Dispatchers.Main) {
@@ -243,22 +269,20 @@ class CallContactSelectionDialogue(
             }
         }
     }
-
+    
     /**
-     * شروع تأیید دو مرحله‌ای تماس
+     * جستجوی مخاطب بر اساس نام
      */
-    private suspend fun startCallConfirmation(contact: Contact) {
-        try {
-            val confirmationManager = CallConfirmationManager(context)
-            
-            // استفاده از شماره اصلی مخاطب
-            val phoneNumber = contact.phoneNumber
-            
-            // خواندن اطلاعات تماس برای تأیید
-            val confirmMessage = "با ${contact.name} به شماره $phoneNumber تماس بگیرم؟"
-            Log.d(TAG, "📢 درخواست تأیید تماس: $confirmMessage")
-            
-            withContext(Dispatchers.Main) {
+    private fun findContactByName(name: String): Contact? {
+        val cleanName = name.lowercase().trim()
+        
+        return contacts.firstOrNull { contact ->
+            contact.name.lowercase() == cleanName ||
+            contact.name.lowercase().contains(cleanName) ||
+            cleanName.contains(contact.name.lowercase())
+        }
+    }
+    
                 ttsHelper.speakOnlineFirst(confirmMessage)
             }
             
@@ -354,20 +378,7 @@ class CallContactSelectionDialogue(
             }
         }
     }
-
-    /**
-     * جستجوی مخاطب بر اساس نام
-     */
-    private fun findContactByName(name: String): Contact? {
-        val cleanName = name.lowercase().trim()
-        
-        return contacts.firstOrNull { contact ->
-            contact.name.lowercase() == cleanName ||
-            contact.name.lowercase().contains(cleanName) ||
-            cleanName.contains(contact.name.lowercase())
-        }
-    }
-
+    
     /**
      * ایجاد فایل صوتی موقت
      */

@@ -70,7 +70,7 @@ class DirectPhoneCallDialogue(
             val tempFile = createTempAudioFile()
             
             // شروع ضبط با VAD
-            val startResult = engine.startRecording(tempFile)
+            val startResult = engine.startRecording()
             if (!startResult.isSuccess) {
                 Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
                 return@withContext ""
@@ -190,8 +190,8 @@ class DirectPhoneCallDialogue(
             """.trimIndent()
             
             // تحلیل با AI
-            val aiResponse = aiAssistant.processText(prompt)
-            val analysis = aiResponse.lowercase().trim()
+            val aiResponse = aiAssistant.processRequestWithAI(prompt)
+            val analysis = aiResponse.text.lowercase().trim()
             
             Log.d(TAG, "🤖 پاسخ AI تأیید تماس مستقیم: $analysis")
             
@@ -239,10 +239,9 @@ class DirectPhoneCallDialogue(
             
             // ایجاد یک مخاطب مجازی برای تماس مستقیم
             val dummyContact = com.persianai.assistant.models.Contact(
-                id = -1,
+                id = "-1",
                 name = "شماره مستقیم",
-                phoneNumber = phoneNumber,
-                phoneNumbers = listOf(phoneNumber)
+                phoneNumber = phoneNumber
             )
             
             confirmationManager.startCallConfirmation(dummyContact, phoneNumber)
