@@ -2,7 +2,7 @@ package com.persianai.assistant.call
 
 import android.content.Context
 import kotlinx.coroutines.withContext
-import com.persianai.assistant.ai.AIClient
+import com.persianai.assistant.api.AIModelManager
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
  */
 class CallIntentAI(private val context: Context) {
     
-    private val aiClient = AIClient(context)
+    private val aiModelManager = AIModelManager(context)
     
     /**
      * تحلیل پاسخ کاربر با هوش مصنوعی آنلاین
@@ -33,8 +33,8 @@ class CallIntentAI(private val context: Context) {
                     فقط یکی از کلمات بالا را برگردان.
                 """.trimIndent()
                 
-                // استفاده از AIClient برای تحلیل هوشمند
-                val response = aiClient.generateResponse(prompt)
+                // استفاده از AIModelManager برای تحلیل هوشمند
+                val response = aiModelManager.generateText(prompt)
                 
                 val intent = when {
                     response.contains("POSSITIVE", ignoreCase = true) -> Intent.POSITIVE
