@@ -9,7 +9,7 @@ import com.persianai.assistant.core.intent.CallSmartIntent
 import com.persianai.assistant.call.CallIntentProcessor
 import com.persianai.assistant.call.CallConfirmationManager
 import com.persianai.assistant.call.CallContactSelectionDialogue
-import com.persianai.assistant.activities.CallConfirmationActivity
+import com.persianai.assistant.call.DirectPhoneCallDialogue
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,96 +33,28 @@ class CallModule(context: Context) : BaseModule(context) {
     private suspend fun handleSmartCall(request: AIIntentRequest, intent: CallSmartIntent): AIIntentResult {
         // اولویت با intent.contactName که توسط AI پردازش شده
         val contactName = intent.contactName ?: extractContactName(intent.rawText)
+        val phoneNumber = extractPhoneNumber(intent.rawText)
         
-        logAction("SMART_CALL", "contact=$contactName")
-        
-        if (contactName.isBlank()) {
-            return createResult(
-                text = "⚠️ لطفاً نام مخاطب را مشخص کنید.\nمثال: 'تماس با علی' یا 'تماس با بهمن'",
-                intentName = intent.name
-            )
-        }
+        logAction("SMART_CALL", "contact=$contactName, phone=$phoneNumber")
         
         return try {
-            // استفاده از سیستم جدید تماس هوشمند
-            val callProcessor = CallIntentProcessor(context)
-            val result = callProcessor.processCallIntent(contactName)
-            
-            when (result) {
-                is CallIntentProcessor.CallIntentResult.SingleContact -> {
-                    // شروع فرآیند تأیید تماس
-                    val confirmationManager = CallConfirmationManager(context)
-                    confirmationManager.startCallConfirmation(result.contact, result.contact.phoneNumber)
-                    
-                    createResult(
-                        text = "📞 مخاطب پیدا شد: «${result.contact.name}»\n" +
-                                "صفحه تأیید تماس نمایش داده شد.",
-                        intentName = intent.name,
-                        success = true
-                    )
+            when {
+                // حالت ۱: تماس مستقیم با شماره
+                phoneNumber.isNotBlank() -> {
+                    handleDirectPhoneCall(phoneNumber)
                 }
-                is CallIntentProcessor.CallIntentResult.MultipleContacts -> {
-                    // شروع مکالمه صوتی برای انتخاب مخاطب
-                    val dialogueManager = CallContactSelectionDialogue(context, result.contacts)
-                    scope.launch {
-                        dialogueManager.startSelectionDialogue()
-                    }
-                    
-                    // نمایش فقط نام و شماره مخاطبین
-                    val contactList = result.contacts.take(3).joinToString("\n") { contact ->
-                        val numbers = if (contact.phoneNumbers.size > 1) {
-                            contact.phoneNumbers.joinToString("، ") { it }
-                        } else {
-                            contact.phoneNumber
-                        }
-                        "• ${contact.name}: $numbers"
-                    }
-                    
-                    createResult(
-                        text = "📞 ${result.contacts.size} مخاطب پیدا شد:\n$contactList",
-                        intentName = intent.name,
-                        success = true
-                    )
+                
+                // حالت ۲: تماس با مخاطب
+                contactName.isNotBlank() -> {
+                    val callProcessor = CallIntentProcessor(context)
+                    val result = callProcessor.processCallIntent(contactName)
+                    processContactCallResult(result, intent)
                 }
-                is CallIntentProcessor.CallIntentResult.ContactNotFound -> {
+                
+                else -> {
                     createResult(
-                        text = "❌ ${result.message}\n\n" +
-                                "💡 پیشنهاد:\n" +
-                                "• نام مخاطب را کامل و صحیح بگویید\n" +
-                                "• از کلمات اضافی مثل «آقا»، «خانم» استفاده نکنید\n" +
-                                "• مطمئن شوید مخاطب در دفترچه تلفن شما ذخیره شده",
-                        intentName = intent.name,
-                        success = false
-                    )
-                }
-                is CallIntentProcessor.CallIntentResult.PermissionRequired -> {
-                    createResult(
-                        text = "🔒 ${result.message}\n\n" +
-                                "لطفاً به تنظیمات بروید و دسترسی مخاطبین را فعال کنید.",
-                        intentName = intent.name,
-                        success = false
-                    )
-                }
-                is CallIntentProcessor.CallIntentResult.Error -> {
-                    createResult(
-                        text = "❌ ${result.message}",
-                        intentName = intent.name,
-                        success = false
-                    )
-                }
-                is CallIntentProcessor.CallIntentResult.Cancel -> {
-                    createResult(
-                        text = "❌ درخواست تماس لغو شد.",
-                        intentName = intent.name,
-                        success = false
-                    )
-                }
-                is CallIntentProcessor.CallIntentResult.NotRecognized -> {
-                    createResult(
-                        text = "⚠️ ${result.message}\n\n" +
-                                "مثال: «تماس با علی» یا «با مریم تماس بگیر»",
-                        intentName = intent.name,
-                        success = false
+                        text = "⚠️ لطفاً نام مخاطب یا شماره تلفن را مشخص کنید.\nمثال: 'تماس با علی' یا 'تماس با شماره ۰۹۱۲...'",
+                        intentName = intent.name
                     )
                 }
             }
@@ -133,6 +65,143 @@ class CallModule(context: Context) : BaseModule(context) {
                 intentName = intent.name,
                 success = false
             )
+        }
+    }
+    
+    /**
+     * استخراج شماره تلفن از عبارت
+     */
+    private fun extractPhoneNumber(text: String): String {
+        // الگوهای شماره تلفن ایرانی
+        val phonePatterns = listOf(
+            Regex("0?9([0-9]{9})"), // 09123456789 یا 9123456789
+            Regex("\\+989([0-9]{9})"), // +989123456789
+            Regex("9([0-9]{9})") // 9123456789
+        )
+        
+        for (pattern in phonePatterns) {
+            val match = pattern.find(text)
+            if (match != null) {
+                val number = match.value
+                // نرمال‌سازی شماره به فرمت استاندارد
+                return when {
+                    number.startsWith("+98") -> number.replace("+98", "0")
+                    number.startsWith("98") && number.length == 12 -> "0" + number.substring(2)
+                    number.startsWith("9") && number.length == 10 -> "0" + number
+                    else -> number
+                }
+            }
+        }
+        
+        return ""
+    }
+    
+    /**
+     * مدیریت تماس مستقیم با شماره تلفن
+     */
+    private suspend fun handleDirectPhoneCall(phoneNumber: String): AIIntentResult {
+        Log.d(TAG, "📞 تماس مستقیم با شماره: $phoneNumber")
+        
+        // شروع مکالمه تأیید تماس مستقیم
+        val dialogueManager = DirectPhoneCallDialogue(context, phoneNumber)
+        scope.launch {
+            dialogueManager.startDirectCallConfirmation()
+        }
+        
+        return createResult(
+            text = "📞 تماس با شماره $phoneNumber\nدر حال تأیید...",
+            intentName = "DirectPhoneCall",
+            success = true
+        )
+    }
+    
+    /**
+     * پردازش نتیجه تماس با مخاطب
+     */
+    private suspend fun processContactCallResult(result: CallIntentProcessor.CallIntentResult, intent: CallSmartIntent): AIIntentResult {
+        return when (result) {
+            is CallIntentProcessor.CallIntentResult.SingleContact -> {
+                // شروع فرآیند تأیید تماس
+                val confirmationManager = CallConfirmationManager(context)
+                confirmationManager.startCallConfirmation(result.contact, result.contact.phoneNumber)
+                
+                createResult(
+                    text = "📞 مخاطب پیدا شد: «${result.contact.name}»\n" +
+                            "صفحه تأیید تماس نمایش داده شد.",
+                    intentName = intent.name,
+                    success = true
+                )
+            }
+            
+            is CallIntentProcessor.CallIntentResult.MultipleContacts -> {
+                // شروع مکالمه صوتی برای انتخاب مخاطب
+                val dialogueManager = CallContactSelectionDialogue(context, result.contacts)
+                scope.launch {
+                    dialogueManager.startSelectionDialogue()
+                }
+                
+                // نمایش فقط نام و شماره مخاطبین
+                val contactList = result.contacts.take(3).joinToString("\n") { contact ->
+                    val numbers = if (contact.phoneNumbers.size > 1) {
+                        contact.phoneNumbers.joinToString("، ") { it }
+                    } else {
+                        contact.phoneNumber
+                    }
+                    "• ${contact.name}: $numbers"
+                }
+                
+                createResult(
+                    text = "📞 ${result.contacts.size} مخاطب پیدا شد:\n$contactList",
+                    intentName = intent.name,
+                    success = true
+                )
+            }
+            
+            is CallIntentProcessor.CallIntentResult.ContactNotFound -> {
+                createResult(
+                    text = "❌ ${result.message}\n\n" +
+                            "💡 پیشنهاد:\n" +
+                            "• نام مخاطب را کامل و صحیح بگویید\n" +
+                            "• از کلمات اضافی مثل «آقا»، «خانم» استفاده نکنید\n" +
+                            "• مطمئن شوید مخاطب در دفترچه تلفن شما ذخیره شده",
+                    intentName = intent.name,
+                    success = false
+                )
+            }
+            
+            is CallIntentProcessor.CallIntentResult.PermissionRequired -> {
+                createResult(
+                    text = "🔒 ${result.message}\n\n" +
+                            "لطفاً به تنظیمات بروید و دسترسی مخاطبین را فعال کنید.",
+                    intentName = intent.name,
+                    success = false
+                )
+            }
+            
+            is CallIntentProcessor.CallIntentResult.Error -> {
+                createResult(
+                    text = "❌ ${result.message}",
+                    intentName = intent.name,
+                    success = false
+                )
+            }
+            
+            is CallIntentProcessor.CallIntentResult.Cancel -> {
+                createResult(
+                    text = "❌ درخواست تماس لغو شد.",
+                    intentName = intent.name,
+                    success = false
+                )
+            }
+            
+            is CallIntentProcessor.CallIntentResult.NotRecognized -> {
+                createResult(
+                    text = "⚠️ ${result.message}\n\n" +
+                            "مثال: «تماس با علی» یا «با مریم تماس بگیر»",
+                    intentName = intent.name,
+                    success = false
+                )
+            }
         }
     }
 

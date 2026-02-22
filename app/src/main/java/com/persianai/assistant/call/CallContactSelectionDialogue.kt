@@ -288,29 +288,114 @@ class CallContactSelectionDialogue(
     }
     
     /**
-     * شروع تأیید تماس
+     * شروع تأیید دو مرحله‌ای تماس
      */
     private suspend fun startCallConfirmation(contact: Contact) {
         try {
-            val confirmationManager = CallConfirmationManager(context)
-            
-            // اگر مخاطب چند شماره دارد، شماره اصلی را استفاده کن
+            // مرحله ۱: تأیید اولیه با شماره
             val phoneNumber = if (contact.phoneNumbers.size > 1) {
                 contact.phoneNumber // شماره اصلی
             } else {
                 contact.phoneNumber
             }
             
-            confirmationManager.startCallConfirmation(contact, phoneNumber)
+            // خواندن اطلاعات تماس برای تأیید
+            val confirmMessage = "با ${contact.name} به شماره $phoneNumber تماس بگیرم؟"
+            Log.d(TAG, "📢 درخواست تأیید تماس: $confirmMessage")
             
             withContext(Dispatchers.Main) {
-                ttsHelper.speakOnlineFirst("در حال تماس با ${contact.name}")
+                ttsHelper.speakOnlineFirst(confirmMessage)
+            }
+            
+            delay(1000) // صبر برای تمام شدن TTS
+            
+            // مرحله ۲: منتظر تأیید کاربر
+            val confirmationResponse = listenForUserResponse()
+            
+            // تحلیل پاسخ تأیید با AI
+            processConfirmationResponse(contact, phoneNumber, confirmationResponse)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در شروع تأیید تماس", e)
+            withContext(Dispatchers.Main) {
+                ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
+            }
+        }
+    }
+    
+    /**
+     * تحلیل پاسخ تأیید با AI آنلاین
+     */
+    private suspend fun processConfirmationResponse(contact: Contact, phoneNumber: String, response: String) {
+        Log.d(TAG, "🤖 تحلیل پاسخ تأیید: $response")
+        
+        when {
+            response == "SILENCE_TIMEOUT" -> {
+                Log.d(TAG, "⏰ لغو به دلیل سکوت کاربر")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("به دلیل سکوت، تماس لغو شد")
+                }
+                return
+            }
+            
+            response.isBlank() -> {
+                Log.d(TAG, "❌ پاسخ خالی")
+                return
+            }
+        }
+        
+        try {
+            // ساخت پرامپت برای AI
+            val prompt = """
+                کاربر برای تأیید تماس گفت: "$response"
+                
+                لطفاً تحلیل کن آیا کاربر تمایل به تماس دارد:
+                - کلمات تأیید: بله، آره، تماس بگیر، اوکی، باشه، انجام بده
+                - کلمات لغو: لغو، نه، کنسل، انصراف، نمیخوام
+                
+                فقط در یک کلمه پاسخ بده:
+                - "CONFIRM" اگر تأیید کرده
+                - "CANCEL" اگر لغو کرده
+                - "NONE" اگر مشخص نیست
+            """.trimIndent()
+            
+            // تحلیل با AI
+            val aiResponse = aiAssistant.processText(prompt)
+            val analysis = aiResponse.lowercase().trim()
+            
+            Log.d(TAG, "🤖 پاسخ AI تأیید: $analysis")
+            
+            when {
+                analysis.contains("confirm") -> {
+                    Log.d(TAG, "✅ AI تشخیص داد: تأیید تماس")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("در حال تماس با ${contact.name}")
+                    }
+                    
+                    // شروع تماس واقعی
+                    val confirmationManager = CallConfirmationManager(context)
+                    confirmationManager.startCallConfirmation(contact, phoneNumber)
+                }
+                
+                analysis.contains("cancel") -> {
+                    Log.d(TAG, "❌ AI تشخیص داد: لغو تماس")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("تماس لغو شد")
+                    }
+                }
+                
+                else -> {
+                    Log.d(TAG, "❓ AI تشخیص داد: نامشخص")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("متوجه نشدم، تماس لغو شد")
+                    }
+                }
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در شروع تماس", e)
+            Log.e(TAG, "❌ خطا در تحلیل تأیید AI", e)
             withContext(Dispatchers.Main) {
-                ttsHelper.speakOnlineFirst("خطا در شروع تماس")
+                ttsHelper.speakOnlineFirst("خطا در تحلیل پاسخ، تماس لغو شد")
             }
         }
     }
