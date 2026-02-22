@@ -106,19 +106,19 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی providers برای STT: GapGPT → Liara (فقط GapGPT و Liara موجود)
+     * اولویت‌بندی دقیق مانند AIClient - Liara اول برای سرعت بیشتر
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
-        val priority = mutableListOf<APIKey>()
+        val activeKeys = apiKeys.filter { it.isActive }
         
-        // 1) GapGPT اول (API key موجود و تست شده)
-        apiKeys.filter { it.provider == AIProvider.GAPGPT }.forEach { priority.add(it) }
-        
-        // 2) Liara دوم (بعد از اصلاح فرمت صدا)
-        apiKeys.filter { it.provider == AIProvider.LIARA }.forEach { priority.add(it) }
-        
-        Log.d(TAG, "STT Provider Priority: ${priority.map { it.provider }}")
-        return priority
+        return activeKeys.sortedWith(compareBy<APIKey> { provider ->
+            when (provider) {
+                AIProvider.LIARA -> 0      // اولویت اول: Liara (4 ثانیه)
+                AIProvider.GAPGPT -> 1    // دوم: GapGPT (3 دقیقه timeout)
+                AIProvider.OPENAI -> 2    // سوم: OpenAI (اگر موجود)
+                else -> 3
+            }
+        })
     }
     
     /**

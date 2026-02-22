@@ -138,7 +138,7 @@ object ModelManager {
         
         // fallback به مدل‌های استاتیک
         return listOf(
-            AIModel.LIARA_GPT_4O_MINI,
+            AIModel.LIARA_GPT_5_NANO,
             AIModel.GPT_4O_MINI,
             AIModel.TINY_LLAMA_OFFLINE
         ).map { ModelWrapper.from(it) }

@@ -234,9 +234,9 @@ class VoiceCommandService : Service() {
             val startTime = System.currentTimeMillis()
             var hasSpeech = false
             var lastSpeechTime = 0L
-            val maxTotalMs = 15_000L      // 15 sec max for longer commands
-            val maxWaitForSpeechMs = 4_500L  // 4.5 sec to start talking
-            val silenceStopMs = 2_500L    // 2.5 sec silence = stop
+            val maxTotalMs = 10_000L      // 10 sec max
+            val maxWaitForSpeechMs = 3_000L  // 3 sec to start talking
+            val silenceStopMs = 1_500L    // 1.5 sec silence = stop
             val threshold = 800            // amplitude threshold
 
             Log.d(tag, "Recording with VAD: timeout=$maxTotalMs, silence=$silenceStopMs")

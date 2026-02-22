@@ -59,15 +59,23 @@ class CallModule(context: Context) : BaseModule(context) {
                     )
                 }
                 is CallIntentProcessor.CallIntentResult.MultipleContacts -> {
-                    // خواندن صوتی لیست مخاطبین و انتخاب
+                    // مکالمه صوتی برای انتخاب مخاطب
                     val contactsText = result.contacts.take(3).joinToString("، ") { it.name }
+                    val contactsWithNumbers = result.contacts.take(3).joinToString("\n") { 
+                        "• ${it.name} (${it.phoneNumber})" 
+                    }
                     
                     createResult(
-                        text = "📞 ${result.contacts.size} مخاطب مشابه پیدا شد:\n" +
-                                "$contactsText\n\n" +
-                                "لطفاً نام مخاطب مورد نظر را بگویید.",
+                        text = "📞 ${result.contacts.size} مخاطب پیدا شد:\n" +
+                                "$contactsWithNumbers\n\n" +
+                                "🎤 لطفاً نام دقیق مخاطب مورد نظر را بگویید.\n" +
+                                "برای تأیید تماس، بگویید «بله».\n" +
+                                "برای لغو، بگویید «لغو» یا سکوت کنید.",
                         intentName = intent.name,
-                        success = true
+                        success = true,
+                        requiresVoiceInput = true,
+                        timeoutMs = 15000,
+                        voicePrompt = "کدام مخاطب را می‌خواهید تماس بگیرید؟"
                     )
                 }
                 is CallIntentProcessor.CallIntentResult.ContactNotFound -> {

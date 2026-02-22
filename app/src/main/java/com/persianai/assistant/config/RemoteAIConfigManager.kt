@@ -35,7 +35,7 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
         private val FALLBACK_MODEL_PRIORITY = listOf(
             AIModel.IVIRA_GPT5_NANO,
             AIModel.GPT_4O_MINI,
-            AIModel.LIARA_GPT_4O_MINI,
+            AIModel.LIARA_GPT_5_NANO,
             AIModel.IVIRA_GPT5_MINI,
             AIModel.QWEN_2_5_1B5,
             AIModel.LLAMA_3_2_1B,
