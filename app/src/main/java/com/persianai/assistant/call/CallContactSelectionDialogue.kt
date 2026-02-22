@@ -6,6 +6,7 @@ import android.util.Log
 import com.persianai.assistant.models.Contact
 import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.stt.OnlineSTTService
+import com.persianai.assistant.services.VoiceCommandService
 import kotlinx.coroutines.*
 
 /**
@@ -72,11 +73,84 @@ class CallContactSelectionDialogue(
         
         return withContext(Dispatchers.IO) {
             try {
-                // ایجاد فایل صوتی موقت
-                val audioFile = createTempAudioFile()
+                // استفاده از OnlineSTTService با ایجاد فایل صوتی واقعی
+                val tempDir = java.io.File(context.cacheDir, "temp_audio")
+                if (!tempDir.exists()) tempDir.mkdirs()
                 
-                // استفاده از OnlineSTTService برای شناسایی صدا
-                val sttResult = onlineSTT.transcribeAudio(audioFile)
+                val audioFile = java.io.File(tempDir, "temp_recording_${System.currentTimeMillis()}.wav")
+                
+                // ضبط صدا با UnifiedVoiceEngine
+                val engine = UnifiedVoiceEngine(context)
+                
+                if (!engine.hasRequiredPermissions()) {
+                    Log.e(TAG, "❌ مجوز ضبط صدا وجود ندارد")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("برای ضبط صدا، مجوز میکروفون را بدهید")
+                    }
+                    return@withContext "PERMISSION_DENIED"
+                }
+                
+                Log.d(TAG, "🎤 شروع ضبط صدا...")
+                
+                // شروع ضبط
+                val startResult = engine.startRecording()
+                if (startResult.isFailure) {
+                    Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
+                    return@withContext ""
+                }
+                
+                // ضبط با timeout
+                val timeoutMs = 8000L
+                val startTime = System.currentTimeMillis()
+                var hasSpeech = false
+                var lastSpeechTime = 0L
+                val silenceStopMs = 2000L
+                val threshold = 800
+                
+                while (engine.isRecordingInProgress()) {
+                    val now = System.currentTimeMillis()
+                    val elapsed = now - startTime
+                    
+                    // بررسی timeout
+                    if (elapsed > timeoutMs) {
+                        Log.d(TAG, "⏰ timeout - توقف ضبط")
+                        break
+                    }
+                    
+                    // بررسی صدا
+                    val amplitude = engine.getCurrentAmplitude()
+                    if (amplitude > threshold) {
+                        hasSpeech = true
+                        lastSpeechTime = now
+                    }
+                    
+                    // بررسی سکوت پس از صحبت
+                    if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
+                        Log.d(TAG, "🔇 سکوت تشخیص داده شد - توقف ضبط")
+                        break
+                    }
+                    
+                    delay(100)
+                }
+                
+                // توقف ضبط و دریافت فایل
+                val stopResult = engine.stopRecording()
+                val recordedFile = if (stopResult.isSuccess) {
+                    stopResult.getOrNull()
+                } else null
+                
+                if (recordedFile == null || !recordedFile.exists()) {
+                    Log.e(TAG, "❌ فایل صوتی ضبط نشد")
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
+                    }
+                    return@withContext ""
+                }
+                
+                Log.d(TAG, "✅ فایل صوتی ضبط شد: ${recordedFile.absolutePath}")
+                
+                // ارسال به STT
+                val sttResult = onlineSTT.transcribeAudio(recordedFile)
                 val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
                 
                 // بررسی سکوت یا timeout
@@ -93,6 +167,9 @@ class CallContactSelectionDialogue(
                 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ خطا در شناسایی صدا", e)
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("خطا در شناسایی صدا، لطفاً دوباره تلاش کنید")
+                }
                 ""
             }
         }

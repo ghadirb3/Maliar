@@ -146,6 +146,16 @@ class CallIntentProcessor(private val context: Context) {
             .replace("دکتر", "").trim()
             .replace("مهندس", "").trim()
             .replace("استاد", "").trim()
+            // حفظ کلمات روابط خانوادگی برای تطابق دقیق
+            // .replace("همسر", "").trim()
+            // .replace("مادر", "").trim()
+            // .replace("پدر", "").trim()
+            // .replace("برادر", "").trim()
+            // .replace("خواهر", "").trim()
+            // .replace("دوست", "").trim()
+            // .replace("همکار", "").trim()
+            // .replace("مدیر", "").trim()
+            // .replace("رئیس", "").trim()
             .trim()
     }
     
