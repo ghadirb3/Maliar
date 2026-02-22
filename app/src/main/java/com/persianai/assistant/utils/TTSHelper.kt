@@ -24,7 +24,6 @@ class TTSHelper(private val context: Context) {
     private val prefsManager = PreferencesManager(context)
     private val remoteConfigManager = RemoteAIConfigManager.getInstance(context)
     private val gapgptTTS = GapGPTTTS(context)
-    private val haaniyeTTS = HaaniyeManager(context)
 
     companion object {
         private const val TAG = "TTSHelper"
@@ -116,7 +115,7 @@ class TTSHelper(private val context: Context) {
                 "local" -> {
                     try {
                         Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
-                        val success = haaniyeTTS.speak(cleanText)
+                        val success = HaaniyeManager.speak(context, cleanText)
                         if (success) {
                             Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
                             return@withContext
