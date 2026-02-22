@@ -256,27 +256,27 @@ class OnlineSTTService(private val context: Context) {
             val audioBytes = audioFile.readBytes()
             val audioBase64 = android.util.Base64.encodeToString(audioBytes, android.util.Base64.NO_WRAP)
             
-            // ساخت درخواست مطابق مستند لیارا
+            // ساخت درخواست مطابق مستند لیارا با JSONArray صحیح
             val requestBody = JSONObject().apply {
                 put("model", "google/gemini-2.0-flash-001")
-                put("messages", listOf(
-                    JSONObject().apply {
+                put("messages", JSONArray().apply {
+                    put(JSONObject().apply {
                         put("role", "user")
-                        put("content", listOf(
-                            JSONObject().apply {
+                        put("content", JSONArray().apply {
+                            put(JSONObject().apply {
                                 put("type", "text")
                                 put("text", "What is the audio saying? Please transcribe the audio content in Persian.")
-                            },
-                            JSONObject().apply {
+                            })
+                            put(JSONObject().apply {
                                 put("type", "input_audio")
                                 put("input_audio", JSONObject().apply {
                                     put("data", audioBase64)
                                     put("format", "m4a")
                                 })
-                            }
-                        ))
-                    }
-                ))
+                            })
+                        })
+                    })
+                })
             }.toString().toRequestBody("application/json".toMediaType())
             
             val request = Request.Builder()
