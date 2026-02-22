@@ -111,8 +111,8 @@ class OnlineSTTService(private val context: Context) {
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        return activeKeys.sortedWith(compareBy<APIKey> { provider ->
-            when (provider) {
+        return activeKeys.sortedWith(compareBy<APIKey> { key ->
+            when (key.provider) {
                 AIProvider.LIARA -> 0      // اولویت اول: Liara (4 ثانیه)
                 AIProvider.GAPGPT -> 1    // دوم: GapGPT (3 دقیقه timeout)
                 AIProvider.OPENAI -> 2    // سوم: OpenAI (اگر موجود)

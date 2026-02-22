@@ -72,10 +72,7 @@ class CallModule(context: Context) : BaseModule(context) {
                                 "برای تأیید تماس، بگویید «بله».\n" +
                                 "برای لغو، بگویید «لغو» یا سکوت کنید.",
                         intentName = intent.name,
-                        success = true,
-                        requiresVoiceInput = true,
-                        timeoutMs = 15000,
-                        voicePrompt = "کدام مخاطب را می‌خواهید تماس بگیرید؟"
+                        success = true
                     )
                 }
                 is CallIntentProcessor.CallIntentResult.ContactNotFound -> {

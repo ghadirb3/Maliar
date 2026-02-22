@@ -3,8 +3,6 @@ package com.persianai.assistant.call
 import android.content.Context
 import kotlinx.coroutines.withContext
 import com.persianai.assistant.ai.AIClient
-import com.persianai.assistant.core.AIIntentRequest
-import com.persianai.assistant.core.AIIntentController
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -36,21 +34,21 @@ class CallIntentAI(private val context: Context) {
                 """.trimIndent()
                 
                 // استفاده از AIClient برای تحلیل هوشمند
-                val response = aiClient.generateText(prompt)
+                val response = aiClient.generateResponse(prompt)
                 
                 val intent = when {
-                    response.contains("POSSITIVE", ignoreCase = true) -> CallIntentResult.POSITIVE
-                    response.contains("NEGATIVE", ignoreCase = true) -> CallIntentResult.NEGATIVE
-                    response.contains("SPEAKER_ON", ignoreCase = true) -> CallIntentResult.SPEAKER_ON
-                    response.contains("SPEAKER_OFF", ignoreCase = true) -> CallIntentResult.SPEAKER_OFF
-                    else -> CallIntentResult.UNCLEAR
+                    response.contains("POSSITIVE", ignoreCase = true) -> Intent.POSITIVE
+                    response.contains("NEGATIVE", ignoreCase = true) -> Intent.NEGATIVE
+                    response.contains("SPEAKER_ON", ignoreCase = true) -> Intent.SPEAKER_ON
+                    response.contains("SPEAKER_OFF", ignoreCase = true) -> Intent.SPEAKER_OFF
+                    else -> Intent.UNCLEAR
                 }
                 
                 CallIntentResult(intent, response)
                 
             } catch (e: Exception) {
                 // fallback به تحلیل دستی در صورت خطا
-                CallIntentResult(CallIntentResult.UNCLEAR, "خطا در تحلیل هوشمند: ${e.message}")
+                CallIntentResult(Intent.UNCLEAR, "خطا در تحلیل هوشمند: ${e.message}")
             }
         }
     }
