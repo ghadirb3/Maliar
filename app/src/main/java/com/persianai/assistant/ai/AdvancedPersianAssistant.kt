@@ -168,8 +168,8 @@ class AdvancedPersianAssistant(private val context: Context) {
             AIProvider.OPENAI -> AIModel.GPT_4O_MINI
             AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
             AIProvider.LIARA -> {
-                // اولویت با GPT-5 Nano
-                AIModel.LIARA_GPT_5_NANO
+                // Use a valid LIARA model to avoid 400 error
+                AIModel.LIARA_GPT_4O_MINI
             }
             else -> AIModel.GPT_4O_MINI
         }

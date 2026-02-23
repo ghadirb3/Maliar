@@ -27,6 +27,13 @@ class TTSHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "TTSHelper"
+        
+        fun formatPhoneNumberForTTS(phoneNumber: String): String {
+            val ltrMark = "\u200E" // LRM
+            val digits = phoneNumber.replace(Regex("[^0-9+]"), "")
+            val spaced = digits.toCharArray().joinToString(" ")
+            return "$ltrMark$spaced"
+        }
     }
 
     fun initialize(onReady: (() -> Unit)? = null) {

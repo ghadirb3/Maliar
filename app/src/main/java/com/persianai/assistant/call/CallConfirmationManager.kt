@@ -11,6 +11,7 @@ import com.persianai.assistant.models.Contact
 import com.persianai.assistant.activities.CallConfirmationActivity
 import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.stt.OnlineSTTService
+import com.persianai.assistant.services.UnifiedVoiceEngine
 import java.io.File
 
 /**
@@ -24,6 +25,9 @@ class CallConfirmationManager(private val context: Context) {
     private val ttsHelper = TTSHelper(context)
     private val iviraManager = IviraIntegrationManager(context)
     private val onlineSTT = OnlineSTTService(context)
+    private val voiceEngine = UnifiedVoiceEngine(context)
+    private var retryCount = 0
+    private val maxRetries = 2
     
     // کلمات کلیدی برای تأیید و لغو
     private val positiveKeywords = listOf(
@@ -93,6 +97,7 @@ class CallConfirmationManager(private val context: Context) {
         
         fun start() {
             this@CallSession.isActive = true
+            retryCount = 0 // ریست شمارنده تلاش برای هر جلسه جدید
             job = scope.launch {
                 try {
                     // مرحله ۱: پرسش تأیید
@@ -124,7 +129,8 @@ class CallConfirmationManager(private val context: Context) {
             if (!this@CallSession.isActive) return
             
             // بلندگو به طور پیش‌فرض فعال نمی‌شود - کاربر انتخاب می‌کند
-            val message = "با ${contact.name} تماس بگیرم؟ برای تأیید بگویید بله، برای لغو بگویید لغو. اگر می‌خواهید با بلندگو صحبت کنید، بگویید بلندگو روشن"
+            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
+            val message = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟ برای تأیید بگویید بله، برای لغو بگویید لغو. اگر می‌خواهید با بلندگو صحبت کنید، بگویید بلندگو روشن"
             Log.d(TAG, "📢 پرسش تأیید: $message")
             
             // استفاده از TTSHelper با اولویت GapGPT آنلاین
@@ -157,25 +163,68 @@ class CallConfirmationManager(private val context: Context) {
         private suspend fun listenForResponse(): String {
             if (!this@CallSession.isActive) return ""
             
-            delay(1000) // کمی صبر برای تمام شدن TTS
+            delay(2000) // صبر برای تمام شدن TTS (هماهنگ با دیالوگ‌های دیگر)
             
             Log.d(TAG, "🎤 فعال کردن شناسایی صدا برای پاسخ کاربر...")
             
-            // منتظر ماندن برای پاسخ با timeout
+            // منتظر ماندن برای پاسخ با timeout و VAD
             val timeoutMs = 8000L // 8 ثانیه برای پاسخ
+            val silenceStopMs = 2000L // 2 ثانیه سکوت
             val startTime = System.currentTimeMillis()
+            var lastSpeechTime = startTime
+            var hasSpeech = false
             
-            return withContext(Dispatchers.IO) {
+            return withContext(Dispatchers.Main) {
                 try {
+                    // شروع ضبط صدا
+                    val recordResult = voiceEngine.startRecording()
+                    if (recordResult.isFailure) {
+                        Log.e(TAG, "❌ خطا در شروع ضبط صدا", recordResult.exceptionOrNull())
+                        return@withContext ""
+                    }
+                    
+                    // حلقه VAD برای قطع ضبط روی سکوت
+                    while (System.currentTimeMillis() - startTime < timeoutMs) {
+                        val now = System.currentTimeMillis()
+                        val amplitude = voiceEngine.getCurrentAmplitude()
+                        
+                        if (amplitude > 100) { // threshold برای تشخیص صدا
+                            hasSpeech = true
+                            lastSpeechTime = now
+                        }
+                        
+                        if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
+                            Log.d(TAG, "🔇 سکوت تشخیص داده شد - توقف ضبط")
+                            break
+                        }
+                        
+                        delay(100)
+                    }
+                    
+                    // توقف ضبط و گرفتن فایل
+                    val stopResult = voiceEngine.stopRecording()
+                    if (stopResult.isFailure) {
+                        Log.e(TAG, "❌ خطا در توقف ضبط صدا", stopResult.exceptionOrNull())
+                        return@withContext ""
+                    }
+                    
+                    val audioFile = voiceEngine.getRecordingFile()
+                    if (audioFile == null || !audioFile.exists()) {
+                        Log.e(TAG, "❌ فایل ضبط شده یافت نشد")
+                        return@withContext ""
+                    }
+                    
+                    Log.d(TAG, "📁 فایل ضبط شده: ${audioFile.absolutePath}")
+                    
                     // استفاده از OnlineSTTService برای شناسایی صدا (Liara → GapGPT)
-                    val audioFile = createTempAudioFile()
-                    val sttResult = onlineSTT.transcribeAudio(audioFile)
+                    val sttResult = withContext(Dispatchers.IO) {
+                        onlineSTT.transcribeAudio(audioFile)
+                    }
                     
                     val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
                     
                     // بررسی سکوت یا timeout
-                    val elapsedTime = System.currentTimeMillis() - startTime
-                    if (transcribedText.isBlank() && elapsedTime > timeoutMs) {
+                    if (transcribedText.isBlank()) {
                         Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار تماس")
                         withContext(Dispatchers.Main) {
                             ttsHelper.speakOnlineFirst("به دلیل عدم پاسخ، تماس لغو شد")
@@ -210,6 +259,11 @@ class CallConfirmationManager(private val context: Context) {
             Log.d(TAG, "📝 پاسخ کاربر: '$response'")
             
             val normalizedResponse = response.lowercase().trim()
+            
+            // ریست کردن شمارنده تلاش برای پاسخهای معتبر
+            if (response != "SILENCE_TIMEOUT" && normalizedResponse.isNotEmpty()) {
+                retryCount = 0
+            }
             
             when {
                 response == "SILENCE_TIMEOUT" -> {
@@ -283,6 +337,14 @@ class CallConfirmationManager(private val context: Context) {
                 
                 normalizedResponse.isEmpty() -> {
                     Log.d(TAG, "❓ پاسخ خالی")
+                    if (retryCount >= maxRetries) {
+                        Log.d(TAG, "⏰ به حداکثر تلاش رسیدیم - لغو تماس")
+                        scope.launch {
+                            ttsHelper.speakOnlineFirst("پاسخ نامشخص بود، تماس لغو شد")
+                        }
+                        return
+                    }
+                    retryCount++
                     scope.launch {
                         ttsHelper.speakOnlineFirst("لطفاً بگویید بله برای تماس یا لغو برای انصراف")
                     }
@@ -295,6 +357,14 @@ class CallConfirmationManager(private val context: Context) {
                 
                 else -> {
                     Log.d(TAG, "❓ پاسخ نامشخص - تلاش مجدد")
+                    if (retryCount >= maxRetries) {
+                        Log.d(TAG, "⏰ به حداکثر تلاش رسیدیم - لغو تماس")
+                        scope.launch {
+                            ttsHelper.speakOnlineFirst("پاسخ نامشخص بود، تماس لغو شد")
+                        }
+                        return
+                    }
+                    retryCount++
                     scope.launch {
                         ttsHelper.speakOnlineFirst("متوجه نشدم. لطفاً بگویید بله، لغو، یا حالت تماس را مشخص کنید")
                     }

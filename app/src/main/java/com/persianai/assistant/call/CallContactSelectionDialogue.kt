@@ -9,7 +9,13 @@ import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.services.RecordingResult
 import com.persianai.assistant.ai.AdvancedPersianAssistant
-import kotlinx.coroutines.*
+import com.persianai.assistant.utils.TTSHelper.formatPhoneNumberForTTS
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -53,7 +59,8 @@ class CallContactSelectionDialogue(
      */
     private suspend fun speakContactsList() {
         val contactsText = contacts.take(3).joinToString("، ") { contact ->
-            "${contact.name} با شماره ${contact.phoneNumber}"
+            val formattedPhone = formatPhoneNumberForTTS(contact.phoneNumber)
+            "${contact.name} با شماره $formattedPhone"
         }
 
         val message = "مخاطبین: $contactsText. لطفاً نام مخاطب را بگویید."
@@ -61,8 +68,8 @@ class CallContactSelectionDialogue(
 
         ttsHelper.speakOnlineFirst(message)
 
-        // کمی صبر برای تمام شدن TTS
-        delay(1000)
+        // صبر برای تمام شدن TTS و کمی وقفه قبل از ضبط
+        delay(2000)
     }
 
     /**
@@ -255,14 +262,15 @@ class CallContactSelectionDialogue(
             val phoneNumber = contact.phoneNumber
             
             // خواندن اطلاعات تماس برای تأیید
-            val confirmMessage = "با ${contact.name} به شماره $phoneNumber تماس بگیرم؟"
+            val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+            val confirmMessage = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟"
             Log.d(TAG, "📢 درخواست تأیید تماس: $confirmMessage")
             
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirst(confirmMessage)
             }
             
-            delay(1000) // صبر برای تمام شدن TTS
+            delay(2000) // صبر برای تمام شدن TTS
             
             // مرحله ۲: منتظر تأیید کاربر
             val confirmationResponse = listenForUserResponse()
@@ -324,7 +332,8 @@ class CallContactSelectionDialogue(
                 analysis.contains("confirm") -> {
                     Log.d(TAG, "✅ AI تشخیص داد: تأیید تماس")
                     withContext(Dispatchers.Main) {
-                        ttsHelper.speakOnlineFirst("در حال تماس با ${contact.name}")
+                        val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+                        ttsHelper.speakOnlineFirst("در حال تماس با ${contact.name} با شماره $formattedPhone")
                     }
                     
                     // شروع تماس واقعی

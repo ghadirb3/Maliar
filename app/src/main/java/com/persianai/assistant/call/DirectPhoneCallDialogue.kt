@@ -7,7 +7,13 @@ import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.services.RecordingResult
 import com.persianai.assistant.ai.AdvancedPersianAssistant
-import kotlinx.coroutines.*
+import com.persianai.assistant.utils.TTSHelper.formatPhoneNumberForTTS
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -50,13 +56,14 @@ class DirectPhoneCallDialogue(
      * خواندن شماره تلفن با TTS
      */
     private suspend fun speakPhoneNumberForConfirmation() {
-        val message = "با شماره $phoneNumber تماس بگیرم؟"
+        val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+        val message = "با شماره $formattedPhone تماس بگیرم؟"
         Log.d(TAG, "📢 درخواست تأیید تماس مستقیم: $message")
         
         ttsHelper.speakOnlineFirst(message)
         
-        // کمی صبر برای تمام شدن TTS
-        delay(1000)
+        // صبر برای تمام شدن TTS و کمی وقفه قبل از ضبط
+        delay(2000)
     }
     
     /**
@@ -199,7 +206,8 @@ class DirectPhoneCallDialogue(
                 analysis.contains("confirm") -> {
                     Log.d(TAG, "✅ AI تشخیص داد: تأیید تماس")
                     withContext(Dispatchers.Main) {
-                        ttsHelper.speakOnlineFirst("در حال تماس با شماره $phoneNumber")
+                        val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+                        ttsHelper.speakOnlineFirst("در حال تماس با شماره $formattedPhone")
                     }
                     
                     // شروع تماس واقعی
