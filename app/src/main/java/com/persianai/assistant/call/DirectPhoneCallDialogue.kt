@@ -3,7 +3,6 @@ package com.persianai.assistant.call
 import android.content.Context
 import android.util.Log
 import com.persianai.assistant.utils.TTSHelper
-import com.persianai.assistant.utils.TTSHelper.formatPhoneNumberForTTS
 import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.services.RecordingResult
@@ -56,7 +55,7 @@ class DirectPhoneCallDialogue(
      * خواندن شماره تلفن با TTS
      */
     private suspend fun speakPhoneNumberForConfirmation() {
-        val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+        val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
         val message = "با شماره $formattedPhone تماس بگیرم؟"
         Log.d(TAG, "📢 درخواست تأیید تماس مستقیم: $message")
         
@@ -206,7 +205,7 @@ class DirectPhoneCallDialogue(
                 analysis.contains("confirm") -> {
                     Log.d(TAG, "✅ AI تشخیص داد: تأیید تماس")
                     withContext(Dispatchers.Main) {
-                        val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+                        val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
                         ttsHelper.speakOnlineFirst("در حال تماس با شماره $formattedPhone")
                     }
                     

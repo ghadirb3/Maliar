@@ -5,7 +5,6 @@ import android.provider.ContactsContract
 import android.util.Log
 import com.persianai.assistant.models.Contact
 import com.persianai.assistant.utils.TTSHelper
-import com.persianai.assistant.utils.TTSHelper.formatPhoneNumberForTTS
 import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.services.RecordingResult
@@ -59,7 +58,7 @@ class CallContactSelectionDialogue(
      */
     private suspend fun speakContactsList() {
         val contactsText = contacts.take(3).joinToString("، ") { contact ->
-            val formattedPhone = formatPhoneNumberForTTS(contact.phoneNumber)
+            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(contact.phoneNumber)
             "${contact.name} با شماره $formattedPhone"
         }
 
@@ -262,7 +261,7 @@ class CallContactSelectionDialogue(
             val phoneNumber = contact.phoneNumber
             
             // خواندن اطلاعات تماس برای تأیید
-            val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
             val confirmMessage = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟"
             Log.d(TAG, "📢 درخواست تأیید تماس: $confirmMessage")
             
@@ -332,7 +331,7 @@ class CallContactSelectionDialogue(
                 analysis.contains("confirm") -> {
                     Log.d(TAG, "✅ AI تشخیص داد: تأیید تماس")
                     withContext(Dispatchers.Main) {
-                        val formattedPhone = formatPhoneNumberForTTS(phoneNumber)
+                        val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
                         ttsHelper.speakOnlineFirst("در حال تماس با ${contact.name} با شماره $formattedPhone")
                     }
                     
