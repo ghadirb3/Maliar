@@ -95,7 +95,7 @@ class DirectPhoneCallDialogue(
                 val now = System.currentTimeMillis()
                 val amplitude = engine.getCurrentAmplitude()
                 
-                if (amplitude > 0.1f) {
+                if (amplitude > 100) {
                     hasSpeech = true
                     lastSpeechTime = now
                 }
@@ -147,6 +147,17 @@ class DirectPhoneCallDialogue(
                 return@withContext "SILENCE_TIMEOUT"
             }
             
+            // بررسی کلمات لغو
+            val normalizedText = transcribedText.lowercase().trim()
+            if (normalizedText.contains("لغو") || normalizedText.contains("کنسل") || normalizedText.contains("نه") || 
+                normalizedText.contains("تموم") || normalizedText.contains("بس") || normalizedText.contains("تمام")) {
+                Log.d(TAG, "❌ کاربر لغو کرد: $transcribedText")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("تماس لغو شد")
+                }
+                return@withContext "CANCEL"
+            }
+            
             Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
             transcribedText
             
@@ -167,11 +178,13 @@ class DirectPhoneCallDialogue(
         
         when {
             response == "SILENCE_TIMEOUT" -> {
-                Log.d(TAG, "⏰ لغو به دلیل سکوت کاربر")
-                withContext(Dispatchers.Main) {
-                    ttsHelper.speakOnlineFirst("به دلیل سکوت، تماس لغو شد")
-                }
-                return
+                Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار تماس")
+                // پیام قبلاً در listenForUserResponse گفته شد
+            }
+            
+            response == "CANCEL" -> {
+                Log.d(TAG, "❌ کاربر لغو کرد")
+                // پیام قبلاً در listenForUserResponse گفته شد
             }
             
             response.isBlank() -> {

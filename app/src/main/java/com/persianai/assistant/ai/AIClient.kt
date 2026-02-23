@@ -794,9 +794,9 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
     private fun getDefaultBaseUrl(provider: AIProvider): String {
         return when (provider) {
             AIProvider.OPENAI -> "https://api.openai.com/v1"
-            AIProvider.LIARA -> "https://ai.liara.ir/v1"
+            AIProvider.LIARA -> "https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1"
             AIProvider.GAPGPT -> "https://api.gapgpt.app/v1"
-            AIProvider.AVALAI -> "https://api.avalai.ir/v1"
+            AIProvider.AVALAI -> "https://avalai.ir/api/v1"
             AIProvider.OPENROUTER -> "https://openrouter.ai/api/v1"
             AIProvider.ANTHROPIC -> "https://api.anthropic.com/v1"
             AIProvider.AIML -> "https://api.aiml.io/v1"

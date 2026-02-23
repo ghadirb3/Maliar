@@ -91,8 +91,8 @@ class CallContactSelectionDialogue(
             Log.d(TAG, "✅ ضبط صدا شروع شد")
             
             // منتظر مکث یا timeout
-            val timeoutMs = 8000L // 8 ثانیه
-            val silenceStopMs = 2000L // 2 ثانیه سکوت
+            val timeoutMs = 12000L // 12 ثانیه - افزایش زمان برای انتخاب مخاطب
+            val silenceStopMs = 3000L // 3 ثانیه سکوت
             val startTime = System.currentTimeMillis()
             var lastSpeechTime = startTime
             var hasSpeech = false
@@ -101,7 +101,7 @@ class CallContactSelectionDialogue(
                 val now = System.currentTimeMillis()
                 val amplitude = engine.getCurrentAmplitude()
                 
-                if (amplitude > 0.1f) {
+                if (amplitude > 100) {
                     hasSpeech = true
                     lastSpeechTime = now
                 }
@@ -146,11 +146,22 @@ class CallContactSelectionDialogue(
             
             // بررسی سکوت یا timeout
             if (transcribedText.isBlank()) {
-                Log.d(TAG, "⏰ کاربر سکوت کرد")
+                Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار")
                 withContext(Dispatchers.Main) {
-                    ttsHelper.speakOnlineFirst("به دلیل سکوت، انتخاب لغو شد")
+                    ttsHelper.speakOnlineFirst("به دلیل عدم پاسخ، انتخاب لغو شد")
                 }
                 return@withContext "SILENCE_TIMEOUT"
+            }
+            
+            // بررسی کلمات لغو
+            val normalizedText = transcribedText.lowercase().trim()
+            if (normalizedText.contains("لغو") || normalizedText.contains("کنسل") || normalizedText.contains("نه") || 
+                normalizedText.contains("تموم") || normalizedText.contains("بس") || normalizedText.contains("تمام")) {
+                Log.d(TAG, "❌ کاربر لغو کرد: $transcribedText")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("انتخاب لغو شد")
+                }
+                return@withContext "CANCEL"
             }
             
             Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
@@ -213,6 +224,16 @@ class CallContactSelectionDialogue(
             Log.d(TAG, "🤖 پاسخ AI: $analysis")
 
             when {
+                response == "SILENCE_TIMEOUT" -> {
+                    Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار")
+                    // پیام قبلاً در listenForUserResponse گفته شد
+                }
+                
+                response == "CANCEL" -> {
+                    Log.d(TAG, "❌ کاربر لغو کرد")
+                    // پیام قبلاً در listenForUserResponse گفته شد
+                }
+                
                 analysis.contains("cancel") -> {
                     Log.d(TAG, "❌ AI تشخیص داد: لغو")
                     withContext(Dispatchers.Main) {
@@ -234,9 +255,16 @@ class CallContactSelectionDialogue(
                         Log.d(TAG, "✅ مخاطب انتخاب شد: ${selectedContact.name}")
                         startCallConfirmation(selectedContact)
                     } else {
-                        Log.d(TAG, "❌ مخاطب یافت نشد: $analysis")
-                        withContext(Dispatchers.Main) {
-                            ttsHelper.speakOnlineFirst("مخاطب یافت نشد، لطفاً دوباره تلاش کنید")
+                        // تلاش برای استخراج شماره تلفن از پاسخ کاربر
+                        val phoneNumber = extractPhoneNumberFromText(userResponse)
+                        if (phoneNumber.isNotBlank()) {
+                            Log.d(TAG, "📞 شماره تلفن از پاسخ استخراج شد: $phoneNumber")
+                            startDirectCallConfirmation(phoneNumber)
+                        } else {
+                            Log.d(TAG, "❌ مخاطب یا شماره یافت نشد: $analysis")
+                            withContext(Dispatchers.Main) {
+                                ttsHelper.speakOnlineFirst("مخاطب یافت نشد. اگر شماره تلفن می‌خواهید تماس بگیرید، لطفاً شماره را بگویید")
+                            }
                         }
                     }
                 }
@@ -250,6 +278,162 @@ class CallContactSelectionDialogue(
         }
     }
 
+    /**
+     * استخراج شماره تلفن از متن
+     */
+    private fun extractPhoneNumberFromText(text: String): String {
+        val phonePatterns = listOf(
+            Regex("0?9([0-9]{9})"), // 09123456789 یا 9123456789
+            Regex("\\+989([0-9]{9})"), // +989123456789
+            Regex("9([0-9]{9})") // 9123456789
+        )
+        
+        for (pattern in phonePatterns) {
+            val match = pattern.find(text)
+            if (match != null) {
+                val number = match.value
+                // نرمال‌سازی شماره به فرمت استاندارد
+                return when {
+                    number.startsWith("+98") -> number.replace("+98", "0")
+                    number.startsWith("98") && number.length == 12 -> "0" + number.substring(2)
+                    number.startsWith("9") && number.length == 10 -> "0" + number
+                    else -> number.replace("\\s".toRegex(), "")
+                }
+            }
+        }
+        
+        return ""
+    }
+    
+    /**
+     * شروع تأیید تماس مستقیم با شماره تلفن
+     */
+    private suspend fun startDirectCallConfirmation(phoneNumber: String) {
+        try {
+            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
+            val confirmMessage = "با شماره $formattedPhone تماس بگیرم؟"
+            Log.d(TAG, "📢 درخواست تأیید تماس مستقیم: $confirmMessage")
+            
+            withContext(Dispatchers.Main) {
+                ttsHelper.speakOnlineFirst(confirmMessage)
+            }
+            
+            delay(2000) // صبر برای تمام شدن TTS
+            
+            // منتظر تأیید کاربر
+            val response = listenForUserResponse()
+            processDirectCallResponse(response, phoneNumber)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در تأیید تماس مستقیم", e)
+            withContext(Dispatchers.Main) {
+                ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
+            }
+        }
+    }
+    
+    /**
+     * پردازش پاسخ کاربر برای تماس مستقیم
+     */
+    private suspend fun processDirectCallResponse(response: String, phoneNumber: String) {
+        if (response.isBlank()) {
+            Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار تماس مستقیم")
+            withContext(Dispatchers.Main) {
+                ttsHelper.speakOnlineFirst("به دلیل عدم پاسخ، تماس لغو شد")
+            }
+            return
+        }
+        
+        val normalizedResponse = response.lowercase().trim()
+        
+        when {
+            normalizedResponse.contains("لغو") || normalizedResponse.contains("کنسل") || normalizedResponse.contains("نه") -> {
+                Log.d(TAG, "❌ کاربر تماس مستقیم را لغو کرد")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("تماس لغو شد")
+                }
+            }
+            
+            normalizedResponse.contains("بله") || normalizedResponse.contains("آره") || normalizedResponse.contains("تمام") -> {
+                Log.d(TAG, "✅ کاربر تأیید تماس مستقیم کرد")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("در حال برقراری تماس...")
+                }
+                makeDirectPhoneCall(phoneNumber)
+            }
+            
+            else -> {
+                // تحلیل با AI برای پاسخ‌های مبهم
+                val prompt = """
+                    کاربر به پرسش "با شماره $phoneNumber تماس بگیرم؟" این پاسخ را داده: "$response"
+                    
+                    لطفاً مشخص کن:
+                    1. آیا کاربر تأیید کرده؟
+                    2. آیا لغو کرده؟
+                    3. یا نامشخص است؟
+                    
+                    فقط در یک کلمه پاسخ بده:
+                    - "CONFIRM" اگر تأیید کرده
+                    - "CANCEL" اگر لغو کرده  
+                    - "UNCLEAR" اگر نامشخص است
+                """.trimIndent()
+                
+                try {
+                    val aiResponse = aiAssistant.processRequestWithAI(prompt)
+                    val analysis = aiResponse.text.lowercase().trim()
+                    
+                    when {
+                        analysis.contains("confirm") -> {
+                            Log.d(TAG, "✅ AI تأیید تماس مستقیم را تشخیص داد")
+                            withContext(Dispatchers.Main) {
+                                ttsHelper.speakOnlineFirst("در حال برقراری تماس...")
+                            }
+                            makeDirectPhoneCall(phoneNumber)
+                        }
+                        
+                        analysis.contains("cancel") -> {
+                            Log.d(TAG, "❌ AI لغو تماس مستقیم را تشخیص داد")
+                            withContext(Dispatchers.Main) {
+                                ttsHelper.speakOnlineFirst("تماس لغو شد")
+                            }
+                        }
+                        
+                        else -> {
+                            Log.d(TAG, "❓ پاسخ نامشخص برای تماس مستقیم")
+                            withContext(Dispatchers.Main) {
+                                ttsHelper.speakOnlineFirst("متوجه نشدم، لطفاً دوباره تلاش کنید")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ خطا در تحلیل AI برای تماس مستقیم", e)
+                    withContext(Dispatchers.Main) {
+                        ttsHelper.speakOnlineFirst("خطا در تحلیل پاسخ")
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * برقراری تماس مستقیم
+     */
+    private fun makeDirectPhoneCall(phoneNumber: String) {
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
+                data = android.net.Uri.parse("tel:$phoneNumber")
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+            Log.d(TAG, "✅ تماس مستقیم برقرار شد: $phoneNumber")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در برقراری تماس مستقیم", e)
+            scope.launch {
+                ttsHelper.speakOnlineFirst("خطا در برقراری تماس")
+            }
+        }
+    }
+    
     /**
      * شروع تأیید دو مرحله‌ای تماس
      */

@@ -7,7 +7,6 @@ import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.ModelManager
 import com.persianai.assistant.models.ModelWrapper
-import com.persianai.assistant.config.RemoteAIConfigManager
 
 /**
  * انتخاب‌گر هوشمند مدل‌های هوش مصنوعی با پشتیبانی از مدل‌های داینامیک

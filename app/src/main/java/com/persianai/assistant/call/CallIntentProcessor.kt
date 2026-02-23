@@ -32,6 +32,20 @@ class CallIntentProcessor(private val context: Context) {
         Pattern.compile("با (.+) حرف بزن")
     )
     
+    // الگوهای استخراج شماره تلفن
+    private val phonePatterns = listOf(
+        Pattern.compile("تماس مستقیم با شماره ([0-9\\s]+)"),
+        Pattern.compile("با شماره ([0-9\\s]+) تماس بگیر"),
+        Pattern.compile("شماره ([0-9\\s]+) را تماس بگیر"),
+        Pattern.compile("به شماره ([0-9\\s]+) زنگ بزن"),
+        Pattern.compile("زنگ بزن به شماره ([0-9\\s]+)"),
+        Pattern.compile("تماس با شماره ([0-9\\s]+)"),
+        Pattern.compile("شماره ([0-9\\s]+)"),
+        Pattern.compile("\\b(09[0-9\\s]{8,11})\\b"),
+        Pattern.compile("\\b(\\+98[0-9\\s]{8,11})\\b"),
+        Pattern.compile("\\b(0[0-9\\s]{9,11})\\b")
+    )
+    
     // الگوهای لغو تماس
     private val cancelPatterns = listOf(
         Pattern.compile("لغو تماس"),
@@ -61,7 +75,14 @@ class CallIntentProcessor(private val context: Context) {
                 return@withContext CallIntentResult.Cancel
             }
             
-            // مرحله ۲: استخراج نام مخاطب
+            // مرحله ۲: استخراج شماره تلفن یا نام مخاطب
+            val phoneNumber = extractPhoneNumber(normalizedInput)
+            if (phoneNumber != null) {
+                Log.d(TAG, "📞 شماره تلفن مستقیم استخراج شد: '$phoneNumber'")
+                val cleanedPhone = cleanPhoneNumber(phoneNumber)
+                return@withContext CallIntentResult.DirectCall(cleanedPhone)
+            }
+            
             val contactName = extractContactName(normalizedInput)
             if (contactName == null) {
                 Log.d(TAG, "❌ نام مخاطب استخراج نشد")
@@ -109,6 +130,43 @@ class CallIntentProcessor(private val context: Context) {
         return cancelPatterns.any { pattern ->
             pattern.matcher(input).find()
         }
+    }
+    
+    /**
+     * استخراج شماره تلفن از فرمان صوتی
+     */
+    private fun extractPhoneNumber(input: String): String? {
+        for (pattern in phonePatterns) {
+            val matcher = pattern.matcher(input)
+            if (matcher.find()) {
+                val phoneNumber = matcher.group(1)?.trim()
+                if (phoneNumber != null && phoneNumber.isNotBlank()) {
+                    return phoneNumber
+                }
+            }
+        }
+        return null
+    }
+    
+    /**
+     * پاکسازی شماره تلفن از فاصله‌ها و کاراکترهای اضافی
+     */
+    private fun cleanPhoneNumber(phoneNumber: String): String {
+        return phoneNumber
+            .replace("\\s".toRegex(), "") // حذف فاصله‌ها
+            .replace("-", "") // حذف خط تیره
+            .replace("(", "") // حذف پرانتز باز
+            .replace(")", "") // حذف پرانتز بسته
+            .replace("٠", "0") // اعداد عربی
+            .replace("١", "1")
+            .replace("٢", "2")
+            .replace("٣", "3")
+            .replace("٤", "4")
+            .replace("٥", "5")
+            .replace("٦", "6")
+            .replace("٧", "7")
+            .replace("٨", "8")
+            .replace("٩", "9")
     }
     
     /**
@@ -202,5 +260,6 @@ class CallIntentProcessor(private val context: Context) {
         data class Error(val message: String) : CallIntentResult()
         data class SingleContact(val contact: Contact) : CallIntentResult()
         data class MultipleContacts(val contacts: List<Contact>) : CallIntentResult()
+        data class DirectCall(val phoneNumber: String) : CallIntentResult()
     }
 }

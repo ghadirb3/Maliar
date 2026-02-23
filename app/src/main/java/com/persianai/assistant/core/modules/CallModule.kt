@@ -152,6 +152,20 @@ class CallModule(context: Context) : BaseModule(context) {
                 )
             }
             
+            is CallIntentProcessor.CallIntentResult.DirectCall -> {
+                // شروع مکالمه تأیید تماس مستقیم
+                val dialogueManager = DirectPhoneCallDialogue(context, result.phoneNumber)
+                scope.launch {
+                    dialogueManager.startDirectCallConfirmation()
+                }
+                
+                createResult(
+                    text = "📞 تماس با شماره ${result.phoneNumber}\nدر حال تأیید...",
+                    intentName = intent.name,
+                    success = true
+                )
+            }
+            
             is CallIntentProcessor.CallIntentResult.ContactNotFound -> {
                 createResult(
                     text = "❌ ${result.message}\n\n" +

@@ -105,7 +105,7 @@ enum class AIModel(
         200000
     ),
     LIARA_GPT_4O_MINI(
-        "minimax/minimax-m2.5:online",
+        "openai/gpt-4o-mini",
         "GPT-4o Mini (Liara)",
         AIProvider.LIARA,
         "مدل GPT-4o Mini از سرویس لیارا",

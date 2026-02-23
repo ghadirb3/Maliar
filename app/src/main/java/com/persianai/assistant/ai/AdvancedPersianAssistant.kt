@@ -157,20 +157,23 @@ class AdvancedPersianAssistant(private val context: Context) {
                 activeKeys.firstOrNull { it.provider == AIProvider.OPENAI }?.provider
             PreferencesManager.ProviderPreference.SMART_ROUTE ->
                 activeKeys.firstOrNull { it.provider == AIProvider.OPENAI }?.provider
+                    ?: activeKeys.firstOrNull { it.provider == AIProvider.LIARA }?.provider
                     ?: activeKeys.firstOrNull()?.provider
             PreferencesManager.ProviderPreference.AUTO ->
-                activeKeys.firstOrNull()?.provider
+                activeKeys.firstOrNull { it.provider == AIProvider.LIARA }?.provider
+                    ?: activeKeys.firstOrNull { it.provider == AIProvider.OPENAI }?.provider
+                    ?: activeKeys.firstOrNull()?.provider
         }
         
         // Choose best model based on available providers
         val finalProvider = preferredProvider ?: activeKeys.firstOrNull()?.provider
         return when (finalProvider) {
+            AIProvider.LIARA -> {
+                // Use LIARA_GPT_5_NANO to match BaseChatActivity priority
+                AIModel.LIARA_GPT_5_NANO
+            }
             AIProvider.OPENAI -> AIModel.GPT_4O_MINI
             AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
-            AIProvider.LIARA -> {
-                // Use a valid LIARA model to avoid 400 error
-                AIModel.LIARA_GPT_4O_MINI
-            }
             else -> AIModel.GPT_4O_MINI
         }
     }
