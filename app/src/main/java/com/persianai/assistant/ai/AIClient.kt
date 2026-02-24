@@ -360,7 +360,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         }
                     }
                     
-                    if (!contentMessage.content.isNullOrBlank()) {
+                    if (contentMessage != null && !contentMessage.content.isNullOrBlank()) {
                         android.util.Log.d("AIClient", "[$requestId] Success: content length=${contentMessage.content.length}")
                         contentMessage.copy(timestamp = System.currentTimeMillis())
                     } else {
