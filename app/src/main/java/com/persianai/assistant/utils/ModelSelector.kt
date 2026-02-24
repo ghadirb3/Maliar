@@ -5,6 +5,7 @@ import android.util.Log
 import com.persianai.assistant.models.AIModel
 import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.AIProvider
+import com.persianai.assistant.models.DynamicAIModel
 import com.persianai.assistant.models.ModelManager
 import com.persianai.assistant.models.ModelWrapper
 
@@ -46,7 +47,7 @@ object ModelSelector {
                     }
                 }
                 is ModelWrapper.DynamicModel -> {
-                    val dynamicModel = modelWrapper.unwrap()
+                    val dynamicModel = modelWrapper.unwrap() as DynamicAIModel
                     if (activeProviders.contains(dynamicModel.provider)) {
                         // تبدیل مدل داینامیک به مدل استاتیک مشابه یا fallback
                         val staticModel = findCompatibleStaticModel(dynamicModel, apiKeys)
@@ -124,7 +125,7 @@ object ModelSelector {
                 is ModelWrapper.StaticModel -> wrapper.unwrap()
                 is ModelWrapper.DynamicModel -> {
                     // تبدیل مدل داینامیک به مدل استاتیک سازگار
-                    findCompatibleStaticModel(wrapper.unwrap() as DynamicAIModel, apiKeys)
+                    findCompatibleStaticModel(wrapper.unwrap() as com.persianai.assistant.models.DynamicAIModel, apiKeys)
                 }
             }
         }.distinct()
