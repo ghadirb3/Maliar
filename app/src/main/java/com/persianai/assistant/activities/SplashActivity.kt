@@ -236,6 +236,8 @@ class SplashActivity : AppCompatActivity() {
                 // ذخیره کلیدها
                 val prefsManager = PreferencesManager(this@SplashActivity)
                 prefsManager.saveAPIKeys(apiKeys)
+                // همگام‌سازی با SharedPreferences عمومی تا همه ماژول‌ها کلیدها را ببینند
+                syncApiPrefs(prefsManager)
                 
                 Toast.makeText(
                     this@SplashActivity,

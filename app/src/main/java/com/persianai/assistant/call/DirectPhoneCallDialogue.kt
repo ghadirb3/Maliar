@@ -145,10 +145,18 @@ class DirectPhoneCallDialogue(
                 return@withContext "SILENCE_TIMEOUT"
             }
             
-            // بررسی کلمات لغو
+            // بررسی کلمات لغو (فقط کلمات کامل برای جلوگیری از false positive)
             val normalizedText = transcribedText.lowercase().trim()
-            if (normalizedText.contains("لغو") || normalizedText.contains("کنسل") || normalizedText.contains("نه") || 
-                normalizedText.contains("تموم") || normalizedText.contains("بس") || normalizedText.contains("تمام")) {
+            val negativePatterns = listOf(
+                Regex("\\bلغو\\b"),
+                Regex("\\bکنسل\\b"),
+                Regex("\\bنه\\b"),
+                Regex("\\bتموم\\b"),
+                Regex("\\bبس\\b"),
+                Regex("\\bتمام\\b")
+            )
+            val isNegative = negativePatterns.any { it.containsMatchIn(normalizedText) }
+            if (isNegative) {
                 Log.d(TAG, "❌ کاربر لغو کرد: $transcribedText")
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("تماس لغو شد")

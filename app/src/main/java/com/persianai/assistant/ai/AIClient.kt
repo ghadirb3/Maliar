@@ -356,15 +356,26 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                                             val choiceObj = choicesArray[0].asJsonObject
                                             val finishReason = choiceObj.get("finish_reason")?.asString
                                             if (finishReason == "length") {
+                                                // Try both OpenAI and possible Liara variant structures
                                                 val messageObj = choiceObj.getAsJsonObject("message")
                                                 if (messageObj != null) {
                                                     val partialContent = messageObj.get("content")?.asString
                                                     if (!partialContent.isNullOrBlank()) {
+                                                        android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from message.content")
                                                         return@withContext ChatMessage(
                                                             role = MessageRole.ASSISTANT,
                                                             content = partialContent
                                                         )
                                                     }
+                                                }
+                                                // Fallback: sometimes content may be directly under choice
+                                                val directContent = choiceObj.get("content")?.asString
+                                                if (!directContent.isNullOrBlank()) {
+                                                    android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from choice.content")
+                                                    return@withContext ChatMessage(
+                                                        role = MessageRole.ASSISTANT,
+                                                        content = directContent
+                                                    )
                                                 }
                                             }
                                         }
