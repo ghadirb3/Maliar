@@ -124,7 +124,7 @@ object ModelSelector {
                 is ModelWrapper.StaticModel -> wrapper.unwrap()
                 is ModelWrapper.DynamicModel -> {
                     // تبدیل مدل داینامیک به مدل استاتیک سازگار
-                    findCompatibleStaticModel(wrapper.unwrap(), apiKeys)
+                    findCompatibleStaticModel(wrapper.unwrap() as DynamicAIModel, apiKeys)
                 }
             }
         }.distinct()
