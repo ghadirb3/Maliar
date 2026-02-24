@@ -285,8 +285,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                     val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
                         ?: throw Exception("Failed to parse response as ChatResponse")
                     
-                    // Try multiple response formats
-                    val content = when {
+                    val contentMessage = when {
                         // Standard OpenAI format
                         !chatResponse.choices.isNullOrEmpty() -> {
                             val choice = chatResponse.choices.firstOrNull()
@@ -307,7 +306,10 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                                             val partialContent = messageObj.get("content")?.asString
                                             if (!partialContent.isNullOrBlank()) {
                                                 android.util.Log.w("AIClient", "[$requestId] Using truncated LIARA response: ${partialContent.take(100)}...")
-                                                return@withContext partialContent
+                                                return@withContext ChatMessage(
+                                                    role = MessageRole.ASSISTANT,
+                                                    content = partialContent
+                                                )
                                             }
                                         }
                                     }
@@ -316,36 +318,51 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                                 }
                             }
                             
-                            content
+                            ChatMessage(
+                                role = MessageRole.ASSISTANT,
+                                content = content ?: ""
+                            )
                         }
                         // Alternative direct response field
-                        !chatResponse.response.isNullOrBlank() -> chatResponse.response
+                        !chatResponse.response.isNullOrBlank() -> ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = chatResponse.response
+                        )
                         // Alternative text field
-                        !chatResponse.text.isNullOrBlank() -> chatResponse.text
+                        !chatResponse.text.isNullOrBlank() -> ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = chatResponse.text
+                        )
                         // Alternative content field
-                        !chatResponse.content.isNullOrBlank() -> chatResponse.content
+                        !chatResponse.content.isNullOrBlank() -> ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = chatResponse.content
+                        )
                         // Last resort: try to parse as plain text or different JSON structure
                         else -> {
                             try {
                                 val json = gson.fromJson(responseBody, JsonObject::class.java)
-                                json.get("response")?.asString 
+                                val fallbackContent = json.get("response")?.asString 
                                     ?: json.get("text")?.asString
                                     ?: json.get("content")?.asString
                                     ?: json.get("message")?.asString
                                     ?: json.get("answer")?.asString
+                                
+                                if (!fallbackContent.isNullOrBlank()) {
+                                    ChatMessage(
+                                        role = MessageRole.ASSISTANT,
+                                        content = fallbackContent
+                                    )
+                                } else null
                             } catch (e: Exception) {
                                 null
                             }
                         }
                     }
                     
-                    if (!content.isNullOrBlank()) {
-                        android.util.Log.d("AIClient", "[$requestId] Success: content length=${content.length}")
-                        ChatMessage(
-                            role = MessageRole.ASSISTANT,
-                            content = content,
-                            timestamp = System.currentTimeMillis()
-                        )
+                    if (!contentMessage.content.isNullOrBlank()) {
+                        android.util.Log.d("AIClient", "[$requestId] Success: content length=${contentMessage.content.length}")
+                        contentMessage.copy(timestamp = System.currentTimeMillis())
                     } else {
                         throw Exception("پاسخ خالی از API")
                     }
