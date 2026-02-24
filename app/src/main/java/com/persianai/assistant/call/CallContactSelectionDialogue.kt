@@ -279,17 +279,31 @@ class CallContactSelectionDialogue(
     }
 
     /**
-     * استخراج شماره تلفن از متن
+     * استخراج شماره تلفن از متن با پشتیبانی از ارقام پراکنده
      */
     private fun extractPhoneNumberFromText(text: String): String {
+        val normalizedText = text
+            .replace('۰', '0').replace('٠', '0')
+            .replace('۱', '1').replace('١', '1')
+            .replace('۲', '2').replace('٢', '2')
+            .replace('۳', '3').replace('٣', '3')
+            .replace('۴', '4').replace('٤', '4')
+            .replace('۵', '5').replace('٥', '5')
+            .replace('۶', '6').replace('٦', '6')
+            .replace('۷', '7').replace('٧', '7')
+            .replace('۸', '8').replace('٨', '8')
+            .replace('۹', '9').replace('٩', '9')
+
+        // الگوهای استاندارد
         val phonePatterns = listOf(
             Regex("0?9([0-9]{9})"), // 09123456789 یا 9123456789
             Regex("\\+989([0-9]{9})"), // +989123456789
             Regex("9([0-9]{9})") // 9123456789
         )
         
+        // اول الگوهای استاندارد را امتحان کن
         for (pattern in phonePatterns) {
-            val match = pattern.find(text)
+            val match = pattern.find(normalizedText)
             if (match != null) {
                 val number = match.value
                 // نرمال‌سازی شماره به فرمت استاندارد
@@ -298,6 +312,44 @@ class CallContactSelectionDialogue(
                     number.startsWith("98") && number.length == 12 -> "0" + number.substring(2)
                     number.startsWith("9") && number.length == 10 -> "0" + number
                     else -> number.replace("\\s".toRegex(), "")
+                }
+            }
+        }
+        
+        // اگر الگوی استانداری پیدا نشد، ارقام پراکنده را ترکیب کن
+        val allDigits = normalizedText.filter { it.isDigit() }
+        
+        // جستجوی شماره تلفن ایرانی در ارقام استخراج شده
+        if (allDigits.length >= 10) {
+            // الگوهای مختلف برای شماره ایرانی
+            val iranianPatterns = listOf(
+                // شماره 10 رقمی که با 9 شروع می‌شود
+                Regex("(9\\d{9})"),
+                // شماره 11 رقمی که با 09 شروع می‌شود  
+                Regex("(09\\d{9})"),
+                // شماره 12 رقمی که با 989 شروع می‌شود
+                Regex("(989\\d{9})"),
+                // شماره 13 رقمی که با +989 شروع می‌شود
+                Regex("(\\+989\\d{9})")
+            )
+            
+            for (pattern in iranianPatterns) {
+                val match = pattern.find(allDigits)
+                if (match != null) {
+                    var number = match.value
+                    // نرمال‌سازی
+                    when {
+                        number.startsWith("+98") -> number = number.replace("+98", "0")
+                        number.startsWith("98") && number.length == 12 -> number = "0" + number.substring(2)
+                        number.startsWith("9") && number.length == 10 -> number = "0" + number
+                    }
+                    // حذف فاصله‌ها
+                    number = number.replace("\\s".toRegex(), "")
+                    
+                    // اعتبارسنجی نهایی
+                    if (number.matches(Regex("09\\d{9}"))) {
+                        return number
+                    }
                 }
             }
         }

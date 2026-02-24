@@ -64,9 +64,22 @@ class CallIntentProcessor(private val context: Context) {
      * @return نتیجه پردازش فرمان
      */
     suspend fun processCallIntent(userInput: String): CallIntentResult = withContext(Dispatchers.IO) {
-        val normalizedInput = userInput.lowercase().trim()
+        // نرمال‌سازی ارقام فارسی/عربی به لاتین
+        val normalizedInput = userInput
+            .replace('۰', '0').replace('٠', '0')
+            .replace('۱', '1').replace('١', '1')
+            .replace('۲', '2').replace('٢', '2')
+            .replace('۳', '3').replace('٣', '3')
+            .replace('۴', '4').replace('٤', '4')
+            .replace('۵', '5').replace('٥', '5')
+            .replace('۶', '6').replace('٦', '6')
+            .replace('۷', '7').replace('٧', '7')
+            .replace('۸', '8').replace('٨', '8')
+            .replace('۹', '9').replace('٩', '9')
+            .lowercase()
+            .trim()
         
-        Log.d(TAG, "🎯 پردازش فرمان تماس: '$userInput'")
+        Log.d(TAG, "🎯 پردازش فرمان تماس: '$userInput' -> '$normalizedInput'")
         
         try {
             // مرحله ۱: بررسی لغو تماس
@@ -167,6 +180,16 @@ class CallIntentProcessor(private val context: Context) {
             .replace("٧", "7")
             .replace("٨", "8")
             .replace("٩", "9")
+            .replace("۰", "0") // اعداد فارسی
+            .replace("۱", "1")
+            .replace("۲", "2")
+            .replace("۳", "3")
+            .replace("۴", "4")
+            .replace("۵", "5")
+            .replace("۶", "6")
+            .replace("۷", "7")
+            .replace("۸", "8")
+            .replace("۹", "9")
     }
     
     /**

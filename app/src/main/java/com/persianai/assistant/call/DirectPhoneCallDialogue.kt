@@ -187,72 +187,147 @@ class DirectPhoneCallDialogue(
                 // پیام قبلاً در listenForUserResponse گفته شد
             }
             
-            response.isBlank() -> {
-                Log.d(TAG, "❌ پاسخ خالی")
-                return
-            }
-        }
-        
-        try {
-            // ساخت پرامپت برای AI
-            val prompt = """
-                کاربر برای تأیید تماس با شماره $phoneNumber گفت: "$response"
+            else -> {
+                // استخراج شماره تلفن از پاسخ (در صورت وجود)
+                val extractedPhone = extractPhoneNumberFromText(response)
                 
-                لطفاً تحلیل کن آیا کاربر تمایل به تماس دارد:
-                - کلمات تأیید: بله، آره، تماس بگیر، اوکی، باشه، انجام بده، بگیر
-                - کلمات لغو: لغو، نه، کنسل، انصراف، نمیخوام
-                
-                فقط در یک کلمه پاسخ بده:
-                - "CONFIRM" اگر تأیید کرده
-                - "CANCEL" اگر لغو کرده
-                - "NONE" اگر مشخص نیست
-            """.trimIndent()
-            
-            // تحلیل با AI
-            val aiResponse = aiAssistant.processRequestWithAI(prompt)
-            val analysis = aiResponse.text.lowercase().trim()
-            
-            Log.d(TAG, "🤖 پاسخ AI تأیید تماس مستقیم: $analysis")
-            
-            when {
-                analysis.contains("confirm") -> {
-                    Log.d(TAG, "✅ AI تشخیص داد: تأیید تماس")
-                    withContext(Dispatchers.Main) {
-                        val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
-                        ttsHelper.speakOnlineFirst("در حال تماس با شماره $formattedPhone")
+                when {
+                    // بررسی کلمات تأیید
+                    response.lowercase().contains("بله") || 
+                    response.lowercase().contains("آره") || 
+                    response.lowercase().contains("تماس") ||
+                    response.lowercase().contains("بزن") ||
+                    response.lowercase().contains("کن") -> {
+                        
+                        val finalPhone = if (extractedPhone.isNotBlank()) {
+                            Log.d(TAG, "📞 شماره اصلاح شده از پاسخ: $extractedPhone")
+                            extractedPhone
+                        } else {
+                            phoneNumber
+                        }
+                        
+                        Log.d(TAG, "✅ تماس تأیید شد با شماره: $finalPhone")
+                        
+                        withContext(Dispatchers.Main) {
+                            ttsHelper.speakOnlineFirst("در حال برقراری تماس با $finalPhone")
+                        }
+                        
+                        delay(1000)
+                        
+                        // برقراری تماس
+                        makePhoneCall(finalPhone)
                     }
                     
-                    // شروع تماس واقعی
-                    startActualCall()
-                }
-                
-                analysis.contains("cancel") -> {
-                    Log.d(TAG, "❌ AI تشخیص داد: لغو تماس")
-                    withContext(Dispatchers.Main) {
-                        ttsHelper.speakOnlineFirst("تماس لغو شد")
+                    // اگر شماره جدیدی در پاسخ وجود دارد، از آن استفاده کن
+                    extractedPhone.isNotBlank() && extractedPhone != phoneNumber -> {
+                        Log.d(TAG, "📞 شماره جدید از پاسخ استخراج شد: $extractedPhone")
+                        
+                        withContext(Dispatchers.Main) {
+                            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(extractedPhone)
+                            ttsHelper.speakOnlineFirst("با شماره $formattedPhone تماس بگیرم؟")
+                        }
+                        
+                        delay(2000)
+                        
+                        // شنود مجدد برای تأیید شماره جدید
+                        val secondResponse = listenForUserResponse()
+                        processConfirmationResponse(secondResponse)
+                    }
+                    
+                    else -> {
+                        Log.d(TAG, "❓ پاسخ نامشخص: $response")
+                        withContext(Dispatchers.Main) {
+                            ttsHelper.speakOnlineFirst("متوجه نشدم. لطفاً بگویید بله برای تماس یا لغو برای انصراف")
+                        }
                     }
                 }
-                
-                else -> {
-                    Log.d(TAG, "❓ AI تشخیص داد: نامشخص")
-                    withContext(Dispatchers.Main) {
-                        ttsHelper.speakOnlineFirst("متوجه نشدم، تماس لغو شد")
-                    }
-                }
-            }
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در تحلیل تأیید AI", e)
-            withContext(Dispatchers.Main) {
-                ttsHelper.speakOnlineFirst("خطا در تحلیل پاسخ، تماس لغو شد")
             }
         }
     }
     
     /**
-     * شروع تماس واقعی
+     * استخراج شماره تلفن از متن با پشتیبانی از ارقام پراکنده
      */
-    private suspend fun startActualCall() {
+    private fun extractPhoneNumberFromText(text: String): String {
+        val normalizedText = text
+            .replace('۰', '0').replace('٠', '0')
+            .replace('۱', '1').replace('١', '1')
+            .replace('۲', '2').replace('٢', '2')
+            .replace('۳', '3').replace('٣', '3')
+            .replace('۴', '4').replace('٤', '4')
+            .replace('۵', '5').replace('٥', '5')
+            .replace('۶', '6').replace('٦', '6')
+            .replace('۷', '7').replace('٧', '7')
+            .replace('۸', '8').replace('٨', '8')
+            .replace('۹', '9').replace('٩', '9')
+
+        // الگوهای استاندارد
+        val phonePatterns = listOf(
+            Regex("0?9([0-9]{9})"), // 09123456789 یا 9123456789
+            Regex("\\+989([0-9]{9})"), // +989123456789
+            Regex("9([0-9]{9})") // 9123456789
+        )
+        
+        // اول الگوهای استاندارد را امتحان کن
+        for (pattern in phonePatterns) {
+            val match = pattern.find(normalizedText)
+            if (match != null) {
+                val number = match.value
+                // نرمال‌سازی شماره به فرمت استاندارد
+                return when {
+                    number.startsWith("+98") -> number.replace("+98", "0")
+                    number.startsWith("98") && number.length == 12 -> "0" + number.substring(2)
+                    number.startsWith("9") && number.length == 10 -> "0" + number
+                    else -> number.replace("\\s".toRegex(), "")
+                }
+            }
+        }
+        
+        // اگر الگوی استانداری پیدا نشد، ارقام پراکنده را ترکیب کن
+        val allDigits = normalizedText.filter { it.isDigit() }
+        
+        // جستجوی شماره تلفن ایرانی در ارقام استخراج شده
+        if (allDigits.length >= 10) {
+            // الگوهای مختلف برای شماره ایرانی
+            val iranianPatterns = listOf(
+                // شماره 10 رقمی که با 9 شروع می‌شود
+                Regex("(9\\d{9})"),
+                // شماره 11 رقمی که با 09 شروع می‌شود  
+                Regex("(09\\d{9})"),
+                // شماره 12 رقمی که با 989 شروع می‌شود
+                Regex("(989\\d{9})"),
+                // شماره 13 رقمی که با +989 شروع می‌شود
+                Regex("(\\+989\\d{9})")
+            )
+            
+            for (pattern in iranianPatterns) {
+                val match = pattern.find(allDigits)
+                if (match != null) {
+                    var number = match.value
+                    // نرمال‌سازی
+                    when {
+                        number.startsWith("+98") -> number = number.replace("+98", "0")
+                        number.startsWith("98") && number.length == 12 -> number = "0" + number.substring(2)
+                        number.startsWith("9") && number.length == 10 -> number = "0" + number
+                    }
+                    // حذف فاصله‌ها
+                    number = number.replace("\\s".toRegex(), "")
+                    
+                    // اعتبارسنجی نهایی
+                    if (number.matches(Regex("09\\d{9}"))) {
+                        return number
+                    }
+                }
+            }
+        }
+        
+        return ""
+    }
+    
+    /**
+     * برقراری تماس تلفنی
+     */
+    private suspend fun makePhoneCall(phoneNumber: String) {
         try {
             // استفاده از CallConfirmationManager برای شروع تماس
             val confirmationManager = CallConfirmationManager(context)

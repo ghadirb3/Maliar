@@ -299,6 +299,13 @@
             android:theme="@style/Theme.PersianAIAssistant.Transparent" />
             
         <activity
+            android:name=".activities.VoicePermissionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.PersianAIAssistant.Transparent" />
+            
+        <activity
             android:name=".activities.GenericInfoActivity"
             android:exported="false"
             android:theme="@style/Theme.PersianAIAssistant" />

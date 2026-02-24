@@ -27,10 +27,34 @@ class TTSHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "TTSHelper"
+
+        private fun normalizeDigits(input: String): String {
+            if (input.isBlank()) return input
+            return buildString(input.length) {
+                for (ch in input) {
+                    append(
+                        when (ch) {
+                            '۰', '٠' -> '0'
+                            '۱', '١' -> '1'
+                            '۲', '٢' -> '2'
+                            '۳', '٣' -> '3'
+                            '۴', '٤' -> '4'
+                            '۵', '٥' -> '5'
+                            '۶', '٦' -> '6'
+                            '۷', '٧' -> '7'
+                            '۸', '٨' -> '8'
+                            '۹', '٩' -> '9'
+                            else -> ch
+                        }
+                    )
+                }
+            }
+        }
         
         fun formatPhoneNumberForTTS(phoneNumber: String): String {
             val ltrMark = "\u200E" // LRM
-            val digits = phoneNumber.replace(Regex("[^0-9+]"), "")
+            val normalized = normalizeDigits(phoneNumber)
+            val digits = normalized.replace(Regex("[^0-9+]"), "")
             val spaced = digits.toCharArray().joinToString(" ")
             return "$ltrMark$spaced"
         }

@@ -290,9 +290,33 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         // Standard OpenAI format
                         !chatResponse.choices.isNullOrEmpty() -> {
                             val choice = chatResponse.choices.firstOrNull()
-                            choice?.message?.content 
+                            val content = choice?.message?.content 
                                 ?: choice?.text 
                                 ?: choice?.content
+                            
+                            // Handle LIARA truncated responses due to max_output_tokens
+                            if (content.isNullOrBlank() && choice?.finishReason == "length") {
+                                // For truncated responses, try to extract partial content from raw response
+                                try {
+                                    val json = gson.fromJson(responseBody, JsonObject::class.java)
+                                    val choicesArray = json.getAsJsonArray("choices")
+                                    if (choicesArray != null && choicesArray.size() > 0) {
+                                        val choiceObj = choicesArray[0].asJsonObject
+                                        val messageObj = choiceObj.getAsJsonObject("message")
+                                        if (messageObj != null) {
+                                            val partialContent = messageObj.get("content")?.asString
+                                            if (!partialContent.isNullOrBlank()) {
+                                                android.util.Log.w("AIClient", "[$requestId] Using truncated LIARA response: ${partialContent.take(100)}...")
+                                                return@withContext partialContent
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("AIClient", "[$requestId] Failed to extract truncated content: ${e.message}")
+                                }
+                            }
+                            
+                            content
                         }
                         // Alternative direct response field
                         !chatResponse.response.isNullOrBlank() -> chatResponse.response

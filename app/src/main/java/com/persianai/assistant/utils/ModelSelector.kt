@@ -47,7 +47,7 @@ object ModelSelector {
                     }
                 }
                 is ModelWrapper.DynamicModel -> {
-                    val dynamicModel = modelWrapper.unwrap() as DynamicAIModel
+                    val dynamicModel = modelWrapper.dynamicModel
                     if (activeProviders.contains(dynamicModel.provider)) {
                         // تبدیل مدل داینامیک به مدل استاتیک مشابه یا fallback
                         val staticModel = findCompatibleStaticModel(dynamicModel, apiKeys)
@@ -67,7 +67,7 @@ object ModelSelector {
     /**
      * پیدا کردن مدل استاتیک سازگار با مدل داینامیک
      */
-    private fun findCompatibleStaticModel(dynamicModel: com.persianai.assistant.models.DynamicAIModel, apiKeys: List<APIKey>): AIModel? {
+    private fun findCompatibleStaticModel(dynamicModel: DynamicAIModel, apiKeys: List<APIKey>): AIModel? {
         // اول تلاش کن مدل استاتیک با همین provider پیدا کن
         val compatibleStatic = AIModel.values().find { it.provider == dynamicModel.provider }
         if (compatibleStatic != null) {
@@ -125,7 +125,7 @@ object ModelSelector {
                 is ModelWrapper.StaticModel -> wrapper.unwrap()
                 is ModelWrapper.DynamicModel -> {
                     // تبدیل مدل داینامیک به مدل استاتیک سازگار
-                    findCompatibleStaticModel(wrapper.unwrap() as com.persianai.assistant.models.DynamicAIModel, apiKeys)
+                    findCompatibleStaticModel(wrapper.dynamicModel, apiKeys)
                 }
             }
         }.distinct()
