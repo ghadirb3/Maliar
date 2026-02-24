@@ -257,6 +257,24 @@ class VoiceCallActivity : AppCompatActivity() {
                         cancelButton.isEnabled = true
                     }
                     
+                    is CallIntentProcessor.CallIntentResult.DirectCall -> {
+                        statusText.text = "📞 تماس مستقیم با شماره: ${result.phoneNumber}"
+                        
+                        // شروع تأیید تماس مستقیم
+                        val confirmationManager = CallConfirmationManager(this@VoiceCallActivity)
+                        // ایجاد یک مخاطب مجازی برای تماس مستقیم
+                        val virtualContact = com.persianai.assistant.models.Contact(
+                            id = "direct_${result.phoneNumber}",
+                            name = result.phoneNumber,
+                            phoneNumber = result.phoneNumber
+                        )
+                        confirmationManager.startCallConfirmation(virtualContact, result.phoneNumber)
+                        
+                        // بستن صفحه تماس صوتی بعد از شروع تأیید
+                        delay(1000)
+                        finish()
+                    }
+                    
                     is CallIntentProcessor.CallIntentResult.Error -> {
                         statusText.text = "❌ خطا"
                         

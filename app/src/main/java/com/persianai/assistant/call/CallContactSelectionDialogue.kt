@@ -256,7 +256,7 @@ class CallContactSelectionDialogue(
                         startCallConfirmation(selectedContact)
                     } else {
                         // تلاش برای استخراج شماره تلفن از پاسخ کاربر
-                        val phoneNumber = extractPhoneNumberFromText(userResponse)
+                        val phoneNumber = extractPhoneNumberFromText(response)
                         if (phoneNumber.isNotBlank()) {
                             Log.d(TAG, "📞 شماره تلفن از پاسخ استخراج شد: $phoneNumber")
                             startDirectCallConfirmation(phoneNumber)

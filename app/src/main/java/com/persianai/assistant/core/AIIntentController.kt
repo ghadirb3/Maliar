@@ -128,9 +128,7 @@ import com.persianai.assistant.models.MessageRole
 
             // انتخاب مدل آنلاین بر اساس اولویت remote ai_config.json و کلیدهای فعال
             val activeKeys = keys.filter { it.isActive && it.key.isNotBlank() }
-            val model = ModelSelector.getAvailableAIModels(this@AIIntentController.context, activeKeys)
-                .firstOrNull { it.provider != AIProvider.LOCAL && it.provider != AIProvider.IVIRA }
-                ?: ModelSelector.selectBestModel(this@AIIntentController.context, activeKeys)
+            val model = ModelSelector.selectBestModel(this@AIIntentController.context, activeKeys)
 
             Log.d("AIIntentController", "Online intent via model=${model.displayName} provider=${model.provider.name}")
 
