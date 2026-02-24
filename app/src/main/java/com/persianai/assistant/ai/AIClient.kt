@@ -348,6 +348,28 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                                     ?: json.get("message")?.asString
                                     ?: json.get("answer")?.asString
                                 
+                                // For truncated responses (finish_reason=length), try to extract partial content from choices
+                                if (fallbackContent.isNullOrBlank() && choice?.finishReason == "length") {
+                                    try {
+                                        val choicesArray = json.getAsJsonArray("choices")
+                                        if (choicesArray != null && choicesArray.size() > 0) {
+                                            val choiceObj = choicesArray[0].asJsonObject
+                                            val messageObj = choiceObj.getAsJsonObject("message")
+                                            if (messageObj != null) {
+                                                val partialContent = messageObj.get("content")?.asString
+                                                if (!partialContent.isNullOrBlank()) {
+                                                    return@withContext ChatMessage(
+                                                        role = MessageRole.ASSISTANT,
+                                                        content = partialContent
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.w("AIClient", "Failed to extract truncated content: ${e.message}")
+                                    }
+                                }
+                                
                                 if (!fallbackContent.isNullOrBlank()) {
                                     ChatMessage(
                                         role = MessageRole.ASSISTANT,

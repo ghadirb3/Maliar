@@ -72,6 +72,19 @@ class CallModule(context: Context) : BaseModule(context) {
      * استخراج شماره تلفن از عبارت
      */
     private fun extractPhoneNumber(text: String): String {
+        // نرمال‌سازی ارقام فارسی/عربی به لاتین
+        val normalizedText = text
+            .replace('۰', '0').replace('٠', '0')
+            .replace('۱', '1').replace('١', '1')
+            .replace('۲', '2').replace('٢', '2')
+            .replace('۳', '3').replace('٣', '3')
+            .replace('۴', '4').replace('٤', '4')
+            .replace('۵', '5').replace('٥', '5')
+            .replace('۶', '6').replace('٦', '6')
+            .replace('۷', '7').replace('٧', '7')
+            .replace('۸', '8').replace('٨', '8')
+            .replace('۹', '9').replace('٩', '9')
+        
         // الگوهای شماره تلفن ایرانی
         val phonePatterns = listOf(
             Regex("0?9([0-9]{9})"), // 09123456789 یا 9123456789
@@ -80,7 +93,7 @@ class CallModule(context: Context) : BaseModule(context) {
         )
         
         for (pattern in phonePatterns) {
-            val match = pattern.find(text)
+            val match = pattern.find(normalizedText)
             if (match != null) {
                 val number = match.value
                 // نرمال‌سازی شماره به فرمت استاندارد

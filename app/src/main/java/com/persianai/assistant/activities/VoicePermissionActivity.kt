@@ -13,11 +13,12 @@ class VoicePermissionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // درخواست مجوز میکروفن و مخاطبین
-        requestPermissionLauncher.launch(arrayOf(
+        // درخواست مجوزهای مشخص شده یا پیش‌فرض میکروفن و مخاطبین
+        val permissions = intent.getStringArrayExtra("permissions") ?: arrayOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.READ_CONTACTS
-        ))
+        )
+        requestPermissionLauncher.launch(permissions)
     }
 
     private val requestPermissionLauncher = registerForActivityResult(

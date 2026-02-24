@@ -158,14 +158,24 @@ class CallNotificationReceiver : BroadcastReceiver() {
         val contactName = intent.getStringExtra("contact_name") ?: return
         
         try {
-            // باز کردن تنظیمات برنامه برای دادن مجوز
-            val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", context.packageName, null)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            // Check if contacts permission is already granted
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                // Permission already granted, show info notification
+                showPermissionGuideNotification(context, contactName)
+                return
             }
-            context.startActivity(settingsIntent)
             
-            // نمایش نوتیفیکیشن راهنما
+            // Request contacts permission via VoicePermissionActivity
+            val permIntent = Intent(context, com.persianai.assistant.activities.VoicePermissionActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("permissions", arrayOf(android.Manifest.permission.READ_CONTACTS))
+                putExtra("extra_mode", "notification")
+                putExtra("extra_transcript", "تماس با $contactName")
+                putExtra("extra_notification_id", 6002)
+            }
+            context.startActivity(permIntent)
+            
+            // Show guidance notification while permission dialog is open
             showPermissionGuideNotification(context, contactName)
             
         } catch (e: Exception) {

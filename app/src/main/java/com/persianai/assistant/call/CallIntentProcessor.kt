@@ -222,6 +222,9 @@ class CallIntentProcessor(private val context: Context) {
      */
     private fun cleanupContactName(name: String): String {
         return name
+            .replace("،", "").trim()  // Remove Arabic comma
+            .replace(",", "").trim()   // Remove Latin comma
+            .replace(".", "").trim()   // Remove period
             .replace("آقای", "").trim()
             .replace("خانم", "").trim()
             .replace("جناب", "").trim()
