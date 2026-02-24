@@ -10,8 +10,11 @@ import java.util.*
 import com.persianai.assistant.services.HaaniyeManager
 import com.persianai.assistant.config.RemoteAIConfigManager
 import com.persianai.assistant.tts.GapGPTTTS
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * کمک‌کننده برای تبدیل متن به گفتار فارسی
@@ -24,6 +27,7 @@ class TTSHelper(private val context: Context) {
     private val prefsManager = PreferencesManager(context)
     private val remoteConfigManager = RemoteAIConfigManager.getInstance(context)
     private val gapgptTTS = GapGPTTTS(context)
+    private val pendingUtterances = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
 
     companion object {
         private const val TAG = "TTSHelper"
@@ -95,17 +99,102 @@ class TTSHelper(private val context: Context) {
 
             override fun onDone(utteranceId: String?) {
                 Log.d(TAG, "TTS finished: $utteranceId")
+                if (!utteranceId.isNullOrBlank()) {
+                    pendingUtterances.remove(utteranceId)?.complete(Unit)
+                }
             }
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
                 Log.e(TAG, "TTS error: $utteranceId")
+                if (!utteranceId.isNullOrBlank()) {
+                    pendingUtterances.remove(utteranceId)?.complete(Unit)
+                }
             }
 
             override fun onError(utteranceId: String?, errorCode: Int) {
                 Log.e(TAG, "TTS error: $utteranceId, code: $errorCode")
+                if (!utteranceId.isNullOrBlank()) {
+                    pendingUtterances.remove(utteranceId)?.complete(Unit)
+                }
             }
         })
+    }
+
+    suspend fun speakOnlineFirstAndWait(text: String, timeoutMs: Long = 20_000L) = withContext(Dispatchers.IO) {
+        if (!prefsManager.isTTSEnabled()) {
+            Log.d(TAG, "TTS is disabled")
+            return@withContext
+        }
+
+        val cleanText = cleanTextForTTS(text)
+        if (cleanText.isBlank()) {
+            Log.d(TAG, "Empty text after cleaning")
+            return@withContext
+        }
+
+        val ttsPriority = remoteConfigManager.getTTSPriority()
+        Log.d(TAG, "TTS priority from remote config: $ttsPriority")
+
+        for (provider in ttsPriority) {
+            when (provider.lowercase()) {
+                "gapgpt" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT gpt-4o-mini-tts (آنلاین)...")
+                        val audioFile = gapgptTTS.synthesizeSpeech(cleanText)
+                        if (audioFile != null && audioFile.exists()) {
+                            playAudioFileAndWait(audioFile, timeoutMs)
+                            Log.d(TAG, "✅ TTS با موفقیت از GapGPT (آنلاین) اجرا شد")
+                            return@withContext
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "GapGPT TTS failed: ${e.message}")
+                    }
+                }
+
+                "local" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
+                        val success = HaaniyeManager.speak(context, cleanText)
+                        if (success) {
+                            Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
+                            return@withContext
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Haaniye TTS failed: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        try {
+            val handled = HaaniyeManager.speak(context, cleanText)
+            if (handled) {
+                Log.d(TAG, "TTS via Haaniye (offline)")
+                return@withContext
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
+        }
+
+        if (isInitialized && tts != null) {
+            val utteranceId = "tts_${System.currentTimeMillis()}"
+            val deferred = CompletableDeferred<Unit>()
+            pendingUtterances[utteranceId] = deferred
+
+            Log.d(TAG, "TTS via Android TTS (final fallback) [wait]")
+            runOnUiThread {
+                tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+            }
+
+            withTimeoutOrNull(timeoutMs) {
+                deferred.await()
+            }
+
+            pendingUtterances.remove(utteranceId)
+        } else {
+            Log.w(TAG, "No TTS provider available")
+        }
     }
 
     /**
@@ -255,6 +344,41 @@ class TTSHelper(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در پخش فایل صوتی", e)
             audioFile.delete()
+        }
+    }
+
+    private suspend fun playAudioFileAndWait(audioFile: File, timeoutMs: Long) {
+        val done = CompletableDeferred<Unit>()
+        val mediaPlayer = try {
+            MediaPlayer().apply {
+                setDataSource(audioFile.absolutePath)
+                prepare()
+                setOnCompletionListener {
+                    try { release() } catch (_: Exception) {}
+                    try { audioFile.delete() } catch (_: Exception) {}
+                    done.complete(Unit)
+                }
+                setOnErrorListener { _, _, _ ->
+                    try { release() } catch (_: Exception) {}
+                    try { audioFile.delete() } catch (_: Exception) {}
+                    done.complete(Unit)
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در پخش فایل صوتی", e)
+            try { audioFile.delete() } catch (_: Exception) {}
+            return
+        }
+
+        try {
+            mediaPlayer.start()
+            withTimeoutOrNull(timeoutMs) {
+                done.await()
+            }
+        } finally {
+            try { mediaPlayer.release() } catch (_: Exception) {}
+            try { audioFile.delete() } catch (_: Exception) {}
         }
     }
     

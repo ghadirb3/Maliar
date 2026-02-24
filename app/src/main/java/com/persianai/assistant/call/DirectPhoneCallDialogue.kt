@@ -58,11 +58,9 @@ class DirectPhoneCallDialogue(
         val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
         val message = "با شماره $formattedPhone تماس بگیرم؟"
         Log.d(TAG, "📢 درخواست تأیید تماس مستقیم: $message")
-        
-        ttsHelper.speakOnlineFirst(message)
-        
-        // صبر برای تمام شدن TTS و کمی وقفه قبل از ضبط
-        delay(2000)
+
+        ttsHelper.speakOnlineFirstAndWait(message)
+        delay(300)
     }
     
     /**
@@ -85,7 +83,7 @@ class DirectPhoneCallDialogue(
             Log.d(TAG, "✅ ضبط صدا شروع شد")
             
             // منتظر مکث یا timeout
-            val timeoutMs = 8000L // 8 ثانیه
+            val timeoutMs = 12000L // 12 ثانیه
             val silenceStopMs = 2000L // 2 ثانیه سکوت
             val startTime = System.currentTimeMillis()
             var lastSpeechTime = startTime

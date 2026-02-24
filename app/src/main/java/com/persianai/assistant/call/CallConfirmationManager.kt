@@ -134,7 +134,7 @@ class CallConfirmationManager(private val context: Context) {
             Log.d(TAG, "📢 پرسش تأیید: $message")
             
             // استفاده از TTSHelper با اولویت GapGPT آنلاین
-            ttsHelper.speakOnlineFirst(message)
+            ttsHelper.speakOnlineFirstAndWait(message)
             
             // نمایش صفحه تأیید تماس
             showConfirmationOverlay()
@@ -162,13 +162,13 @@ class CallConfirmationManager(private val context: Context) {
         
         private suspend fun listenForResponse(): String {
             if (!this@CallSession.isActive) return ""
-            
-            delay(2000) // صبر برای تمام شدن TTS (هماهنگ با دیالوگ‌های دیگر)
+
+            delay(300)
             
             Log.d(TAG, "🎤 فعال کردن شناسایی صدا برای پاسخ کاربر...")
             
             // منتظر ماندن برای پاسخ با timeout و VAD
-            val timeoutMs = 8000L // 8 ثانیه برای پاسخ
+            val timeoutMs = 12000L // 12 ثانیه برای پاسخ
             val silenceStopMs = 2000L // 2 ثانیه سکوت
             val startTime = System.currentTimeMillis()
             var lastSpeechTime = startTime

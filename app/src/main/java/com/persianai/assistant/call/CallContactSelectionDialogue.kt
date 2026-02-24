@@ -65,10 +65,8 @@ class CallContactSelectionDialogue(
         val message = "مخاطبین: $contactsText. لطفاً نام مخاطب را بگویید."
         Log.d(TAG, "📢 خواندن لیست مخاطبین: $message")
 
-        ttsHelper.speakOnlineFirst(message)
-
-        // صبر برای تمام شدن TTS و کمی وقفه قبل از ضبط
-        delay(2000)
+        ttsHelper.speakOnlineFirstAndWait(message)
+        delay(300)
     }
 
     /**
@@ -366,12 +364,8 @@ class CallContactSelectionDialogue(
             val confirmMessage = "با شماره $formattedPhone تماس بگیرم؟"
             Log.d(TAG, "📢 درخواست تأیید تماس مستقیم: $confirmMessage")
             
-            withContext(Dispatchers.Main) {
-                ttsHelper.speakOnlineFirst(confirmMessage)
-            }
-            
-            delay(2000) // صبر برای تمام شدن TTS
-            
+            ttsHelper.speakOnlineFirstAndWait(confirmMessage)
+            delay(300)
             // منتظر تأیید کاربر
             val response = listenForUserResponse()
             processDirectCallResponse(response, phoneNumber)
@@ -501,11 +495,8 @@ class CallContactSelectionDialogue(
             val confirmMessage = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟"
             Log.d(TAG, "📢 درخواست تأیید تماس: $confirmMessage")
             
-            withContext(Dispatchers.Main) {
-                ttsHelper.speakOnlineFirst(confirmMessage)
-            }
-            
-            delay(2000) // صبر برای تمام شدن TTS
+            ttsHelper.speakOnlineFirstAndWait(confirmMessage)
+            delay(300)
             
             // مرحله ۲: منتظر تأیید کاربر
             val confirmationResponse = listenForUserResponse()

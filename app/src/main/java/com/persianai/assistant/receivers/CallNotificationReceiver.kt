@@ -168,7 +168,13 @@ class CallNotificationReceiver : BroadcastReceiver() {
             // Request contacts permission via VoicePermissionActivity
             val permIntent = Intent(context, com.persianai.assistant.activities.VoicePermissionActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                putExtra("permissions", arrayOf(android.Manifest.permission.READ_CONTACTS))
+                putExtra(
+                    "permissions",
+                    arrayOf(
+                        android.Manifest.permission.RECORD_AUDIO,
+                        android.Manifest.permission.READ_CONTACTS
+                    )
+                )
                 putExtra("extra_mode", "notification")
                 putExtra("extra_transcript", "تماس با $contactName")
                 putExtra("extra_notification_id", 6002)

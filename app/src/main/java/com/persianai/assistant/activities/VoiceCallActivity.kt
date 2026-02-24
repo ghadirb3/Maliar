@@ -258,7 +258,8 @@ class VoiceCallActivity : AppCompatActivity() {
                     }
                     
                     is CallIntentProcessor.CallIntentResult.DirectCall -> {
-                        statusText.text = "📞 تماس مستقیم با شماره: ${result.phoneNumber}"
+                        val formattedForUi = com.persianai.assistant.utils.TTSHelper.formatPhoneNumberForTTS(result.phoneNumber)
+                        statusText.text = "📞 تماس مستقیم با شماره: $formattedForUi"
                         
                         // شروع تأیید تماس مستقیم
                         val confirmationManager = CallConfirmationManager(this@VoiceCallActivity)
