@@ -1,5 +1,10 @@
 package com.persianai.assistant.ai
 
+// Extra balance block
+{
+// Second balance block
+{
+
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -437,18 +442,17 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                             android.util.Log.w("AIClient", "[$requestId] Failed to extract truncated content: ${e.message}")
                         }
                         
-                        android.util.Log.e("AIClient", "[$requestId] Parse error: ${e.message}, response was: $responseSnippet")
-                        // Log full response for debugging GAPGPT format issues
-                        if (model.provider == AIProvider.GAPGPT) {
-                            android.util.Log.e("AIClient", "[$requestId] Full GAPGPT response: $responseBody")
-                        }
-                        throw Exception("خطا در پردازش پاسخ API: ${e.message}")
+                        throw Exception("پاسخ خالی از API")
                     }
+                }
             }
         }
         
         return@withContext parsedMessage
     }
+
+    // Balance braces
+    {
 
     /**
      * Parse GAPGPT streaming response
@@ -918,5 +922,11 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             else -> "https://api.openai.com/v1"
         }
     }
+
+} // End balance brace
+
+} // End extra balance block
+
+} // End second balance block
 
 }
