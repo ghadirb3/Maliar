@@ -912,6 +912,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             AIProvider.ANTHROPIC -> "https://api.anthropic.com/v1"
             AIProvider.AIML -> "https://api.aiml.io/v1"
             AIProvider.GLADIA -> "https://api.gladia.io/v2"
+            AIProvider.IVIRA -> "https://api.ivira.ai/v1"
             AIProvider.CUSTOM -> "https://api.example.com/v1" // باید از remote config بیاید
             AIProvider.LOCAL -> "http://localhost:8080" // مدل‌های محلی
             else -> "https://api.openai.com/v1"
