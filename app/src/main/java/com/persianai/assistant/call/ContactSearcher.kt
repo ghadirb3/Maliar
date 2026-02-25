@@ -45,7 +45,7 @@ class ContactSearcher(private val context: Context) {
                     
                     if (contacts.isEmpty() && retryCount < maxRetries - 1) {
                         Log.d(TAG, "🔄 مخاطبی یافت نشد، تلاش مجدد ${retryCount + 1}/$maxRetries")
-                        val delayMs: Long = 500 * (retryCount + 1)
+                        val delayMs: Long = 500L * (retryCount + 1)
                         delay(delayMs) // 500ms, 1000ms, 1500ms delays
                     }
                 } catch (e: SecurityException) {
