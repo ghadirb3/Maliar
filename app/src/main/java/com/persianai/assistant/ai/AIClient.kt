@@ -400,16 +400,50 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         android.util.Log.d("AIClient", "[$requestId] Success: content length=${contentMessage.content.length}")
                         contentMessage.copy(timestamp = System.currentTimeMillis())
                     } else {
-                        throw Exception("پاسخ خالی از API")
+                        // Before throwing "پاسخ خالی از API", try to extract truncated content from finish_reason:length responses
+                        try {
+                            val json = gson.fromJson(responseBody, JsonObject::class.java)
+                            val choicesArray = json.getAsJsonArray("choices")
+                            if (choicesArray != null && choicesArray.size() > 0) {
+                                val choiceObj = choicesArray[0].asJsonObject
+                                val finishReason = choiceObj.get("finish_reason")?.asString
+                                if (finishReason == "length") {
+                                    // Try to extract partial content from truncated response
+                                    val messageObj = choiceObj.getAsJsonObject("message")
+                                    if (messageObj != null) {
+                                        val partialContent = messageObj.get("content")?.asString
+                                        if (!partialContent.isNullOrBlank()) {
+                                            android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from finish_reason:length: ${partialContent.take(100)}...")
+                                            return@withContext ChatMessage(
+                                                role = MessageRole.ASSISTANT,
+                                                content = partialContent,
+                                                timestamp = System.currentTimeMillis()
+                                            )
+                                        }
+                                    }
+                                    // Fallback: try direct content field
+                                    val directContent = choiceObj.get("content")?.asString
+                                    if (!directContent.isNullOrBlank()) {
+                                        android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from choice.content: ${directContent.take(100)}...")
+                                        return@withContext ChatMessage(
+                                            role = MessageRole.ASSISTANT,
+                                            content = directContent,
+                                            timestamp = System.currentTimeMillis()
+                                        )
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("AIClient", "[$requestId] Failed to extract truncated content: ${e.message}")
+                        }
+                        
+                        android.util.Log.e("AIClient", "[$requestId] Parse error: ${e.message}, response was: $responseSnippet")
+                        // Log full response for debugging GAPGPT format issues
+                        if (model.provider == AIProvider.GAPGPT) {
+                            android.util.Log.e("AIClient", "[$requestId] Full GAPGPT response: $responseBody")
+                        }
+                        throw Exception("خطا در پردازش پاسخ API: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("AIClient", "[$requestId] Parse error: ${e.message}, response was: $responseSnippet")
-                    // Log full response for debugging GAPGPT format issues
-                    if (model.provider == AIProvider.GAPGPT) {
-                        android.util.Log.e("AIClient", "[$requestId] Full GAPGPT response: $responseBody")
-                    }
-                    throw Exception("خطا در پردازش پاسخ API: ${e.message}")
-                }
             }
         }
         

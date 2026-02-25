@@ -151,7 +151,7 @@ class CallContactSelectionDialogue(
                 if (amplitude > 100) {
                     hasSpeech = true
                     lastSpeechTime = now
-                    if (!hasSpeech) {
+                    if (hasSpeech) {
                         updateNotification("🎤 در حال ضبط صدا", "صدای شما شنیده شد، ادامه دهید...")
                     }
                 }

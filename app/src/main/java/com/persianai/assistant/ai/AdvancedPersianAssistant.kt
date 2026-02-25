@@ -131,6 +131,7 @@ class AdvancedPersianAssistant(private val context: Context) {
                     if (model.provider == AIProvider.LIARA && model.modelId.contains("gpt-5-nano")) {
                         android.util.Log.w("AdvancedPersianAssistant", "Liara GPT-5-nano failed, attempting fallback to gpt-4o-mini")
                         
+                        // Try OPENAI first
                         val openaiKey = apiKeys.firstOrNull { it.provider == AIProvider.OPENAI && it.isActive }
                         if (openaiKey != null) {
                             try {
@@ -141,12 +142,35 @@ class AdvancedPersianAssistant(private val context: Context) {
                                 )
                                 val fallbackContent = fallbackResp.content.trim()
                                 if (fallbackContent.isNotBlank()) {
-                                    android.util.Log.d("AdvancedPersianAssistant", "Fallback to gpt-4o-mini successful after error")
+                                    android.util.Log.d("AdvancedPersianAssistant", "Fallback to OPENAI gpt-4o-mini successful after error")
                                     return fallbackContent
                                 }
                             } catch (fallbackError: Exception) {
-                                android.util.Log.e("AdvancedPersianAssistant", "Fallback to gpt-4o-mini also failed: ${fallbackError.message}")
+                                android.util.Log.e("AdvancedPersianAssistant", "Fallback to OPENAI gpt-4o-mini also failed: ${fallbackError.message}")
                             }
+                        } else {
+                            android.util.Log.w("AdvancedPersianAssistant", "No active OPENAI key found for fallback")
+                        }
+                        
+                        // Try GAPGPT as second fallback
+                        val gapgptKey = apiKeys.firstOrNull { it.provider == AIProvider.GAPGPT && it.isActive }
+                        if (gapgptKey != null) {
+                            try {
+                                val fallbackModel = AIModel.GAPGPT_GPT_5_NANO  // Use GPT-5-nano for GAPGPT fallback
+                                val fallbackResp = aiClient.sendMessage(
+                                    model = fallbackModel,
+                                    messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
+                                )
+                                val fallbackContent = fallbackResp.content.trim()
+                                if (fallbackContent.isNotBlank()) {
+                                    android.util.Log.d("AdvancedPersianAssistant", "Fallback to GAPGPT gpt-5-nano successful after error")
+                                    return fallbackContent
+                                }
+                            } catch (fallbackError: Exception) {
+                                android.util.Log.e("AdvancedPersianAssistant", "Fallback to GAPGPT gpt-5-nano also failed: ${fallbackError.message}")
+                            }
+                        } else {
+                            android.util.Log.w("AdvancedPersianAssistant", "No active GAPGPT key found for fallback")
                         }
                     }
                     
@@ -225,7 +249,7 @@ class AdvancedPersianAssistant(private val context: Context) {
                 AIModel.LIARA_GPT_5_NANO
             }
             AIProvider.OPENAI -> AIModel.GPT_4O_MINI
-            AIProvider.GAPGPT -> AIModel.GPT_4O_MINI
+            AIProvider.GAPGPT -> AIModel.GAPGPT_GPT_5_NANO  // Use GPT-5-nano as priority for GAPGPT
             else -> AIModel.GPT_4O_MINI
         }
     }
