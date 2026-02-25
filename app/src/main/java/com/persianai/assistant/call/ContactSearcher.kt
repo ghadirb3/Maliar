@@ -6,6 +6,7 @@ import android.provider.ContactsContract
 import android.util.Log
 import com.persianai.assistant.models.Contact
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -44,7 +45,7 @@ class ContactSearcher(private val context: Context) {
                     
                     if (contacts.isEmpty() && retryCount < maxRetries - 1) {
                         Log.d(TAG, "🔄 مخاطبی یافت نشد، تلاش مجدد ${retryCount + 1}/$maxRetries")
-                        kotlinx.coroutines.delay(500 * (retryCount + 1)) // 500ms, 1000ms, 1500ms delays
+                        delay(500 * (retryCount + 1)) // 500ms, 1000ms, 1500ms delays
                     }
                 } catch (e: SecurityException) {
                     Log.e(TAG, "❌ دسترسی به مخاطبین مجاز نیست", e)
