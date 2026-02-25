@@ -126,22 +126,10 @@ class VoiceCommandReceiver : BroadcastReceiver() {
             return
         }
         
-        // Check CALL_PHONE permission
-        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CALL_PHONE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            // Open app to request permission
-            val appIntent = Intent(context, com.persianai.assistant.activities.DashboardActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("request_permission", "CALL_PHONE")
-                putExtra("pending_call", phoneNumber)
-            }
-            context.startActivity(appIntent)
-            
-            showErrorNotification(context, "برای تماس، مجوز تماس را در برنامه فعال کنید", notificationId)
-            return
-        }
-        
+        // No CALL_PHONE permission needed for ACTION_DIAL
         try {
-            val callIntent = Intent(Intent.ACTION_CALL).apply {
+            // Use ACTION_DIAL (safer, no CALL_PHONE permission needed)
+            val callIntent = Intent(Intent.ACTION_DIAL).apply {
                 data = android.net.Uri.parse("tel:$phoneNumber")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -151,8 +139,8 @@ class VoiceCommandReceiver : BroadcastReceiver() {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("📞 در حال تماس...")
-                .setContentText("با شماره $phoneNumber تماس گرفته می‌شود")
+                .setContentTitle("📞 شماره‌گیر باز شد...")
+                .setContentText("شماره $phoneNumber در شماره‌گیر باز شد")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
                 .build()

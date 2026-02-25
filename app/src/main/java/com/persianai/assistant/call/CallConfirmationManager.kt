@@ -414,22 +414,23 @@ class CallConfirmationManager(private val context: Context) {
                 // غیرفعال کردن بلندگو قبل از تماس
                 disableSpeakerphone()
                 
-                val intent = Intent(Intent.ACTION_CALL).apply {
+                // Use ACTION_DIAL (safer, no CALL_PHONE permission needed)
+                val intent = Intent(Intent.ACTION_DIAL).apply {
                     data = Uri.parse("tel:$phoneNumber")
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(intent)
-                Log.d(TAG, "📞 تماس با $phoneNumber از طریق شماره‌گیر گوشی برقرار شد")
+                Log.d(TAG, "📞 شماره‌گیر برای $phoneNumber باز شد")
                 
-                // اطلاع به کاربر درباره حالت‌های تماس
+                // اطلاع به کاربر
                 scope.launch {
                     delay(1000)
-                    ttsHelper.speakOnlineFirst("تماس برقرار شد. می‌توانید از بلندگو، هندزفری یا بلوتوث استفاده کنید")
+                    ttsHelper.speakOnlineFirst("شماره در شماره‌گیر باز شد. برای تماس دکمه تماس را بزنید")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ خطا در برقراری تماس", e)
+                Log.e(TAG, "❌ خطا در باز کردن شماره‌گیر", e)
                 scope.launch {
-                    ttsHelper.speakOnlineFirst("خطا در برقراری تماس")
+                    ttsHelper.speakOnlineFirst("خطا در باز کردن شماره‌گیر")
                 }
             }
         }

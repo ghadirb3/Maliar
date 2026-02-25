@@ -1,7 +1,12 @@
 package com.persianai.assistant.call
 
 import android.content.Context
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import android.util.Log
+import com.persianai.assistant.R
 import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.UnifiedVoiceEngine
@@ -28,6 +33,48 @@ class DirectPhoneCallDialogue(
     private val ttsHelper = TTSHelper(context)
     private val onlineSTT = OnlineSTTService(context)
     private val aiAssistant = AdvancedPersianAssistant(context)
+    private val voiceEngine = UnifiedVoiceEngine(context)
+    
+    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val NOTIFICATION_ID = 2001
+    private val CHANNEL_ID = "call_dialog_channel"
+    
+    init {
+        createNotificationChannel()
+    }
+    
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Call Dialogue",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Status updates for voice call confirmation"
+                setShowBadge(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+    
+    private fun updateNotification(title: String, content: String) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_mic)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setOngoing(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .build()
+        
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+    
+    private fun cancelNotification() {
+        notificationManager.cancel(NOTIFICATION_ID)
+    }
     
     /**
      * شروع مکالمه تأیید تماس مستقیم
@@ -45,6 +92,7 @@ class DirectPhoneCallDialogue(
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در مکالمه تأیید تماس مستقیم", e)
+            cancelNotification()
             scope.launch {
                 ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
             }
@@ -73,10 +121,15 @@ class DirectPhoneCallDialogue(
             val engine = UnifiedVoiceEngine(context)
             val tempFile = createTempAudioFile()
             
-            // شروع ضبط با VAD
+            // شروع ضبط صدا
+            updateNotification("🎧 در حال ضبط صدا", "در حال شنیدن پاسخ شما...")
             val startResult = engine.startRecording()
-            if (!startResult.isSuccess) {
+            if (startResult.isFailure) {
                 Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
+                }
+                cancelNotification()
                 return@withContext ""
             }
             
@@ -85,17 +138,19 @@ class DirectPhoneCallDialogue(
             // منتظر مکث یا timeout
             val timeoutMs = 12000L // 12 ثانیه
             val silenceStopMs = 2000L // 2 ثانیه سکوت
-            val startTime = System.currentTimeMillis()
-            var lastSpeechTime = startTime
+            var lastSpeechTime = System.currentTimeMillis()
             var hasSpeech = false
             
-            while (System.currentTimeMillis() - startTime < timeoutMs) {
+            while (System.currentTimeMillis() - lastSpeechTime < timeoutMs) {
                 val now = System.currentTimeMillis()
                 val amplitude = engine.getCurrentAmplitude()
                 
                 if (amplitude > 100) {
                     hasSpeech = true
                     lastSpeechTime = now
+                    if (!hasSpeech) {
+                        updateNotification("🎤 در حال ضبط صدا", "صدای شما شنیده شد، ادامه دهید...")
+                    }
                 }
                 
                 if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
@@ -105,6 +160,8 @@ class DirectPhoneCallDialogue(
                 
                 delay(100)
             }
+            
+            updateNotification("📝 پردازش صدا", "در حال تبدیل گفتار به متن...")
             
             // توقف ضبط و دریافت فایل
             val stopResult = engine.stopRecording()
@@ -139,6 +196,7 @@ class DirectPhoneCallDialogue(
             // بررسی سکوت یا timeout
             if (transcribedText.isBlank()) {
                 Log.d(TAG, "⏰ کاربر سکوت کرد")
+                cancelNotification()
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("به دلیل سکوت، تماس لغو شد")
                 }
@@ -158,6 +216,7 @@ class DirectPhoneCallDialogue(
             val isNegative = negativePatterns.any { it.containsMatchIn(normalizedText) }
             if (isNegative) {
                 Log.d(TAG, "❌ کاربر لغو کرد: $transcribedText")
+                cancelNotification()
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("تماس لغو شد")
                 }
@@ -165,10 +224,12 @@ class DirectPhoneCallDialogue(
             }
             
             Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
+            cancelNotification()
             transcribedText
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در شناسایی صدا", e)
+            cancelNotification()
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirst("خطا در شناسایی صدا، لطفاً دوباره تلاش کنید")
             }

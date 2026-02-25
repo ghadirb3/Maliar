@@ -2,7 +2,12 @@ package com.persianai.assistant.call
 
 import android.content.Context
 import android.provider.ContactsContract
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import android.util.Log
+import com.persianai.assistant.R
 import com.persianai.assistant.models.Contact
 import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.stt.OnlineSTTService
@@ -30,6 +35,47 @@ class CallContactSelectionDialogue(
     private val ttsHelper = TTSHelper(context)
     private val onlineSTT = OnlineSTTService(context)
     private val aiAssistant = AdvancedPersianAssistant(context)
+    
+    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val NOTIFICATION_ID = 2002
+    private val CHANNEL_ID = "call_selection_dialog_channel"
+    
+    init {
+        createNotificationChannel()
+    }
+    
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Call Selection Dialogue",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Status updates for voice contact selection"
+                setShowBadge(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+    
+    private fun updateNotification(title: String, content: String) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_mic)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setOngoing(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .build()
+        
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+    
+    private fun cancelNotification() {
+        notificationManager.cancel(NOTIFICATION_ID)
+    }
 
     /**
      * شروع مکالمه انتخاب مخاطب
@@ -47,6 +93,7 @@ class CallContactSelectionDialogue(
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در مکالمه انتخاب مخاطب", e)
+            cancelNotification()
             scope.launch {
                 ttsHelper.speakOnlineFirst("خطا در انتخاب مخاطب")
             }
@@ -80,9 +127,11 @@ class CallContactSelectionDialogue(
             val tempFile = createTempAudioFile()
             
             // شروع ضبط با VAD
+            updateNotification("🎧 در حال ضبط صدا", "در حال شنیدن نام مخاطب...")
             val startResult = engine.startRecording()
             if (!startResult.isSuccess) {
                 Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
+                cancelNotification()
                 return@withContext ""
             }
             
@@ -102,6 +151,9 @@ class CallContactSelectionDialogue(
                 if (amplitude > 100) {
                     hasSpeech = true
                     lastSpeechTime = now
+                    if (!hasSpeech) {
+                        updateNotification("🎤 در حال ضبط صدا", "صدای شما شنیده شد، ادامه دهید...")
+                    }
                 }
                 
                 if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
@@ -112,6 +164,8 @@ class CallContactSelectionDialogue(
                 delay(100)
             }
             
+            updateNotification("📝 پردازش صدا", "در حال تبدیل گفتار به متن...")
+            
             // توقف ضبط و دریافت فایل
             val stopResult = engine.stopRecording()
             val recordingResult = if (stopResult.isSuccess) {
@@ -120,6 +174,7 @@ class CallContactSelectionDialogue(
 
             if (recordingResult == null) {
                 Log.e(TAG, "❌ فایل صوتی ضبط نشد")
+                cancelNotification()
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
                 }
@@ -130,6 +185,7 @@ class CallContactSelectionDialogue(
 
             if (!recordedFile.exists()) {
                 Log.e(TAG, "❌ فایل صوتی وجود ندارد: ${recordedFile.absolutePath}")
+                cancelNotification()
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("خطا در ضبط صدا، لطفاً دوباره تلاش کنید")
                 }
@@ -145,6 +201,7 @@ class CallContactSelectionDialogue(
             // بررسی سکوت یا timeout
             if (transcribedText.isBlank()) {
                 Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار")
+                cancelNotification()
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("به دلیل عدم پاسخ، انتخاب لغو شد")
                 }
@@ -156,6 +213,7 @@ class CallContactSelectionDialogue(
             if (normalizedText.contains("لغو") || normalizedText.contains("کنسل") || normalizedText.contains("نه") || 
                 normalizedText.contains("تموم") || normalizedText.contains("بس") || normalizedText.contains("تمام")) {
                 Log.d(TAG, "❌ کاربر لغو کرد: $transcribedText")
+                cancelNotification()
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("انتخاب لغو شد")
                 }
@@ -163,10 +221,12 @@ class CallContactSelectionDialogue(
             }
             
             Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
+            cancelNotification()
             transcribedText
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در شناسایی صدا", e)
+            cancelNotification()
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirst("خطا در شناسایی صدا، لطفاً دوباره تلاش کنید")
             }

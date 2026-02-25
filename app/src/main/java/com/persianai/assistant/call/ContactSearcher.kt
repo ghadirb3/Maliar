@@ -33,8 +33,32 @@ class ContactSearcher(private val context: Context) {
             
             Log.d(TAG, "🔍 جستجوی مخاطبین برای: '$query'")
             
-            // خواندن مخاطبین از دفترچه تلفن
-            val contacts = readAllContacts()
+            // Retry mechanism for first-time permission grants
+            var contacts = emptyList<Contact>()
+            var retryCount = 0
+            val maxRetries = 3
+            
+            while (retryCount < maxRetries && contacts.isEmpty()) {
+                try {
+                    contacts = readAllContacts()
+                    
+                    if (contacts.isEmpty() && retryCount < maxRetries - 1) {
+                        Log.d(TAG, "🔄 مخاطبی یافت نشد، تلاش مجدد ${retryCount + 1}/$maxRetries")
+                        kotlinx.coroutines.delay(500 * (retryCount + 1)) // 500ms, 1000ms, 1500ms delays
+                    }
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "❌ دسترسی به مخاطبین مجاز نیست", e)
+                    break
+                }
+                retryCount++
+            }
+            
+            if (contacts.isEmpty()) {
+                Log.w(TAG, "⚠️ پس از $maxRetries تلاش، مخاطبی یافت نشد")
+                return@withContext emptyList()
+            }
+            
+            Log.d(TAG, "✅ ${contacts.size} مخاطب از دفترچه تلفن خوانده شد")
             
             // فیلتر و امتیازدهی
             val matchingContacts = contacts
@@ -46,7 +70,7 @@ class ContactSearcher(private val context: Context) {
                 .sortedByDescending { it.score }
                 .take(maxResults)
             
-            Log.d(TAG, "✅ ${matchingContacts.size} مخاطب یافت شد")
+            Log.d(TAG, "✅ ${matchingContacts.size} مخاطب مطابق یافت شد")
             matchingContacts.forEach { contact ->
                 Log.d(TAG, "  - ${contact.name} (${contact.phoneNumber}) [امتیاز: ${contact.score}]")
             }

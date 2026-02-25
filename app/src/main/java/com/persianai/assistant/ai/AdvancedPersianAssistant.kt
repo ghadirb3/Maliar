@@ -95,11 +95,63 @@ class AdvancedPersianAssistant(private val context: Context) {
             android.util.Log.d("AdvancedPersianAssistant", "Using online model: ${model.modelId} (${model.provider})")
 
             suspend fun callOnline(prompt: String): String {
-                val resp = aiClient.sendMessage(
-                    model = model,
-                    messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
-                )
-                return resp.content.trim()
+                try {
+                    val resp = aiClient.sendMessage(
+                        model = model,
+                        messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
+                    )
+                    val content = resp.content.trim()
+                    
+                    // If using Liara GPT-5-nano and content is empty or too short, fallback to gpt-4o-mini
+                    if (model.provider == AIProvider.LIARA && model.modelId.contains("gpt-5-nano") && 
+                        (content.isBlank() || content.length < 10)) {
+                        android.util.Log.w("AdvancedPersianAssistant", "Liara GPT-5-nano returned empty/short response, falling back to gpt-4o-mini")
+                        
+                        // Try to find an OpenAI key for fallback
+                        val openaiKey = apiKeys.firstOrNull { it.provider == AIProvider.OPENAI && it.isActive }
+                        if (openaiKey != null) {
+                            val fallbackModel = AIModel.GPT_4O_MINI
+                            val fallbackResp = aiClient.sendMessage(
+                                model = fallbackModel,
+                                messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
+                            )
+                            val fallbackContent = fallbackResp.content.trim()
+                            if (fallbackContent.isNotBlank()) {
+                                android.util.Log.d("AdvancedPersianAssistant", "Fallback to gpt-4o-mini successful")
+                                return fallbackContent
+                            }
+                        }
+                    }
+                    
+                    return content
+                } catch (e: Exception) {
+                    android.util.Log.e("AdvancedPersianAssistant", "Online request failed with model ${model.modelId}: ${e.message}")
+                    
+                    // If using Liara GPT-5-nano and it failed, try fallback to gpt-4o-mini
+                    if (model.provider == AIProvider.LIARA && model.modelId.contains("gpt-5-nano")) {
+                        android.util.Log.w("AdvancedPersianAssistant", "Liara GPT-5-nano failed, attempting fallback to gpt-4o-mini")
+                        
+                        val openaiKey = apiKeys.firstOrNull { it.provider == AIProvider.OPENAI && it.isActive }
+                        if (openaiKey != null) {
+                            try {
+                                val fallbackModel = AIModel.GPT_4O_MINI
+                                val fallbackResp = aiClient.sendMessage(
+                                    model = fallbackModel,
+                                    messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
+                                )
+                                val fallbackContent = fallbackResp.content.trim()
+                                if (fallbackContent.isNotBlank()) {
+                                    android.util.Log.d("AdvancedPersianAssistant", "Fallback to gpt-4o-mini successful after error")
+                                    return fallbackContent
+                                }
+                            } catch (fallbackError: Exception) {
+                                android.util.Log.e("AdvancedPersianAssistant", "Fallback to gpt-4o-mini also failed: ${fallbackError.message}")
+                            }
+                        }
+                    }
+                    
+                    throw e
+                }
             }
 
             if (baseResponse.actionType == ActionType.NEEDS_AI) {
