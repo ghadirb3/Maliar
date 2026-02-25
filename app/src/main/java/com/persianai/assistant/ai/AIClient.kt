@@ -1,12 +1,5 @@
 package com.persianai.assistant.ai
 
-// Balance block 1
-{
-// Balance block 2  
-{
-// Balance block 3
-{
-
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -235,311 +228,59 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         
         val requestBuilder = Request.Builder()
             .url(apiUrl)
-            .addHeader("Authorization", "Bearer $cleanKey")
             .addHeader("Content-Type", "application/json")
-            .addHeader("Accept", if (model.provider == AIProvider.GAPGPT) "text/event-stream, application/json" else "application/json")
-        if (apiKey.provider == AIProvider.OPENROUTER) {
-            // OpenRouter نیاز به Referer و X-Title دارد
-            requestBuilder.addHeader("HTTP-Referer", "https://openrouter.ai/")
-            requestBuilder.addHeader("X-Title", "Persian AI Assistant")
+            .addHeader("Authorization", "Bearer $cleanKey")
+            .post(body)
+
+        // Add provider-specific headers
+        when (model.provider) {
+            AIProvider.OPENROUTER -> {
+                requestBuilder.addHeader("HTTP-Referer", "https://github.com/ghadirb3/Maliar")
+                requestBuilder.addHeader("X-Title", "Maliar AI Assistant")
+            }
+            AIProvider.AIML -> {
+                requestBuilder.addHeader("Authorization", "Bearer $cleanKey")
+            }
+            AIProvider.GAPGPT -> {
+                requestBuilder.addHeader("Authorization", "Bearer $cleanKey")
+            }
+            else -> {}
         }
-        val request = requestBuilder.post(body).build()
 
-        var parsedMessage: ChatMessage
-        
+        val request = requestBuilder.build()
+
         client.newCall(request).execute().use { response ->
-            // Log response headers for debugging GAPGPT
-            if (model.provider == AIProvider.GAPGPT) {
-                android.util.Log.d("AIClient", "[$requestId] GAPGPT response headers: content-type=${response.header("content-type")}, content-length=${response.header("content-length")}, transfer-encoding=${response.header("transfer-encoding")}")
-            }
-            
-            var responseBody = response.body?.string()
-            if (responseBody.isNullOrBlank()) {
-                val peek = try { response.peekBody(1024 * 1024).string() } catch (_: Exception) { null }
-                if (!peek.isNullOrBlank()) {
-                    responseBody = peek
-                    android.util.Log.d("AIClient", "[$requestId] Used peekBody for GAPGPT: ${peek.take(100)}")
-                }
-            }
-            val responseSnippet = responseBody?.take(200) ?: "(empty)"
-            
-            android.util.Log.d("AIClient", "[$requestId] Response: code=${response.code}, success=${response.isSuccessful}, body=$responseSnippet")
-            
+            val responseBody = response.body?.string() ?: ""
             if (!response.isSuccessful) {
-                val errorDetail = "خطای API: ${response.code} - $responseSnippet"
-                android.util.Log.e("AIClient", "[$requestId] API Error: $errorDetail")
-                throw Exception(errorDetail)
+                android.util.Log.e("AIClient", "API Error ${response.code}: $responseBody")
+                throw Exception("API Error ${response.code}: ${response.message}")
             }
 
-            // Check for empty response body before parsing
-            if (responseBody.isNullOrBlank()) {
-                android.util.Log.e("AIClient", "[$requestId] Empty response body from ${model.provider.name}")
-                throw Exception("پاسخ خالی از API ${model.provider.name}")
+            if (responseBody.isBlank()) {
+                throw Exception("پاسخ خالی از API")
             }
 
-            // Log raw response for GAPGPT debugging
-            if (model.provider == AIProvider.GAPGPT) {
-                android.util.Log.d("AIClient", "[$requestId] Raw GAPGPT response: $responseBody")
-            }
-
-            // Parse response (streaming for GAPGPT, JSON for others)
-            parsedMessage = if (model.provider == AIProvider.GAPGPT && responseBody.contains("data:")) {
-                // Handle streaming response for GAPGPT
-                parseGAPGPTStream(responseBody, requestId)
-            } else {
-                // Handle standard JSON response
-                try {
-                    val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
-                        ?: throw Exception("Failed to parse response as ChatResponse")
-                    
-                    val contentMessage = when {
-                        // Standard OpenAI format
-                        !chatResponse.choices.isNullOrEmpty() -> {
-                            val choice = chatResponse.choices.firstOrNull()
-                            val content = choice?.message?.content 
-                                ?: choice?.text 
-                                ?: choice?.content
-                            
-                            // Handle LIARA truncated responses due to max_output_tokens
-                            if (content.isNullOrBlank() && choice?.finishReason == "length") {
-                                // For truncated responses, try to extract partial content from raw response
-                                try {
-                                    val json = gson.fromJson(responseBody, JsonObject::class.java)
-                                    val choicesArray = json.getAsJsonArray("choices")
-                                    if (choicesArray != null && choicesArray.size() > 0) {
-                                        val choiceObj = choicesArray[0].asJsonObject
-                                        val messageObj = choiceObj.getAsJsonObject("message")
-                                        if (messageObj != null) {
-                                            val partialContent = messageObj.get("content")?.asString
-                                            if (!partialContent.isNullOrBlank()) {
-                                                android.util.Log.w("AIClient", "[$requestId] Using truncated LIARA response: ${partialContent.take(100)}...")
-                                                return@withContext ChatMessage(
-                                                    role = MessageRole.ASSISTANT,
-                                                    content = partialContent
-                                                )
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.w("AIClient", "[$requestId] Failed to extract truncated content: ${e.message}")
-                                }
-                            }
-                            
-                            ChatMessage(
+            try {
+                val json = gson.fromJson(responseBody, JsonObject::class.java)
+                val choices = json.getAsJsonArray("choices")
+                if (choices != null && choices.size() > 0) {
+                    val choice = choices[0].asJsonObject
+                    val message = choice.getAsJsonObject("message")
+                    if (message != null) {
+                        val content = message.get("content")?.asString
+                        if (!content.isNullOrBlank()) {
+                            return@withContext ChatMessage(
                                 role = MessageRole.ASSISTANT,
-                                content = content ?: ""
+                                content = content,
+                                timestamp = System.currentTimeMillis()
                             )
                         }
-                        // Alternative direct response field
-                        !chatResponse.response.isNullOrBlank() -> ChatMessage(
-                            role = MessageRole.ASSISTANT,
-                            content = chatResponse.response
-                        )
-                        // Alternative text field
-                        !chatResponse.text.isNullOrBlank() -> ChatMessage(
-                            role = MessageRole.ASSISTANT,
-                            content = chatResponse.text
-                        )
-                        // Alternative content field
-                        !chatResponse.content.isNullOrBlank() -> ChatMessage(
-                            role = MessageRole.ASSISTANT,
-                            content = chatResponse.content
-                        )
-                        // Last resort: try to parse as plain text or different JSON structure
-                        else -> {
-                            try {
-                                val json = gson.fromJson(responseBody, JsonObject::class.java)
-                                val fallbackContent = json.get("response")?.asString 
-                                    ?: json.get("text")?.asString
-                                    ?: json.get("content")?.asString
-                                    ?: json.get("message")?.asString
-                                    ?: json.get("answer")?.asString
-                                
-                                // For truncated responses (finish_reason=length), try to extract partial content from choices
-                                if (fallbackContent.isNullOrBlank()) {
-                                    try {
-                                        val choicesArray = json.getAsJsonArray("choices")
-                                        if (choicesArray != null && choicesArray.size() > 0) {
-                                            val choiceObj = choicesArray[0].asJsonObject
-                                            val finishReason = choiceObj.get("finish_reason")?.asString
-                                            if (finishReason == "length") {
-                                                // Try both OpenAI and possible Liara variant structures
-                                                val messageObj = choiceObj.getAsJsonObject("message")
-                                                if (messageObj != null) {
-                                                    val partialContent = messageObj.get("content")?.asString
-                                                    if (!partialContent.isNullOrBlank()) {
-                                                        android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from message.content")
-                                                        return@withContext ChatMessage(
-                                                            role = MessageRole.ASSISTANT,
-                                                            content = partialContent
-                                                        )
-                                                    }
-                                                }
-                                                // Fallback: sometimes content may be directly under choice
-                                                val directContent = choiceObj.get("content")?.asString
-                                                if (!directContent.isNullOrBlank()) {
-                                                    android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from choice.content")
-                                                    return@withContext ChatMessage(
-                                                        role = MessageRole.ASSISTANT,
-                                                        content = directContent
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        android.util.Log.w("AIClient", "Failed to extract truncated content: ${e.message}")
-                                    }
-                                }
-                                
-                                if (!fallbackContent.isNullOrBlank()) {
-                                    ChatMessage(
-                                        role = MessageRole.ASSISTANT,
-                                        content = fallbackContent
-                                    )
-                                } else null
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-                    }
-                    
-                    if (contentMessage != null && !contentMessage.content.isNullOrBlank()) {
-                        android.util.Log.d("AIClient", "[$requestId] Success: content length=${contentMessage.content.length}")
-                        contentMessage.copy(timestamp = System.currentTimeMillis())
-                    } else {
-                        // Before throwing "پاسخ خالی از API", try to extract truncated content from finish_reason:length responses
-                        try {
-                            val json = gson.fromJson(responseBody, JsonObject::class.java)
-                            val choicesArray = json.getAsJsonArray("choices")
-                            if (choicesArray != null && choicesArray.size() > 0) {
-                                val choiceObj = choicesArray[0].asJsonObject
-                                val finishReason = choiceObj.get("finish_reason")?.asString
-                                if (finishReason == "length") {
-                                    // Try to extract partial content from truncated response
-                                    val messageObj = choiceObj.getAsJsonObject("message")
-                                    if (messageObj != null) {
-                                        val partialContent = messageObj.get("content")?.asString
-                                        if (!partialContent.isNullOrBlank()) {
-                                            android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from finish_reason:length: ${partialContent.take(100)}...")
-                                            return@withContext ChatMessage(
-                                                role = MessageRole.ASSISTANT,
-                                                content = partialContent,
-                                                timestamp = System.currentTimeMillis()
-                                            )
-                                        }
-                                    }
-                                    // Fallback: try direct content field
-                                    val directContent = choiceObj.get("content")?.asString
-                                    if (!directContent.isNullOrBlank()) {
-                                        android.util.Log.d("AIClient", "[$requestId] Extracted truncated content from choice.content: ${directContent.take(100)}...")
-                                        return@withContext ChatMessage(
-                                            role = MessageRole.ASSISTANT,
-                                            content = directContent,
-                                            timestamp = System.currentTimeMillis()
-                                        )
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.w("AIClient", "[$requestId] Failed to extract truncated content: ${e.message}")
-                        }
-                        
-                        throw Exception("پاسخ خالی از API")
                     }
                 }
-            }
-        }
-        
-        return@withContext parsedMessage
-    }
-
-    // Balance braces
-    {
-
-    /**
-     * Parse GAPGPT streaming response
-     */
-    private fun parseGAPGPTStream(responseBody: String, requestId: String): ChatMessage {
-        val contentBuilder = StringBuilder()
-        
-        responseBody.lines().forEach { line ->
-            line.trim().takeIf { it.startsWith("data:") }?.let { dataLine ->
-                val jsonStr = dataLine.removePrefix("data:").trim()
-                if (jsonStr == "[DONE]") return@forEach
-                
-                try {
-                    val json = gson.fromJson(jsonStr, JsonObject::class.java)
-                    val choices = json.getAsJsonArray("choices")
-                    if (choices != null && choices.size() > 0) {
-                        val choice = choices[0].asJsonObject
-                        val delta = choice.getAsJsonObject("delta")
-                        if (delta != null) {
-                            val content = delta.get("content")?.asString
-                            if (!content.isNullOrBlank()) {
-                                contentBuilder.append(content)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.w("AIClient", "[$requestId] Failed to parse stream chunk: $jsonStr", e)
-                }
-            }
-        }
-        
-        val finalContent = contentBuilder.toString()
-        if (finalContent.isBlank()) {
-            throw Exception("No content extracted from GAPGPT stream")
-        }
-        
-        android.util.Log.d("AIClient", "[$requestId] GAPGPT stream parsed successfully: ${finalContent.length} chars")
-        return ChatMessage(
-            role = MessageRole.ASSISTANT,
-            content = finalContent,
-            timestamp = System.currentTimeMillis()
-        )
-    }
-
-    private fun callWhisperLike(url: String, key: String, body: okhttp3.MultipartBody): String {
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("Authorization", "Bearer $key")
-            .post(body)
-            .build()
-        client.newCall(request).execute().use { resp ->
-            val respBody = resp.body?.string()
-            if (!resp.isSuccessful) {
-                android.util.Log.e("AIClient", "Whisper-like error ${resp.code}: $respBody")
-                return ""
-            }
-            if (respBody.isNullOrBlank()) return ""
-            return try {
-                val json = gson.fromJson(respBody, JsonObject::class.java)
-                json.get("text")?.asString ?: json.get("generated_text")?.asString ?: respBody
-            } catch (_: Exception) {
-                respBody
-            }
-        }
-    }
-
-    private fun callHuggingFaceWhisper(url: String, key: String, body: okhttp3.MultipartBody): String {
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("Authorization", "Bearer $key")
-            .addHeader("Accept", "application/json")
-            .post(body)
-            .build()
-        client.newCall(request).execute().use { resp ->
-            val respBody = resp.body?.string()
-            if (!resp.isSuccessful) {
-                android.util.Log.e("AIClient", "HF Whisper error ${resp.code}: $respBody")
-                return ""
-            }
-            if (respBody.isNullOrBlank()) return ""
-            return try {
-                val json = gson.fromJson(respBody, JsonObject::class.java)
-                json.get("text")?.asString ?: json.get("generated_text")?.asString ?: respBody
-            } catch (_: Exception) {
-                respBody
+                throw Exception("پاسخ خالی از API")
+            } catch (e: Exception) {
+                android.util.Log.e("AIClient", "Parse error: ${e.message}")
+                throw Exception("خطا در پردازش پاسخ API: ${e.message}")
             }
         }
     }
@@ -554,54 +295,76 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         apiKey: APIKey
     ): ChatMessage = withContext(Dispatchers.IO) {
         
-        val apiUrl = "https://api.anthropic.com/v1/messages"
+        val baseUrl = apiKey.baseUrl?.trim()?.trimEnd('/')
+        val apiUrl = baseUrl?.let { "$it/messages" }
+            ?: "https://api.anthropic.com/v1/messages"
 
-        val messageList = messages.map { msg ->
-            mapOf(
+        val messageList = mutableListOf<Map<String, String>>()
+        
+        messages.forEach { msg ->
+            messageList.add(mapOf(
                 "role" to when(msg.role) {
                     MessageRole.USER -> "user"
                     MessageRole.ASSISTANT -> "assistant"
-                    else -> "user"
+                    MessageRole.SYSTEM -> "user" // Claude doesn't support system role in messages
                 },
                 "content" to msg.content
-            )
+            ))
         }
 
-        val jsonObject = JsonObject().apply {
-            addProperty("model", model.modelId)
-            add("messages", gson.toJsonTree(messageList))
-            addProperty("max_tokens", 4096)
+        val requestBody = mapOf(
+            "model" to model.modelId,
+            "max_tokens" to 500,
+            "messages" to messageList
+        ).let { body ->
             if (systemPrompt != null) {
-                addProperty("system", systemPrompt)
+                body + ("system" to systemPrompt)
+            } else {
+                body
             }
         }
 
-        val body = gson.toJson(jsonObject).toRequestBody(mediaType)
+        val jsonBody = gson.toJson(requestBody)
+        val body = jsonBody.toRequestBody(mediaType)
 
         val request = Request.Builder()
             .url(apiUrl)
+            .addHeader("Content-Type", "application/json")
             .addHeader("x-api-key", apiKey.key)
             .addHeader("anthropic-version", "2023-06-01")
-            .addHeader("content-type", "application/json")
             .post(body)
             .build()
 
         client.newCall(request).execute().use { response ->
-            val responseBody = response.body?.string()
-            
+            val responseBody = response.body?.string() ?: ""
             if (!response.isSuccessful) {
-                throw Exception("خطای Claude API: ${response.code} - $responseBody")
+                android.util.Log.e("AIClient", "Claude API Error ${response.code}: $responseBody")
+                throw Exception("Claude API Error ${response.code}: ${response.message}")
             }
 
-            val claudeResponse = gson.fromJson(responseBody, ClaudeResponse::class.java)
-            val content = claudeResponse.content.firstOrNull()?.text
-                ?: throw Exception("پاسخ خالی از Claude")
+            if (responseBody.isBlank()) {
+                throw Exception("پاسخ خالی از Claude API")
+            }
 
-            ChatMessage(
-                role = MessageRole.ASSISTANT,
-                content = content,
-                timestamp = System.currentTimeMillis()
-            )
+            try {
+                val json = gson.fromJson(responseBody, JsonObject::class.java)
+                val content = json.getAsJsonArray("content")
+                if (content != null && content.size() > 0) {
+                    val textBlock = content[0].asJsonObject
+                    val text = textBlock.get("text")?.asString
+                    if (!text.isNullOrBlank()) {
+                        return@withContext ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = text,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    }
+                }
+                throw Exception("پاسخ خالی از Claude API")
+            } catch (e: Exception) {
+                android.util.Log.e("AIClient", "Claude Parse error: ${e.message}")
+                throw Exception("خطا در پردازش پاسخ Claude API: ${e.message}")
+            }
         }
     }
 
@@ -621,290 +384,63 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                     AIProvider.GAPGPT -> 0
                     AIProvider.LIARA -> 1
                     AIProvider.OPENAI -> 2
-                    AIProvider.CUSTOM -> 3
-                    else -> 4
+                    else -> 99
                 }
             }
-            .filter { it.provider == AIProvider.GAPGPT || it.provider == AIProvider.LIARA || it.provider == AIProvider.OPENAI }
 
-        if (keysOrdered.isEmpty()) {
-            android.util.Log.w("AIClient", "No GAPGPT/LIARA/OPENAI key for STT")
-            return@withContext ""
-        }
-
-        val mediaTypeStr = when (file.extension.lowercase()) {
-            "m4a", "mp4" -> "audio/mp4"
-            "wav" -> "audio/wav"
-            "ogg" -> "audio/ogg"
-            "webm" -> "audio/webm"
-            "mp3" -> "audio/mpeg"
-            else -> "application/octet-stream"
-        }
-        val mediaTypeAudio = mediaTypeStr.toMediaType()
-
-        fun buildBody(): okhttp3.MultipartBody {
-            return okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
-                .addFormDataPart("file", file.name, okhttp3.RequestBody.create(mediaTypeAudio, file))
-                .addFormDataPart("model", "whisper-1")
-                .addFormDataPart("language", "fa")
-                .build()
-        }
-
-        for (k in keysOrdered) {
+        for (apiKey in keysOrdered) {
             try {
-                val baseUrl = when (k.provider) {
-                    AIProvider.GAPGPT -> k.baseUrl?.trim()?.trimEnd('/') ?: "https://api.gapgpt.app/v1"
-                    AIProvider.LIARA -> k.baseUrl?.trim()?.trimEnd('/') ?: "https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1"
-                    AIProvider.OPENAI -> k.baseUrl?.trim()?.trimEnd('/') ?: "https://api.openai.com/v1"
-                    AIProvider.CUSTOM -> k.baseUrl?.trim()?.trimEnd('/') ?: "https://api.example.com/v1"
-                    else -> k.baseUrl?.trim()?.trimEnd('/') ?: "https://api.openai.com/v1"
+                android.util.Log.d("AIClient", "🎤 تلاش برای transcribe با ${apiKey.provider.name} key: ${apiKey.key.take(8)}...")
+                val result = when (apiKey.provider) {
+                    AIProvider.GAPGPT, AIProvider.LIARA, AIProvider.OPENAI -> callWhisperLike(apiKey, file)
+                    else -> continue
                 }
-                val url = "$baseUrl/audio/transcriptions"
-                val body = buildBody()
-                val text = withTimeout(20000) {
-                    android.util.Log.d("AIClient", "transcribeAudio using ${k.provider.name} at $url")
-                    callWhisperLike(url, k.key, body)
-                }.trim()
-                if (text.isNotBlank()) return@withContext text
+                if (result.isNotBlank()) return@withContext result
             } catch (e: Exception) {
-                android.util.Log.w("AIClient", "${k.provider.name} STT failed: ${e.message}")
+                android.util.Log.w("AIClient", "❌ Transcribe با ${apiKey.provider.name} ناموفق: ${e.message}")
             }
         }
 
-        return@withContext ""
+        ""
     }
 
-    /**
-     * AIML async STT دو مرحله‌ای: stt/create سپس polling روی stt/{id}
-     */
-    private suspend fun callAimlSttAsync(
-        baseUrl: String,
-        key: String,
-        mediaTypeStr: String,
-        file: java.io.File
-    ): String {
-        val createUrl = "$baseUrl/stt/create"
-        val body = okhttp3.MultipartBody.Builder()
+    private fun callWhisperLike(apiKey: APIKey, file: java.io.File): String {
+        val url = when (apiKey.provider) {
+            AIProvider.GAPGPT -> "https://api.gapgpt.app/v1/audio/transcriptions"
+            AIProvider.LIARA -> "https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1/audio/transcriptions"
+            AIProvider.OPENAI -> "https://api.openai.com/v1/audio/transcriptions"
+            else -> return ""
+        }
+
+        val requestBody = okhttp3.MultipartBody.Builder()
             .setType(okhttp3.MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                file.name,
-                okhttp3.RequestBody.Companion.create(
-                    mediaTypeStr.toMediaType(),
-                    file
-                )
-            )
-            .addFormDataPart("model", "#g1_whisper-small")
-            .addFormDataPart("language", "fa")
+            .addFormDataPart("file", file.name, file.asRequestBody("audio/*".toMediaType()))
+            .addFormDataPart("model", "whisper-1")
             .build()
 
-        val createReq = Request.Builder()
-            .url(createUrl)
-            .addHeader("Authorization", "Bearer $key")
-            .addHeader("Accept", "application/json")
-            .post(body)
-            .build()
-
-        val generationId = try {
-            client.newCall(createReq).execute().use { resp ->
-                val respBody = resp.body?.string()
-                if (!resp.isSuccessful) {
-                    android.util.Log.e("AIClient", "AIML stt/create error ${resp.code}: $respBody")
-                    return ""
-                }
-                val json = gson.fromJson(respBody, JsonObject::class.java)
-                json.get("generation_id")?.asString ?: ""
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("AIClient", "AIML stt/create exception: ${e.message}", e)
-            return ""
-        }
-
-        if (generationId.isBlank()) return ""
-
-        val pollUrl = "$baseUrl/stt/$generationId"
-        repeat(5) { _ ->
-            val pollReq = Request.Builder()
-                .url(pollUrl)
-                .addHeader("Authorization", "Bearer $key")
-                .addHeader("Accept", "application/json")
-                .get()
-                .build()
-
-            try {
-                client.newCall(pollReq).execute().use { resp ->
-                    val respBody = resp.body?.string()
-                    if (!resp.isSuccessful) {
-                        android.util.Log.e("AIClient", "AIML stt poll error ${resp.code}: $respBody")
-                        return ""
-                    }
-                    if (respBody.isNullOrBlank()) return ""
-                    val json = gson.fromJson(respBody, JsonObject::class.java)
-                    val status = json.get("status")?.asString ?: ""
-                    if (status.equals("waiting", true) || status.equals("active", true)) {
-                        // keep polling
-                    } else {
-                        val result = json.getAsJsonObject("result")
-                        val transcript = result
-                            ?.getAsJsonObject("results")
-                            ?.getAsJsonArray("channels")
-                            ?.firstOrNull()
-                            ?.asJsonObject
-                            ?.getAsJsonArray("alternatives")
-                            ?.firstOrNull()
-                            ?.asJsonObject
-                            ?.get("transcript")
-                            ?.asString
-                        if (!transcript.isNullOrBlank()) return transcript
-                        return respBody
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("AIClient", "AIML stt poll exception: ${e.message}", e)
-                return ""
-            }
-
-            delay(1500)
-        }
-
-        return ""
-    }
-
-    private fun callHuggingFaceRaw(token: String, mediaTypeStr: String, file: java.io.File): String {
-        val url = "https://router.huggingface.co/models/openai/whisper-large-v3?wait_for_model=true"
-        val body = file.readBytes().toRequestBody(mediaTypeStr.toMediaType())
         val request = Request.Builder()
             .url(url)
-            .addHeader("Authorization", "Bearer $token")
-            .addHeader("Accept", "application/json")
-            .post(body)
-            .build()
-
-        client.newCall(request).execute().use { resp ->
-            val respBody = resp.body?.string()
-            if (!resp.isSuccessful) {
-                android.util.Log.e("AIClient", "HF STT (raw) error: ${resp.code} - $respBody")
-                return ""
-            }
-            if (respBody.isNullOrBlank()) return ""
-            if (respBody.startsWith("<!doctype", true)) {
-                android.util.Log.e("AIClient", "HF STT returned HTML (blocked)")
-                return ""
-            }
-            return try {
-                val json = gson.fromJson(respBody, JsonObject::class.java)
-                json.get("text")?.asString ?: json.get("generated_text")?.asString ?: respBody
-            } catch (_: Exception) {
-                respBody
-            }
-        }
-    }
-
-    fun callGladiaTranscribe(url: String, key: String, body: okhttp3.MultipartBody): String {
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("x-gladia-key", key)
-            .addHeader("Accept", "application/json")
-            .post(body)
-            .build()
-
-        client.newCall(request).execute().use { resp ->
-            val respBody = resp.body?.string()
-            if (!resp.isSuccessful) {
-                android.util.Log.e("AIClient", "Gladia STT error ${resp.code}: $respBody")
-                return ""
-            }
-            if (respBody.isNullOrBlank()) return ""
-            return try {
-                val json = gson.fromJson(respBody, JsonObject::class.java)
-                // Prefer common fields
-                json.get("text")?.asString
-                    ?: json.get("transcription")?.asString
-                    ?: json.get("result")?.asJsonObject?.get("transcription")?.asString
-                    ?: respBody
-            } catch (_: Exception) {
-                respBody
-            }
-        }
-    }
-    
-    /**
-     * ارسال پیام به مدل داینامیک با base_url سفارشی
-     */
-    suspend fun sendDynamicMessage(
-        modelId: String,
-        provider: AIProvider,
-        baseUrl: String?,
-        messages: List<ChatMessage>,
-        systemPrompt: String? = null
-    ): ChatMessage = withContext(Dispatchers.IO) {
-        
-        // پیدا کردن کلید API مناسب برای این provider
-        val apiKey = apiKeys.find { it.isActive && it.provider == provider }
-            ?: throw IllegalStateException("No active API key found for provider: $provider")
-        
-        // استفاده از baseUrl سفارشی یا baseUrl از کلید API
-        val finalBaseUrl = baseUrl ?: apiKey.baseUrl ?: getDefaultBaseUrl(provider)
-        
-        // ساخت درخواست
-        val requestMessages = mutableListOf<Map<String, String>>()
-        systemPrompt?.let {
-            requestMessages.add(mapOf("role" to "system", "content" to it))
-        }
-        requestMessages.addAll(messages.map { 
-            mapOf("role" to it.role.name.lowercase(), "content" to it.content) 
-        })
-        
-        val requestBody = ChatRequest(
-            model = modelId,
-            messages = requestMessages,
-            temperature = 0.7,
-            maxTokens = 4096,
-            stream = false
-        )
-        
-        val jsonBody = gson.toJson(requestBody)
-        android.util.Log.d("AIClient", "Sending dynamic request to $finalBaseUrl with model: $modelId")
-        
-        val request = Request.Builder()
-            .url("$finalBaseUrl/chat/completions")
-            .addHeader("Content-Type", "application/json")
             .addHeader("Authorization", "Bearer ${apiKey.key}")
-            .post(jsonBody.toRequestBody(mediaType))
+            .post(requestBody)
             .build()
-        
-        try {
-            client.newCall(request).execute().use { response ->
-                val responseBody = response.body?.string()
-                
-                if (!response.isSuccessful || responseBody.isNullOrBlank()) {
-                    throw Exception("HTTP ${response.code}: ${response.message}")
-                }
-                
-                val chatResponse = gson.fromJson(responseBody, ChatResponse::class.java)
-                val choice = chatResponse.choices?.firstOrNull()
-                    ?: throw Exception("No choices in response")
-                
-                ChatMessage(
-                    role = MessageRole.ASSISTANT,
-                    content = choice.message?.content 
-                        ?: choice.text 
-                        ?: choice.content
-                        ?: throw Exception("Empty content in choice"),
-                    timestamp = System.currentTimeMillis()
-                )
+
+        client.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string()
+            if (!response.isSuccessful) {
+                android.util.Log.e("AIClient", "Whisper API Error ${response.code}: $responseBody")
+                return ""
             }
-        } catch (e: Exception) {
-            android.util.Log.e("AIClient", "Dynamic model request failed", e)
-            ChatMessage(
-                role = MessageRole.ASSISTANT,
-                content = "خطا: ${e.message}",
-                timestamp = System.currentTimeMillis(),
-                isError = true
-            )
+            if (responseBody.isNullOrBlank()) return ""
+            
+            return try {
+                val json = gson.fromJson(responseBody, JsonObject::class.java)
+                json.get("text")?.asString ?: responseBody
+            } catch (_: Exception) {
+                responseBody
+            }
         }
     }
-    
+
     /**
      * دریافت baseUrl پیش‌فرض برای provider‌های مختلف
      */
@@ -924,17 +460,5 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             else -> "https://api.openai.com/v1"
         }
     }
-
-} // End balance brace
-
-} // End balance block 3
-
-} // End balance block 2
-
-} // End balance block 1
-
-} // End extra balance block
-
-} // End second balance block
 
 }
