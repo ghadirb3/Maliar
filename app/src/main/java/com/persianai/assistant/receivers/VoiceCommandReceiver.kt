@@ -7,11 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.R
 import com.persianai.assistant.activities.DashboardActivity
 import com.persianai.assistant.core.AIIntentController
 import com.persianai.assistant.core.AIIntentRequest
-import com.persianai.assistant.utils.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -120,33 +120,59 @@ class VoiceCommandReceiver : BroadcastReceiver() {
     private fun handleExecuteCall(context: Context, intent: Intent) {
         val phoneNumber = intent.getStringExtra("phone_number")?.trim()
         val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0)
+        val prefsManager = PreferencesManager(context)
         
         if (phoneNumber.isNullOrBlank()) {
             showErrorNotification(context, "شماره تماس یافت نشد", notificationId)
             return
         }
         
-        // No CALL_PHONE permission needed for ACTION_DIAL
         try {
-            // Use ACTION_DIAL (safer, no CALL_PHONE permission needed)
-            val callIntent = Intent(Intent.ACTION_DIAL).apply {
-                data = android.net.Uri.parse("tel:$phoneNumber")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            // دریافت حالت تماس از تنظیمات
+            val callMode = prefsManager.getCallMode()
+            
+            when (callMode) {
+                PreferencesManager.CallMode.DIALER -> {
+                    // استفاده از شماره‌گیر گوشی (ACTION_DIAL)
+                    val callIntent = Intent(Intent.ACTION_DIAL).apply {
+                        data = android.net.Uri.parse("tel:$phoneNumber")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(callIntent)
+                    
+                    // Show success notification
+                    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle("📞 شماره‌گیر باز شد...")
+                        .setContentText("شماره $phoneNumber در شماره‌گیر باز شد")
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(true)
+                        .build()
+                    
+                    nm.notify(notificationId + 2000, notification)
+                }
+                PreferencesManager.CallMode.DIRECT -> {
+                    // تماس مستقیم (ACTION_CALL)
+                    val callIntent = Intent(Intent.ACTION_CALL).apply {
+                        data = android.net.Uri.parse("tel:$phoneNumber")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(callIntent)
+                    
+                    // Show success notification
+                    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle("📞 تماس مستقیم...")
+                        .setContentText("در حال برقراری تماس با $phoneNumber")
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(true)
+                        .build()
+                    
+                    nm.notify(notificationId + 2000, notification)
+                }
             }
-            context.startActivity(callIntent)
-            
-            // Show success notification
-            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("📞 شماره‌گیر باز شد...")
-                .setContentText("شماره $phoneNumber در شماره‌گیر باز شد")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .build()
-            
-            nm.notify(notificationId + 2000, notification)
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error making call", e)
             showErrorNotification(context, "خطا در برقراری تماس: ${e.message}", notificationId)

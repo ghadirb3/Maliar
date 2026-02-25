@@ -15,6 +15,7 @@ import com.persianai.assistant.utils.DriveHelper
 import com.persianai.assistant.utils.EncryptionHelper
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.APIKey
+import com.persianai.assistant.ui.CallSettingsDialog
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -116,6 +117,11 @@ class SettingsActivity : AppCompatActivity() {
                 android.util.Log.e("SettingsActivity", "Error opening ConnectedAppsActivity", e)
                 android.widget.Toast.makeText(this, "خطا: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
             }
+        }
+        
+        // دکمه تنظیمات تماس
+        binding.callSettingsButton.setOnClickListener {
+            CallSettingsDialog.show(this)
         }
         
         // دکمه راهنمای ارسال خودکار

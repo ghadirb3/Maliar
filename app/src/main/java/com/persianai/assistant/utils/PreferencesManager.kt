@@ -48,6 +48,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_REMOTE_AI_CONFIG_URL = "remote_ai_config_url"
         private const val KEY_REMOTE_AI_CONFIG_JSON = "remote_ai_config_json"
         private const val KEY_REMOTE_AI_CONFIG_TS = "remote_ai_config_ts"
+        private const val KEY_CALL_MODE = "call_mode"
         private const val KEY_DIRECT_CALL_ENABLED = "direct_call_enabled"
         
         const val DEFAULT_SYSTEM_PROMPT = """OUTPUT ONLY JSON. NO TEXT.
@@ -414,6 +415,25 @@ JSON ONLY."""
      */
     fun getDouble(key: String, defaultValue: Double): Double {
         return prefs.getFloat(key, defaultValue.toFloat()).toDouble()
+    }
+    
+    // Call Mode Settings
+    enum class CallMode(val displayName: String, val description: String) {
+        DIALER("شماره‌گیر گوشی", "استفاده از برنامه تماس خود گوشی (امن‌تر)"),
+        DIRECT("تماس مستقیم", "تماس مستقیم بدون نیاز به تأیید (نیاز به مجوز)")
+    }
+    
+    fun setCallMode(mode: CallMode) {
+        prefs.edit().putString(KEY_CALL_MODE, mode.name).apply()
+    }
+    
+    fun getCallMode(): CallMode {
+        val modeName = prefs.getString(KEY_CALL_MODE, CallMode.DIALER.name)
+        return try {
+            CallMode.valueOf(modeName!!)
+        } catch (e: Exception) {
+            CallMode.DIALER
+        }
     }
     
     // Direct Call Settings

@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.util.Log
 import kotlinx.coroutines.*
 import com.persianai.assistant.utils.TTSHelper
+import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.models.Contact
 import com.persianai.assistant.activities.CallConfirmationActivity
 import com.persianai.assistant.integration.IviraIntegrationManager
@@ -23,6 +24,7 @@ class CallConfirmationManager(private val context: Context) {
     private val TAG = "CallConfirmationManager"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val ttsHelper = TTSHelper(context)
+    private val prefsManager = PreferencesManager(context)
     private val iviraManager = IviraIntegrationManager(context)
     private val onlineSTT = OnlineSTTService(context)
     private val voiceEngine = UnifiedVoiceEngine(context)
@@ -414,23 +416,45 @@ class CallConfirmationManager(private val context: Context) {
                 // غیرفعال کردن بلندگو قبل از تماس
                 disableSpeakerphone()
                 
-                // Use ACTION_DIAL (safer, no CALL_PHONE permission needed)
-                val intent = Intent(Intent.ACTION_DIAL).apply {
-                    data = Uri.parse("tel:$phoneNumber")
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(intent)
-                Log.d(TAG, "📞 شماره‌گیر برای $phoneNumber باز شد")
+                // دریافت حالت تماس از تنظیمات
+                val callMode = prefsManager.getCallMode()
                 
-                // اطلاع به کاربر
-                scope.launch {
-                    delay(1000)
-                    ttsHelper.speakOnlineFirst("شماره در شماره‌گیر باز شد. برای تماس دکمه تماس را بزنید")
+                when (callMode) {
+                    PreferencesManager.CallMode.DIALER -> {
+                        // استفاده از شماره‌گیر گوشی (ACTION_DIAL)
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:$phoneNumber")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                        Log.d(TAG, "📞 شماره‌گیر برای $phoneNumber باز شد")
+                        
+                        // اطلاع به کاربر
+                        scope.launch {
+                            delay(1000)
+                            ttsHelper.speakOnlineFirst("شماره در شماره‌گیر باز شد. برای تماس دکمه تماس را بزنید")
+                        }
+                    }
+                    PreferencesManager.CallMode.DIRECT -> {
+                        // تماس مستقیم (ACTION_CALL)
+                        val intent = Intent(Intent.ACTION_CALL).apply {
+                            data = Uri.parse("tel:$phoneNumber")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                        Log.d(TAG, "📞 تماس مستقیم با $phoneNumber برقرار شد")
+                        
+                        // اطلاع به کاربر
+                        scope.launch {
+                            delay(1000)
+                            ttsHelper.speakOnlineFirst("در حال برقراری تماس مستقیم")
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ خطا در باز کردن شماره‌گیر", e)
+                Log.e(TAG, "❌ خطا در برقراری تماس", e)
                 scope.launch {
-                    ttsHelper.speakOnlineFirst("خطا در باز کردن شماره‌گیر")
+                    ttsHelper.speakOnlineFirst("خطا در برقراری تماس")
                 }
             }
         }

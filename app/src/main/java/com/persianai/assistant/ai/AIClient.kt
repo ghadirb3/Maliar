@@ -794,7 +794,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         }
     }
 
-    private fun callGladiaTranscribe(url: String, key: String, body: okhttp3.MultipartBody): String {
+    fun callGladiaTranscribe(url: String, key: String, body: okhttp3.MultipartBody): String {
         val request = Request.Builder()
             .url(url)
             .addHeader("x-gladia-key", key)
