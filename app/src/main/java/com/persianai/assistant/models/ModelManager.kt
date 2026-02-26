@@ -27,11 +27,11 @@ object ModelManager {
         
         // سپس مدل‌های استاتیک را با اولویت مشخص اضافه کن
         val staticPriority = listOf(
-            AIModel.LIARA_GPT_4O_MINI,      // اولویت ۱: gpt-4o-mini از لیارا (معتبر)
-            AIModel.GAPGPT_GPT_4O_MINI,     // اولویت ۲: gpt-4o-mini از GAPGPT (معتبر)
-            AIModel.GAPGPT_DEEPSEEK_V3,     // اولویت ۳: deepseek از GAPGPT
-            AIModel.LIARA_GPT_5_NANO,       // اولویت ۴: gpt-5-nano از لیارا (fallback)
-            AIModel.GAPGPT_GPT_5_NANO,      // اولویت ۵: gpt-5-nano از GAPGPT (fallback)
+            AIModel.LIARA_GPT_5_NANO,       // اولویت ۱: gpt-5-nano از لیارا (درخواست کاربر)
+            AIModel.LIARA_GPT_4O_MINI,      // اولویت ۲: gpt-4o-mini از لیارا (fallback معتبر)
+            AIModel.GAPGPT_GPT_5_NANO,      // اولویت ۳: gpt-5-nano از GAPGPT (درخواست کاربر)
+            AIModel.GAPGPT_GPT_4O_MINI,     // اولویت ۴: gpt-4o-mini از GAPGPT (fallback معتبر)
+            AIModel.GAPGPT_DEEPSEEK_V3,     // اولویت ۵: deepseek از GAPGPT (درخواست کاربر)
             AIModel.GPT_4O_MINI,            // اولویت ۶: gpt-4o-mini اصلی
             AIModel.TINY_LLAMA_OFFLINE      // آخرین گزینه: آفلاین
         )
