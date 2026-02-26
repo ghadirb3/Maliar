@@ -38,7 +38,7 @@ workflows:
       - name: Build Debug APK
         script: |
           echo "Building debug APK..."
-          ./gradlew assembleDebug --stacktrace --info || {
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build.log || {
             echo "=== BUILD FAILED ==="
             echo "Gradle build failed, checking for errors..."
             echo "Last 50 lines of build log:"
@@ -52,6 +52,8 @@ workflows:
           find app/build/outputs -name "*.apk" -ls
           echo "APK files found in:"
           ls -la app/build/outputs/apk/debug/ || echo "Debug directory not found"
+          echo "Full outputs structure:"
+          find app/build/outputs -type f | head -20
       
       - name: Build Release APK (if keystore is available)
         script: |
