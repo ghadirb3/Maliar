@@ -257,10 +257,10 @@ class DirectPhoneCallDialogue(
             else -> {
                 // استخراج شماره تلفن از پاسخ (در صورت وجود)
                 val extractedPhone = extractPhoneNumberFromText(response)
+                val normalizedResponse = response.lowercase().trim()
                 
                 when {
                     // بررسی کلمات تأیید - بهینه شده برای تشخیص سریع
-                    val normalizedResponse = response.lowercase().trim()
                     normalizedResponse.contains("بله") || 
                     normalizedResponse.contains("آره") || 
                     normalizedResponse.contains("تماس") ||
