@@ -40,6 +40,10 @@ workflows:
           echo "Building debug APK..."
           ./gradlew assembleDebug --stacktrace --info
           echo "Debug build completed"
+          echo "Looking for APK files:"
+          find app/build/outputs -name "*.apk" -ls
+          echo "APK files found in:"
+          ls -la app/build/outputs/apk/debug/ || echo "Debug directory not found"
       
       - name: Build Release APK (if keystore is available)
         script: |
@@ -49,7 +53,16 @@ workflows:
       - name: Generate build report
         script: |
           echo "Generating build report..."
-          find app/build/outputs -name "*.apk" -exec ls -lh {} \; > build_report.txt
+          echo "=== BUILD REPORT ===" > build_report.txt
+          echo "Build completed at: $(date)" >> build_report.txt
+          echo "APK files found:" >> build_report.txt
+          find app/build/outputs -name "*.apk" -exec ls -lh {} \; >> build_report.txt 2>&1 || echo "No APK files found" >> build_report.txt
+          echo "=== DIRECTORY STRUCTURE ===" >> build_report.txt
+          ls -la app/build/outputs/ >> build_report.txt 2>&1 || echo "No outputs directory" >> build_report.txt
+          echo "=== DEBUG DIRECTORY ===" >> build_report.txt
+          ls -la app/build/outputs/apk/debug/ >> build_report.txt 2>&1 || echo "No debug directory" >> build_report.txt
+          echo "=== FULL BUILD OUTPUTS ===" >> build_report.txt
+          find app/build/outputs -type f >> build_report.txt 2>&1 || echo "No build outputs" >> build_report.txt
           cat build_report.txt
     
     artifacts:
