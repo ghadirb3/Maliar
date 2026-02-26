@@ -78,6 +78,87 @@ class CallContactSelectionDialogue(
     }
 
     /**
+     * شنود برای شماره تلفن کاربر
+     */
+    private suspend fun listenForPhoneNumber(): String = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "🎤 شروع ضبط صدا برای شماره تلفن")
+            
+            val engine = UnifiedVoiceEngine(context)
+            val tempFile = createTempAudioFile()
+            
+            // شروع ضبط با VAD
+            updateNotification("🎧 در حال ضبط صدا", "در حال شنیدن شماره تلفن...")
+            val startResult = engine.startRecording()
+            if (!startResult.isSuccess) {
+                Log.e(TAG, "❌ خطا در شروع ضبط: ${startResult.exceptionOrNull()?.message}")
+                cancelNotification()
+                return@withContext ""
+            }
+            
+            Log.d(TAG, "✅ ضبط صدا برای شماره تلفن شروع شد")
+            
+            // منتظر مکث یا timeout
+            val timeoutMs = 10000L // 10 ثانیه
+            val silenceStopMs = 2000L // 2 ثانیه سکوت
+            val startTime = System.currentTimeMillis()
+            var lastSpeechTime = startTime
+            var hasSpeech = false
+            
+            while (System.currentTimeMillis() - startTime < timeoutMs) {
+                val now = System.currentTimeMillis()
+                val amplitude = engine.getCurrentAmplitude()
+                
+                if (amplitude > 30) { // آستانه صدا
+                    lastSpeechTime = now
+                    hasSpeech = true
+                }
+                
+                // اگر صدا داشته و حالا سکوت کرده، ضبط رو متوقف کن
+                if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
+                    Log.d(TAG, "🔇 سکوت پس از صحبت، متوقف کردن ضبط")
+                    break
+                }
+                
+                delay(100)
+            }
+            
+            // متوقف کردن ضبط
+            engine.stopRecording()
+            cancelNotification()
+            
+            if (!hasSpeech) {
+                Log.d(TAG, "❌ هیچ صدایی ضبط نشد")
+                return@withContext ""
+            }
+            
+            // تبدیل صوت به متن
+            Log.d(TAG, "🎧 تبدیل صوت به متن...")
+            val transcribedText = engine.transcribeRecording(tempFile.absolutePath)
+            
+            if (transcribedText.isBlank()) {
+                Log.d(TAG, "❌ متن استخراج شده خالی است")
+                return@withContext ""
+            }
+            
+            Log.d(TAG, "✅ متن استخراج شده: $transcribedText")
+            
+            // استخراج شماره تلفن از متن
+            val phoneNumber = extractPhoneNumberFromText(transcribedText)
+            if (phoneNumber.isNotBlank()) {
+                return@withContext phoneNumber
+            }
+            
+            return@withContext transcribedText
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در ضبط شماره تلفن", e)
+            cancelNotification()
+            return@withContext ""
+        }
+    }
+
+    /**
      * شروع مکالمه انتخاب مخاطب
      */
     suspend fun startSelectionDialogue() {
@@ -322,6 +403,22 @@ class CallContactSelectionDialogue(
                             Log.d(TAG, "❌ مخاطب یا شماره یافت نشد: $analysis")
                             withContext(Dispatchers.Main) {
                                 ttsHelper.speakOnlineFirst("مخاطب یافت نشد. اگر شماره تلفن می‌خواهید تماس بگیرید، لطفاً شماره را بگویید")
+                            }
+                            
+                            // بعد از گفتن پیام، برای ضبط شماره تلفن صبر کن
+                            delay(2000)
+                            
+                            // شروع ضبط شماره تلفن
+                            Log.d(TAG, "🎤 شروع ضبط شماره تلفن...")
+                            val phoneNumberResponse = listenForPhoneNumber()
+                            if (phoneNumberResponse.isNotBlank()) {
+                                Log.d(TAG, "📞 شماره تلفن از کاربر: $phoneNumberResponse")
+                                startDirectCallConfirmation(phoneNumberResponse)
+                            } else {
+                                Log.d(TAG, "❌ شماره تلفن یافت نشد")
+                                withContext(Dispatchers.Main) {
+                                    ttsHelper.speakOnlineFirst("متاسفم، متوجه نشدم. لطفاً دوباره تلاش کنید.")
+                                }
                             }
                         }
                     }

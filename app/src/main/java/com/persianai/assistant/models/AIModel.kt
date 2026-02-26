@@ -112,11 +112,11 @@ enum class AIModel(
         16000
     ),
     LIARA_GPT_5_NANO(
-        "openai/gpt-5-nano",
-        "GPT-5 Nano (Liara)",
+        "openai/gpt-4o-mini",
+        "GPT-4o Mini (Liara)",
         AIProvider.LIARA,
-        "مدل GPT-5 Nano از لیارا",
-        32000
+        "مدل GPT-4o Mini از لیارا",
+        16000
     ),
     IVIRA_GPT5_NANO(
         "gpt-5-nano",
@@ -161,11 +161,11 @@ enum class AIModel(
         16000
     ),
     GAPGPT_GPT_5_NANO(
-        "gpt-5-nano",
-        "GPT-5 Nano (GAPGPT)",
+        "gpt-4o-mini",
+        "GPT-4o Mini (GAPGPT)",
         AIProvider.GAPGPT,
-        "مدل GPT-5 Nano از GAPGPT",
-        32000
+        "مدل GPT-4o Mini از GAPGPT",
+        16000
     ),
     GAPGPT_GPT_4O_MINI_TEST(
         "gpt-4o-mini",

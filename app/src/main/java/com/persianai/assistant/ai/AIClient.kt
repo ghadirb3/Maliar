@@ -278,9 +278,12 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         }
                     }
                 }
+                
+                // Log the full response for debugging
+                android.util.Log.e("AIClient", "Full API response: $responseBody")
                 throw Exception("پاسخ خالی از API")
             } catch (e: Exception) {
-                android.util.Log.e("AIClient", "Parse error: ${e.message}")
+                android.util.Log.e("AIClient", "Parse error: ${e.message}, response: $responseBody")
                 throw Exception("خطا در پردازش پاسخ API: ${e.message}")
             }
         }
