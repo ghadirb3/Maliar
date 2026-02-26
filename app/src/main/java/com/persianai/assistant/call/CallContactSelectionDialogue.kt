@@ -135,11 +135,11 @@ class CallContactSelectionDialogue(
             // تبدیل صوت به متن
             Log.d(TAG, "🎧 تبدیل صوت به متن...")
             val sttService = OnlineSTTService(context)
-            val sttResult = sttService.transcribeAudio(tempFile.absolutePath)
+            val sttResult = sttService.transcribeAudio(tempFile)
             val transcribedText = if (sttResult.isSuccess) {
-                sttResult.getOrNull() ?: ""
+                sttResult.text
             } else {
-                Log.w(TAG, "⚠️ STT failed: ${sttResult.exceptionOrNull()?.message}")
+                Log.w(TAG, "⚠️ STT failed: ${sttResult.error}")
                 ""
             }
             
