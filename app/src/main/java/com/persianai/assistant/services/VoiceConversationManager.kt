@@ -11,7 +11,6 @@ import com.persianai.assistant.core.AIIntentController
 import com.persianai.assistant.core.AIIntentRequest
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.tts.BeepFallback
-// import com.persianai.assistant.core.voice.SpeechToTextPipeline
 import com.persianai.assistant.stt.OnlineSTTService
 
 /**
@@ -47,7 +46,6 @@ class VoiceConversationManager(
     private var amplitudeThreshold = 1000
     private var lastVoiceTime = 0L
 
-    // private val sttPipeline by lazy { SpeechToTextPipeline(context) }
     private val onlineSTT by lazy { OnlineSTTService(context) }
     
     // Callbacks

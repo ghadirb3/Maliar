@@ -35,14 +35,12 @@ import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.TTSHelper
 import com.persianai.assistant.utils.PreferencesManager.ProviderPreference
 import com.persianai.assistant.utils.AutoProvisioningManager
-// import com.persianai.assistant.utils.ModelDownloadManager
 import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.utils.IviraProcessingHelper
 import com.persianai.assistant.services.VoiceRecordingHelper
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.core.AIIntentController
 import com.persianai.assistant.core.AIIntentRequest
-// import com.persianai.assistant.core.voice.SpeechToTextPipeline
 import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.ai.SimpleOfflineResponder
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +86,6 @@ abstract class BaseChatActivity : AppCompatActivity() {
     private val httpClient = OkHttpClient()
     private val sttEngine by lazy { UnifiedVoiceEngine(this) }
     private val onlineSTT by lazy { OnlineSTTService(this) }
-    // private val sttPipeline by lazy { SpeechToTextPipeline(this) }
     private val hfApiKey: String by lazy {
         getSharedPreferences("api_keys", MODE_PRIVATE)
             .getString("hf_api_key", null)

@@ -15,7 +15,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.persianai.assistant.R
-// import com.persianai.assistant.core.voice.SpeechToTextPipeline
 import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.stt.OnlineSTTService
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +46,6 @@ class VoiceActionButton @JvmOverloads constructor(
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val engine = UnifiedVoiceEngine(context)
     private val onlineSTT = OnlineSTTService(context)
-    // private val sttPipeline = SpeechToTextPipeline(context)
 
     init {
         val view = LayoutInflater.from(context).inflate(R.layout.view_voice_action_button, this, true)

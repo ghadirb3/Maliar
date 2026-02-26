@@ -19,7 +19,6 @@ import com.persianai.assistant.utils.DefaultApiKeys
 import com.persianai.assistant.utils.DriveHelper
 import com.persianai.assistant.utils.EncryptionHelper
 import com.persianai.assistant.utils.PreferencesManager
-// import com.persianai.assistant.utils.ModelDownloadManager
 import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.config.RemoteAIConfigManager
 import kotlinx.coroutines.Dispatchers

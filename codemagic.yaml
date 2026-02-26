@@ -41,10 +41,12 @@ workflows:
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build.log || {
             echo "=== BUILD FAILED ==="
             echo "Gradle build failed, checking for errors..."
-            echo "Last 50 lines of build log:"
-            tail -50 app/build/tmp/compileDebugKotlin/previous-compilation-data.txt || echo "No kotlin compilation data"
-            echo "Checking gradle logs..."
-            find . -name "*.log" -exec tail -20 {} \; || echo "No log files found"
+            echo "Last 100 lines of build.log:"
+            tail -100 build.log || echo "No build.log found"
+            echo "=== KOTLIN COMPILATION ERRORS ==="
+            find app/build/tmp -name "*.log" -exec echo "=== {} ===" \; -exec cat {} \; || echo "No compilation logs found"
+            echo "=== LINT ERRORS ==="
+            find app/build/reports -name "*.xml" -exec echo "=== {} ===" \; -exec cat {} \; || echo "No lint reports found"
             exit 1
           }
           echo "Debug build completed"

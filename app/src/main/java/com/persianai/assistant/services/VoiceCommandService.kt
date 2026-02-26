@@ -16,7 +16,6 @@ import androidx.core.content.ContextCompat
 import com.persianai.assistant.R
 import com.persianai.assistant.receivers.VoiceCommandReceiver
 import com.persianai.assistant.core.AIIntentController
-// import com.persianai.assistant.core.voice.SpeechToTextPipeline
 import com.persianai.assistant.stt.OnlineSTTService
 
 import kotlinx.coroutines.CoroutineScope
@@ -154,7 +153,6 @@ class VoiceCommandService : Service() {
     private suspend fun runOneShotCommand(hint: String?, mode: String) {
         val engine = UnifiedVoiceEngine(this)
         val controller = AIIntentController(this)
-        // val stt = SpeechToTextPipeline(this)
         val onlineSTT = OnlineSTTService(this)
 
         try {

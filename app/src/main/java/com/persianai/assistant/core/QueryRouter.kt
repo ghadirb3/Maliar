@@ -11,7 +11,6 @@ import com.persianai.assistant.models.AIModel
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.ChatMessage
 import com.persianai.assistant.models.MessageRole
-// import com.persianai.assistant.utils.ModelDownloadManager
 import com.persianai.assistant.utils.PreferencesManager
 import com.persianai.assistant.utils.ModelSelector
 import com.persianai.assistant.utils.IviraTokenManager
