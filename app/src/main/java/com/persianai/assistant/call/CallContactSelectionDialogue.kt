@@ -134,7 +134,14 @@ class CallContactSelectionDialogue(
             
             // تبدیل صوت به متن
             Log.d(TAG, "🎧 تبدیل صوت به متن...")
-            val transcribedText = engine.transcribeRecording(tempFile.absolutePath)
+            val sttService = OnlineSTTService(context)
+            val sttResult = sttService.transcribeAudio(tempFile.absolutePath)
+            val transcribedText = if (sttResult.isSuccess) {
+                sttResult.getOrNull() ?: ""
+            } else {
+                Log.w(TAG, "⚠️ STT failed: ${sttResult.exceptionOrNull()?.message}")
+                ""
+            }
             
             if (transcribedText.isBlank()) {
                 Log.d(TAG, "❌ متن استخراج شده خالی است")
