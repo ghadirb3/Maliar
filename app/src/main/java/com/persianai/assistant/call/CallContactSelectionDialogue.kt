@@ -338,8 +338,37 @@ class CallContactSelectionDialogue(
                         ttsHelper.speakOnlineFirst("منتظر بمانید، در حال تماس با ${selectedContact.name}")
                         delay(1000)
                         
-                        // شروع تماس
-                        CallModule.makeCall(context, selectedContact.phoneNumber, selectedContact.name)
+                        // شروع تماس مستقیم با Android Intent
+                        val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
+                            data = android.net.Uri.parse("tel:${selectedContact.phoneNumber}")
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+                        
+                        try {
+                            context.startActivity(callIntent)
+                            Log.d(TAG, "✅ تماس با موفقیت شروع شد")
+                            cancelNotification()
+                        } catch (e: SecurityException) {
+                            Log.e(TAG, "❌ عدم دسترسی به تماس: ${e.message}")
+                            ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را در تنظیمات فعال کنید")
+                            
+                            // تلاش با ACTION_DIAL به عنوان جایگزین
+                            try {
+                                val dialIntent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                    data = android.net.Uri.parse("tel:${selectedContact.phoneNumber}")
+                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                context.startActivity(dialIntent)
+                                Log.d(TAG, "📱 صفحه شماره‌گیر باز شد")
+                                ttsHelper.speakOnlineFirst("صفحه شماره‌گیر باز شد، لطفاً تماس را بگیرید")
+                            } catch (e2: Exception) {
+                                Log.e(TAG, "❌ خطا در باز کردن صفحه شماره‌گیر: ${e2.message}")
+                                ttsHelper.speakOnlineFirst("خطا در شروع تماس، لطفاً دستی تماس بگیرید")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "❌ خطا در شروع تماس: ${e.message}")
+                            ttsHelper.speakOnlineFirst("خطا در شروع تماس")
+                        }
                     }
                 }
             }

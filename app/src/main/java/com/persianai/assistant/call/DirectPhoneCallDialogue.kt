@@ -135,9 +135,9 @@ class DirectPhoneCallDialogue(
             
             Log.d(TAG, "✅ ضبط صدا شروع شد")
             
-            // منتظر مکث یا timeout
-            val timeoutMs = 12000L // 12 ثانیه
-            val silenceStopMs = 2000L // 2 ثانیه سکوت
+            // منتظر مکث یا timeout - بهینه شده برای سرعت
+            val timeoutMs = 6000L // 6 ثانیه - کاهش از 12 ثانیه
+            val silenceStopMs = 1500L // 1.5 ثانیه سکوت - کاهش از 2 ثانیه
             var lastSpeechTime = System.currentTimeMillis()
             var hasSpeech = false
             
@@ -259,12 +259,20 @@ class DirectPhoneCallDialogue(
                 val extractedPhone = extractPhoneNumberFromText(response)
                 
                 when {
-                    // بررسی کلمات تأیید
-                    response.lowercase().contains("بله") || 
-                    response.lowercase().contains("آره") || 
-                    response.lowercase().contains("تماس") ||
-                    response.lowercase().contains("بزن") ||
-                    response.lowercase().contains("کن") -> {
+                    // بررسی کلمات تأیید - بهینه شده برای تشخیص سریع
+                    val normalizedResponse = response.lowercase().trim()
+                    normalizedResponse.contains("بله") || 
+                    normalizedResponse.contains("آره") || 
+                    normalizedResponse.contains("تماس") ||
+                    normalizedResponse.contains("بگیر") ||
+                    normalizedResponse.contains("بزن") ||
+                    normalizedResponse.contains("کن") ||
+                    normalizedResponse.contains("باشه") ||
+                    normalizedResponse == "بله" ||
+                    normalizedResponse == "آره" ||
+                    normalizedResponse == "تماس" ||
+                    normalizedResponse == "بگیر" ||
+                    normalizedResponse == "بزن" -> {
                         
                         val finalPhone = if (extractedPhone.isNotBlank()) {
                             Log.d(TAG, "📞 شماره اصلاح شده از پاسخ: $extractedPhone")
@@ -396,20 +404,44 @@ class DirectPhoneCallDialogue(
      */
     private suspend fun makePhoneCall(phoneNumber: String) {
         try {
-            // استفاده از CallConfirmationManager برای شروع تماس
-            val confirmationManager = CallConfirmationManager(context)
+            Log.d(TAG, "📞 شروع تماس مستقیم با شماره: $phoneNumber")
             
-            // ایجاد یک مخاطب مجازی برای تماس مستقیم
-            val dummyContact = com.persianai.assistant.models.Contact(
-                id = "-1",
-                name = "شماره مستقیم",
-                phoneNumber = phoneNumber
-            )
-            
-            confirmationManager.startCallConfirmation(dummyContact, phoneNumber)
+            withContext(Dispatchers.Main) {
+                // تماس مستقیم با اپلیکیشن تلفن اندروید
+                val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
+                    data = android.net.Uri.parse("tel:$phoneNumber")
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                
+                try {
+                    context.startActivity(callIntent)
+                    Log.d(TAG, "✅ تماس با موفقیت شروع شد")
+                    cancelNotification()
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "❌ عدم دسترسی به تماس: ${e.message}")
+                    ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را در تنظیمات فعال کنید")
+                    
+                    // تلاش با ACTION_DIAL به عنوان جایگزین
+                    try {
+                        val dialIntent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                            data = android.net.Uri.parse("tel:$phoneNumber")
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(dialIntent)
+                        Log.d(TAG, "📱 صفحه شماره‌گیر باز شد")
+                        ttsHelper.speakOnlineFirst("صفحه شماره‌گیر باز شد، لطفاً تماس را بگیرید")
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "❌ خطا در باز کردن صفحه شماره‌گیر: ${e2.message}")
+                        ttsHelper.speakOnlineFirst("خطا در شروع تماس، لطفاً دستی تماس بگیرید")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ خطا در شروع تماس: ${e.message}")
+                    ttsHelper.speakOnlineFirst("خطا در شروع تماس")
+                }
+            }
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در شروع تماس واقعی", e)
+            Log.e(TAG, "❌ خطا کلی در makePhoneCall", e)
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirst("خطا در شروع تماس")
             }
