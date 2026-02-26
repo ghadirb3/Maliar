@@ -345,30 +345,32 @@ class CallContactSelectionDialogue(
 
         try {
             // ساخت پرامپت برای AI
-            val contactsList = contacts.joinToString("\n") { "${it.name}: ${it.phoneNumber}" }
+            val contactsList = contacts.joinToString("\n") { it.name }
             val prompt = """
-                کاربر یکی از مخاطبین زیر را انتخاب کرده:
+                مخاطبین موجود:
                 $contactsList
                 
                 کاربر گفت: "$response"
                 
-                نکات مهم:
-                - کلمات رابطه مثل "همسر"، "مادر"، "پدر"، "برادر"، "خواهر"، "دوست" برای تشخیص دقیق‌تر هستن
-                - مثلاً "مریم همسر" یعنی همان "مریم همسر" که در لیست هست
-                - "مریم" تنها ممکن است چندین مخاطب داشته باشد
-                - اولویت با تطابق دقیق کامل نام
+                اگر نام دقیقاً در لیست بالا هست، همون نام را بنویس.
+                اگر لغو کرده، بنویس CANCEL.
+                در غیر این صورت بنویس NONE.
                 
-                لطفاً تحلیل کن و فقط در یک کلمه پاسخ بده:
-                - "CANCEL" اگر لغو کرده (کلماتی مثل: لغو، نه، کنسل، انصراف)
-                - نام دقیق مخاطب اگر انتخاب کرده (مثلاً: "مریم همسر")
-                - "NONE" اگر مشخص نیست یا نامشابه وجود دارد
+                مثال:
+                اگر لیست شامل "مریم همسر" باشد و کاربر گفت "مریم همسر"، پاسخ: "مریم همسر"
+                
+                پاسخ:
             """.trimIndent()
 
             // تحلیل با AI
+            Log.d(TAG, "🔍 شروع تحلیل با پرامپت:")
+            Log.d(TAG, "📝 پرامپت: $prompt")
+            
             val aiResponse = aiAssistant.processRequestWithAI(prompt)
             val analysis = aiResponse.text.lowercase().trim()
 
-            Log.d(TAG, "🤖 پاسخ AI: $analysis")
+            Log.d(TAG, "🤖 پاسخ AI: '$analysis'")
+            Log.d(TAG, "📏 طول پاسخ: ${analysis.length} کاراکتر")
 
             when {
                 response == "SILENCE_TIMEOUT" -> {

@@ -72,7 +72,7 @@ class AdvancedPersianAssistant(private val context: Context) {
         val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
         val models = mutableListOf<AIModel>()
         
-        // اولویت ۱: gpt-5-nano از لیارا (درخواست کاربر)
+        // اولویت ۱: gpt-5-nano از لیارا (درخواست اصلی کاربر - مدل معتبر از مستندات)
         if (activeProviders.contains(AIProvider.LIARA)) {
             models.add(AIModel.LIARA_GPT_5_NANO)
         }
