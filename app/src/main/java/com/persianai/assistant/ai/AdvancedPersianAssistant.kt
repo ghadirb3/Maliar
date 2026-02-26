@@ -65,6 +65,42 @@ class AdvancedPersianAssistant(private val context: Context) {
         }
     }
 
+    /**
+     * دریافت لیست مدل‌ها برای fallback با اولویت‌بندی صحیح
+     */
+    private fun getFallbackModels(apiKeys: List<APIKey>): List<AIModel> {
+        val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
+        val models = mutableListOf<AIModel>()
+        
+        // اولویت ۱: مدل‌های معتبر gpt-4o-mini
+        if (activeProviders.contains(AIProvider.LIARA)) {
+            models.add(AIModel.LIARA_GPT_4O_MINI)
+        }
+        if (activeProviders.contains(AIProvider.GAPGPT)) {
+            models.add(AIModel.GAPGPT_GPT_4O_MINI)
+        }
+        
+        // اولویت ۲: مدل‌های دیگر
+        if (activeProviders.contains(AIProvider.GAPGPT)) {
+            models.add(AIModel.GAPGPT_DEEPSEEK_V3)
+        }
+        
+        // اولویت ۳: مدل‌های اصلی (backup)
+        if (activeProviders.contains(AIProvider.OPENAI)) {
+            models.add(AIModel.GPT_4O_MINI)
+        }
+        
+        // اولویت ۴: مدل‌های مشکوک (آخرین گزینه)
+        if (activeProviders.contains(AIProvider.LIARA)) {
+            models.add(AIModel.LIARA_GPT_5_NANO)
+        }
+        if (activeProviders.contains(AIProvider.GAPGPT)) {
+            models.add(AIModel.GAPGPT_GPT_5_NANO)
+        }
+        
+        return models
+    }
+
     suspend fun processRequestWithAI(userInput: String, contextHint: String? = null): AssistantResponse {
         val baseResponse = processRequest(userInput)
 
@@ -95,87 +131,36 @@ class AdvancedPersianAssistant(private val context: Context) {
             android.util.Log.d("AdvancedPersianAssistant", "Using online model: ${model.modelId} (${model.provider})")
 
             suspend fun callOnline(prompt: String): String {
-                try {
-                    val resp = aiClient.sendMessage(
-                        model = model,
-                        messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
-                    )
-                    val content = resp.content.trim()
-                    
-                    // If using Liara GPT-5-nano and content is empty or too short, fallback to gpt-4o-mini
-                    if (model.provider == AIProvider.LIARA && model.modelId.contains("gpt-5-nano") && 
-                        (content.isBlank() || content.length < 10)) {
-                        android.util.Log.w("AdvancedPersianAssistant", "Liara GPT-5-nano returned empty/short response, falling back to gpt-4o-mini")
+                val availableModels = getFallbackModels(apiKeys)
+                
+                for (currentModel in availableModels) {
+                    try {
+                        android.util.Log.d("AdvancedPersianAssistant", "Trying model: ${currentModel.modelId} (${currentModel.provider})")
                         
-                        // Try to find an OpenAI key for fallback
-                        val openaiKey = apiKeys.firstOrNull { it.provider == AIProvider.OPENAI && it.isActive }
-                        if (openaiKey != null) {
-                            val fallbackModel = AIModel.GPT_4O_MINI
-                            val fallbackResp = aiClient.sendMessage(
-                                model = fallbackModel,
-                                messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
-                            )
-                            val fallbackContent = fallbackResp.content.trim()
-                            if (fallbackContent.isNotBlank()) {
-                                android.util.Log.d("AdvancedPersianAssistant", "Fallback to gpt-4o-mini successful")
-                                return fallbackContent
-                            }
-                        }
-                    }
-                    
-                    return content
-                } catch (e: Exception) {
-                    android.util.Log.e("AdvancedPersianAssistant", "Online request failed with model ${model.modelId}: ${e.message}")
-                    
-                    // If using Liara GPT-5-nano and it failed, try fallback to gpt-4o-mini
-                    if (model.provider == AIProvider.LIARA && model.modelId.contains("gpt-5-nano")) {
-                        android.util.Log.w("AdvancedPersianAssistant", "Liara GPT-5-nano failed, attempting fallback to gpt-4o-mini")
+                        val resp = aiClient.sendMessage(
+                            model = currentModel,
+                            messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
+                        )
+                        val content = resp.content.trim()
                         
-                        // Try OPENAI first
-                        val openaiKey = apiKeys.firstOrNull { it.provider == AIProvider.OPENAI && it.isActive }
-                        if (openaiKey != null) {
-                            try {
-                                val fallbackModel = AIModel.GPT_4O_MINI
-                                val fallbackResp = aiClient.sendMessage(
-                                    model = fallbackModel,
-                                    messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
-                                )
-                                val fallbackContent = fallbackResp.content.trim()
-                                if (fallbackContent.isNotBlank()) {
-                                    android.util.Log.d("AdvancedPersianAssistant", "Fallback to OPENAI gpt-4o-mini successful after error")
-                                    return fallbackContent
-                                }
-                            } catch (fallbackError: Exception) {
-                                android.util.Log.e("AdvancedPersianAssistant", "Fallback to OPENAI gpt-4o-mini also failed: ${fallbackError.message}")
-                            }
+                        // Check if response is meaningful
+                        if (content.isNotBlank() && 
+                            !content.equals("none", ignoreCase = true) && 
+                            !content.equals("cancel", ignoreCase = true) &&
+                            content.length > 3) {
+                            
+                            android.util.Log.d("AdvancedPersianAssistant", "Success with model ${currentModel.modelId}: ${content.take(50)}...")
+                            return content
                         } else {
-                            android.util.Log.w("AdvancedPersianAssistant", "No active OPENAI key found for fallback")
+                            android.util.Log.w("AdvancedPersianAssistant", "Model ${currentModel.modelId} returned empty/invalid response: '$content'")
                         }
-                        
-                        // Try GAPGPT as second fallback
-                        val gapgptKey = apiKeys.firstOrNull { it.provider == AIProvider.GAPGPT && it.isActive }
-                        if (gapgptKey != null) {
-                            try {
-                                val fallbackModel = AIModel.GAPGPT_GPT_5_NANO  // Use GPT-5-nano for GAPGPT fallback
-                                val fallbackResp = aiClient.sendMessage(
-                                    model = fallbackModel,
-                                    messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt))
-                                )
-                                val fallbackContent = fallbackResp.content.trim()
-                                if (fallbackContent.isNotBlank()) {
-                                    android.util.Log.d("AdvancedPersianAssistant", "Fallback to GAPGPT gpt-5-nano successful after error")
-                                    return fallbackContent
-                                }
-                            } catch (fallbackError: Exception) {
-                                android.util.Log.e("AdvancedPersianAssistant", "Fallback to GAPGPT gpt-5-nano also failed: ${fallbackError.message}")
-                            }
-                        } else {
-                            android.util.Log.w("AdvancedPersianAssistant", "No active GAPGPT key found for fallback")
-                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("AdvancedPersianAssistant", "Model ${currentModel.modelId} failed: ${e.message}")
                     }
-                    
-                    throw e
                 }
+                
+                android.util.Log.w("AdvancedPersianAssistant", "All models failed, returning empty response")
+                return ""
             }
 
             if (baseResponse.actionType == ActionType.NEEDS_AI) {
