@@ -14,6 +14,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.ConnectionPool
 import java.util.concurrent.TimeUnit
 
