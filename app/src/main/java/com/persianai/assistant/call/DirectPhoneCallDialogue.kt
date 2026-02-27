@@ -3,7 +3,11 @@ package com.persianai.assistant.call
 import android.content.Context
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import android.util.Log
 import com.persianai.assistant.R
@@ -59,16 +63,37 @@ class DirectPhoneCallDialogue(
         }
     }
     
-    private fun updateNotification(title: String, content: String) {
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+    private fun updateNotification(title: String, content: String, showPermissionButton: Boolean = false) {
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_mic)
             .setContentTitle(title)
             .setContentText(content)
             .setOngoing(true)
             .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
-            .build()
         
+        // اضافه کردن دکمه درخواست دسترسی تماس
+        if (showPermissionButton) {
+            val permissionIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            
+            val pendingIntent = PendingIntent.getActivity(
+                context, 
+                0, 
+                permissionIntent, 
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            builder.addAction(
+                R.drawable.ic_mic,
+                "فعال‌سازی دسترسی تماس",
+                pendingIntent
+            )
+        }
+        
+        val notification = builder.build()
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
     
@@ -419,7 +444,15 @@ class DirectPhoneCallDialogue(
                     cancelNotification()
                 } catch (e: SecurityException) {
                     Log.e(TAG, "❌ عدم دسترسی به تماس: ${e.message}")
-                    ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را در تنظیمات فعال کنید")
+                    
+                    // نمایش نوتیفیکیشن با دکمه درخواست دسترسی
+                    updateNotification(
+                        title = "نیاز به دسترسی تماس",
+                        content = "برای تماس مستقیم، دسترسی تلفن را فعال کنید",
+                        showPermissionButton = true
+                    )
+                    
+                    ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را از نوتیفیکیشن فعال کنید")
                     
                     // تلاش با ACTION_DIAL به عنوان جایگزین
                     try {
