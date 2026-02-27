@@ -133,7 +133,7 @@ class DirectPhoneCallDialogue(
         Log.d(TAG, "📢 درخواست تأیید تماس مستقیم: $message")
 
         ttsHelper.speakOnlineFirstAndWait(message)
-        delay(300)
+        delay(2000)  // صبر 2 ثانیه برای اطمینان از کامل شدن TTS
     }
     
     /**
@@ -161,8 +161,8 @@ class DirectPhoneCallDialogue(
             Log.d(TAG, "✅ ضبط صدا شروع شد")
             
             // منتظر مکث یا timeout - بهینه شده برای سرعت
-            val timeoutMs = 6000L // 6 ثانیه - کاهش از 12 ثانیه
-            val silenceStopMs = 1500L // 1.5 ثانیه سکوت - کاهش از 2 ثانیه
+            val timeoutMs = 15000L // 15 ثانیه - افزایش برای جلوگیری از گیر کردن
+            val silenceStopMs = 2000L // 2 ثانیه سکوت - افزایش زمان انتظار
             var lastSpeechTime = System.currentTimeMillis()
             var hasSpeech = false
             

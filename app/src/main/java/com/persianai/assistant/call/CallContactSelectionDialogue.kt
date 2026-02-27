@@ -115,7 +115,7 @@ class CallContactSelectionDialogue(
         Log.d(TAG, "📢 خواندن لیست مخاطبین: $message")
 
         ttsHelper.speakOnlineFirstAndWait(message)
-        delay(300)
+        delay(2000)  // صبر 2 ثانیه برای اطمینان از کامل شدن TTS
     }
     
     /**
@@ -190,8 +190,8 @@ class CallContactSelectionDialogue(
             Log.d(TAG, "✅ ضبط صدا شروع شد")
             
             // منتظر مکث یا timeout
-            val timeoutMs = 12000L // 12 ثانیه
-            val silenceStopMs = 3000L // 3 ثانیه سکوت
+            val timeoutMs = 15000L // 15 ثانیه - افزایش برای جلوگیری از گیر کردن
+            val silenceStopMs = 2000L // 2 ثانیه سکوت - یکسانسازی با تماس مستقیم
             val startTime = System.currentTimeMillis()
             var lastSpeechTime = startTime
             var hasSpeech = false
@@ -371,7 +371,7 @@ class CallContactSelectionDialogue(
             
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirstAndWait(message)
-                delay(300)
+                delay(2000)  // صبر 2 ثانیه برای اطمینان از کامل شدن TTS
             }
             
             // شنود برای پاسخ تأیید/لغو
