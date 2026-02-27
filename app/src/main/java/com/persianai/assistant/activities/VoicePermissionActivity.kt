@@ -13,10 +13,11 @@ class VoicePermissionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // درخواست مجوزهای مشخص شده یا پیش‌فرض میکروفن و مخاطبین
+        // درخواست مجوزهای مشخص شده یا پیش‌فرض میکروفن، مخاطبین و تلفن
         val permissions = intent.getStringArrayExtra("permissions") ?: arrayOf(
             Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.READ_CONTACTS
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.CALL_PHONE
         )
         requestPermissionLauncher.launch(permissions)
     }
@@ -26,7 +27,7 @@ class VoicePermissionActivity : AppCompatActivity() {
     ) { permissions ->
         val allGranted = permissions.entries.all { it.value }
         if (allGranted) {
-            Toast.makeText(this, "✅ مجوزهای میکروفون و مخاطبین داده شد", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "✅ مجوزهای میکروفون، مخاطبین و تلفن داده شد", Toast.LENGTH_SHORT).show()
 
             // بعد از گرفتن مجوز، همان فرمان را دوباره اجرا کن
             val mode = intent.getStringExtra("extra_mode") ?: ""

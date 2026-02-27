@@ -479,11 +479,75 @@ class CallContactSelectionDialogue(
     }
     
     /**
+     * بررسی وجود مجوز تماس
+     */
+    private fun hasCallPermission(): Boolean {
+        return android.content.pm.PackageManager.PERMISSION_GRANTED == 
+            android.core.content.ContextCompat.checkSelfPermission(
+                context, 
+                android.Manifest.permission.CALL_PHONE
+            )
+    }
+    
+    /**
+     * درخواست مجوز تماس
+     */
+    private suspend fun requestCallPermission() {
+        withContext(Dispatchers.Main) {
+            // نمایش نوتیفیکیشن با دکمه درخواست دسترسی
+            updateNotification(
+                title = "نیاز به دسترسی تماس",
+                content = "برای تماس مستقیم، دسترسی تلفن را فعال کنید",
+                showPermissionButton = true
+            )
+            
+            ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را از نوتیفیکیشن فعال کنید")
+            
+            // شروع مانیتورینگ برای تشخیص دادن مجوز
+            startPermissionMonitoring()
+        }
+    }
+    
+    /**
+     * مانیتورینگ وضعیت مجوز برای بستن نوتیفیکیشن بعد از دادن مجوز
+     */
+    private fun startPermissionMonitoring() {
+        scope.launch {
+            var attempts = 0
+            val maxAttempts = 30 // 30 ثانیه منتظر می‌مونیم
+            
+            while (attempts < maxAttempts) {
+                delay(1000) // هر ثانیه چک می‌کنیم
+                attempts++
+                
+                if (hasCallPermission()) {
+                    Log.d(TAG, "✅ مجوز تماس داده شد - بستن نوتیفیکیشن")
+                    cancelNotification()
+                    ttsHelper.speakOnlineFirst("مجوز تماس فعال شد، می‌توانید دوباره تلاش کنید")
+                    break
+                }
+            }
+            
+            if (attempts >= maxAttempts) {
+                Log.d(TAG, "⏰ زمان انتظار برای مجوز تمام شد")
+                cancelNotification()
+            }
+        }
+    }
+    
+    /**
      * برقراری تماس تلفنی
      */
     private suspend fun makePhoneCall(contact: Contact) {
         try {
             Log.d(TAG, "📞 شروع تماس با شماره: ${contact.phoneNumber}")
+            
+            // بررسی وضعیت مجوز تماس
+            if (!hasCallPermission()) {
+                Log.d(TAG, "🔐 مجوز تماس وجود ندارد - درخواست مجوز")
+                requestCallPermission()
+                return
+            }
             
             // تماس مستقیم با Android Intent
             val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
