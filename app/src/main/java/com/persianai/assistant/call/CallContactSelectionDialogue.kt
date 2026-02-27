@@ -483,7 +483,7 @@ class CallContactSelectionDialogue(
      */
     private fun hasCallPermission(): Boolean {
         return android.content.pm.PackageManager.PERMISSION_GRANTED == 
-            android.core.content.ContextCompat.checkSelfPermission(
+            androidx.core.content.ContextCompat.checkSelfPermission(
                 context, 
                 android.Manifest.permission.CALL_PHONE
             )
