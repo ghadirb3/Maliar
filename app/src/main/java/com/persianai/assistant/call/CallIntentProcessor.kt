@@ -249,7 +249,13 @@ class CallIntentProcessor(private val context: Context) {
      * استخراج مستقیم نام مخاطب (fallback)
      */
     private fun extractDirectContactName(input: String): String? {
-        val words = input.split(" ").filter { it.isNotBlank() }
+        // ابتدا پاکسازی ورودی از نشانه‌گذاری
+        val cleanedInput = input
+            .replace("،", "").trim()  // Remove Arabic comma
+            .replace(",", "").trim()   // Remove Latin comma
+            .replace(".", "").trim()   // Remove period
+            
+        val words = cleanedInput.split(" ").filter { it.isNotBlank() }
         
         // جستجوی ترکیب‌های ممکن
         for (i in words.indices) {
