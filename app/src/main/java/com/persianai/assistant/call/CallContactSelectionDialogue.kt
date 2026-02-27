@@ -334,42 +334,8 @@ class CallContactSelectionDialogue(
                     val selectedContact = contacts[selectedNumber - 1]
                     Log.d(TAG, "✅ مخاطب انتخاب شد: ${selectedContact.name} (${selectedContact.phoneNumber})")
                     
-                    withContext(Dispatchers.Main) {
-                        ttsHelper.speakOnlineFirst("منتظر بمانید، در حال تماس با ${selectedContact.name}")
-                        delay(1000)
-                        
-                        // شروع تماس مستقیم با Android Intent
-                        val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
-                            data = android.net.Uri.parse("tel:${selectedContact.phoneNumber}")
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        }
-                        
-                        try {
-                            context.startActivity(callIntent)
-                            Log.d(TAG, "✅ تماس با موفقیت شروع شد")
-                            cancelNotification()
-                        } catch (e: SecurityException) {
-                            Log.e(TAG, "❌ عدم دسترسی به تماس: ${e.message}")
-                            ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را در تنظیمات فعال کنید")
-                            
-                            // تلاش با ACTION_DIAL به عنوان جایگزین
-                            try {
-                                val dialIntent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                    data = android.net.Uri.parse("tel:${selectedContact.phoneNumber}")
-                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(dialIntent)
-                                Log.d(TAG, "📱 صفحه شماره‌گیر باز شد")
-                                ttsHelper.speakOnlineFirst("صفحه شماره‌گیر باز شد، لطفاً تماس را بگیرید")
-                            } catch (e2: Exception) {
-                                Log.e(TAG, "❌ خطا در باز کردن صفحه شماره‌گیر: ${e2.message}")
-                                ttsHelper.speakOnlineFirst("خطا در شروع تماس، لطفاً دستی تماس بگیرید")
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "❌ خطا در شروع تماس: ${e.message}")
-                            ttsHelper.speakOnlineFirst("خطا در شروع تماس")
-                        }
-                    }
+                    // مرحله ۲: تأیید نهایی تماس
+                    startFinalConfirmation(selectedContact)
                 }
             }
 
@@ -379,6 +345,218 @@ class CallContactSelectionDialogue(
                 ttsHelper.speakOnlineFirst("خطا در انتخاب، لطفاً دوباره تلاش کنید")
             }
         }
+    }
+    
+    /**
+     * مرحله ۲: تأیید نهایی تماس
+     */
+    private suspend fun startFinalConfirmation(contact: Contact) {
+        try {
+            // خواندن اطلاعات مخاطب برای تأیید
+            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(contact.phoneNumber)
+            val message = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟ برای تأیید بگویید: بله، یا تأیید، یا تماس بگیر. برای لغو بگویید: نه، یا لغو، یا تماس نگیر."
+            
+            Log.d(TAG, "📢 درخواست تأیید نهایی: $message")
+            
+            withContext(Dispatchers.Main) {
+                ttsHelper.speakOnlineFirstAndWait(message)
+                delay(300)
+            }
+            
+            // شنود برای پاسخ تأیید/لغو
+            val response = listenForUserResponse()
+            
+            // تحلیل پاسخ نهایی
+            processFinalConfirmationResponse(response, contact)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا در تأیید نهایی", e)
+            cancelNotification()
+            scope.launch {
+                ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
+            }
+        }
+    }
+    
+    /**
+     * تحلیل پاسخ نهایی تأیید/لغو
+     */
+    private suspend fun processFinalConfirmationResponse(response: String, contact: Contact) {
+        Log.d(TAG, "🔍 تحلیل پاسخ نهایی: $response")
+        
+        when {
+            response == "SILENCE_TIMEOUT" -> {
+                Log.d(TAG, "⏰ لغو به دلیل سکوت کاربر")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("به دلیل سکوت، تماس لغو شد")
+                }
+                return
+            }
+            
+            response == "CANCEL" -> {
+                Log.d(TAG, "❌ کاربر لغو کرد")
+                return
+            }
+            
+            response.isBlank() -> {
+                Log.d(TAG, "❌ پاسخ خالی")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("متوجه نشدم. لطفاً بگویید بله یا نه")
+                }
+                return
+            }
+        }
+        
+        // بررسی کلمات تأیید و لغو
+        val normalizedResponse = response.lowercase().trim()
+        
+        when {
+            // کلمات تأیید
+            normalizedResponse.contains("بله") || 
+            normalizedResponse.contains("آره") || 
+            normalizedResponse.contains("تائید") ||
+            normalizedResponse.contains("تأیید") ||
+            normalizedResponse.contains("تماس") ||
+            normalizedResponse.contains("بگیر") ||
+            normalizedResponse.contains("بزن") ||
+            normalizedResponse.contains("کن") ||
+            normalizedResponse == "بله" ||
+            normalizedResponse == "آره" ||
+            normalizedResponse == "تائید" ||
+            normalizedResponse == "تأیید" ||
+            normalizedResponse == "تماس" ||
+            normalizedResponse == "بگیر" ||
+            normalizedResponse == "بزن" -> {
+                
+                Log.d(TAG, "✅ تماس تأیید شد با شماره: ${contact.phoneNumber}")
+                
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("در حال برقراری تماس با ${contact.name}")
+                    delay(1000)
+                    
+                    makePhoneCall(contact)
+                }
+            }
+            
+            // کلمات لغو
+            normalizedResponse.contains("نه") || 
+            normalizedResponse.contains("لغو") || 
+            normalizedResponse.contains("تموم") ||
+            normalizedResponse.contains("بس") ||
+            normalizedResponse.contains("تمام") ||
+            normalizedResponse.contains("نمی") ||
+            normalizedResponse.contains("نخو") ||
+            normalizedResponse == "نه" ||
+            normalizedResponse == "لغو" ||
+            normalizedResponse == "تموم" ||
+            normalizedResponse == "بس" ||
+            normalizedResponse == "تمام" -> {
+                
+                Log.d(TAG, "❌ تماس لغو شد توسط کاربر")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("تماس لغو شد")
+                }
+            }
+            
+            else -> {
+                Log.d(TAG, "❌ پاسخ نامفهوم: $response")
+                withContext(Dispatchers.Main) {
+                    ttsHelper.speakOnlineFirst("متوجه نشدم. لطفاً بگویید بله برای تأیید یا نه برای لغو")
+                }
+            }
+        }
+    }
+    
+    /**
+     * برقراری تماس تلفنی
+     */
+    private suspend fun makePhoneCall(contact: Contact) {
+        try {
+            Log.d(TAG, "📞 شروع تماس با شماره: ${contact.phoneNumber}")
+            
+            // تماس مستقیم با Android Intent
+            val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
+                data = android.net.Uri.parse("tel:${contact.phoneNumber}")
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            
+            try {
+                context.startActivity(callIntent)
+                Log.d(TAG, "✅ تماس با موفقیت شروع شد")
+                cancelNotification()
+            } catch (e: SecurityException) {
+                Log.e(TAG, "❌ عدم دسترسی به تماس: ${e.message}")
+                
+                // نمایش نوتیفیکیشن با دکمه درخواست دسترسی
+                updateNotification(
+                    title = "نیاز به دسترسی تماس",
+                    content = "برای تماس مستقیم، دسترسی تلفن را فعال کنید",
+                    showPermissionButton = true
+                )
+                
+                ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را از نوتیفیکیشن فعال کنید")
+                
+                // تلاش با ACTION_DIAL به عنوان جایگزین
+                try {
+                    val dialIntent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                        data = android.net.Uri.parse("tel:${contact.phoneNumber}")
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(dialIntent)
+                    Log.d(TAG, "📱 صفحه شماره‌گیر باز شد")
+                    ttsHelper.speakOnlineFirst("صفحه شماره‌گیر باز شد، لطفاً تماس را بگیرید")
+                } catch (e2: Exception) {
+                    Log.e(TAG, "❌ خطا در باز کردن صفحه شماره‌گیر: ${e2.message}")
+                    ttsHelper.speakOnlineFirst("خطا در شروع تماس، لطفاً دستی تماس بگیرید")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ خطا در شروع تماس: ${e.message}")
+                ttsHelper.speakOnlineFirst("خطا در شروع تماس")
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ خطا کلی در makePhoneCall", e)
+            withContext(Dispatchers.Main) {
+                ttsHelper.speakOnlineFirst("خطا در شروع تماس")
+            }
+        }
+    }
+    
+    /**
+     * به‌روزرسانی نوتیفیکیشن با دکمه دسترسی
+     */
+    private fun updateNotification(title: String, content: String, showPermissionButton: Boolean = false) {
+        val builder = androidx.core.app.NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_mic)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setOngoing(true)
+            .setSilent(true)
+            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_STATUS)
+        
+        // اضافه کردن دکمه درخواست دسترسی تماس
+        if (showPermissionButton) {
+            val permissionIntent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", context.packageName, null)
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                context, 
+                0, 
+                permissionIntent, 
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            builder.addAction(
+                R.drawable.ic_mic,
+                "فعال‌سازی دسترسی تماس",
+                pendingIntent
+            )
+        }
+        
+        val notification = builder.build()
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
     
     /**
