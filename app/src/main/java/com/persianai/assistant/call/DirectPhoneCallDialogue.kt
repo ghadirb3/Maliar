@@ -231,12 +231,15 @@ class DirectPhoneCallDialogue(
             // بررسی کلمات لغو (فقط کلمات کامل برای جلوگیری از false positive)
             val normalizedText = transcribedText.lowercase().trim()
             val negativePatterns = listOf(
-                Regex("\\bلغو\\b"),
-                Regex("\\bکنسل\\b"),
-                Regex("\\bنه\\b"),
-                Regex("\\bتموم\\b"),
-                Regex("\\bبس\\b"),
-                Regex("\\bتمام\\b")
+                Regex("^\\bلغو\\b$"),
+                Regex("^\\bکنسل\\b$"),
+                Regex("^\\bنه$"),
+                Regex("^\\bتموم\\b$"),
+                Regex("^\\bبس\\b$"),
+                Regex("^\\bتمام\\b$"),
+                Regex("^\\بخواه$"),
+                Regex("^\\نمیخوام$"),
+                Regex("^\\نمی‌خوام$")
             )
             val isNegative = negativePatterns.any { it.containsMatchIn(normalizedText) }
             if (isNegative) {
