@@ -1,407 +1,487 @@
 package com.persianai.assistant.call
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.media.AudioManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
-import com.persianai.assistant.tts.TTSHelper
-import com.persianai.assistant.preferences.PreferencesManager
-import com.persianai.assistant.data.Contact
-import com.persianai.assistant.ui.CallConfirmationActivity
-import com.persianai.assistant.ivira.IviraIntegrationManager
+import com.persianai.assistant.utils.TTSHelper
+import com.persianai.assistant.utils.PreferencesManager
+import com.persianai.assistant.models.Contact
+import com.persianai.assistant.activities.CallConfirmationActivity
+import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.stt.OnlineSTTService
-import com.persianai.assistant.voice.UnifiedVoiceEngine
+import com.persianai.assistant.services.UnifiedVoiceEngine
 import java.io.File
 
+/**
+ * مدیر سیستم تأیید تماس مالیار
+ * مکانیزم ایمن و بدون لمس برای تأیید تماس‌های صوتی
+ */
 class CallConfirmationManager(private val context: Context) {
     
     private val TAG = "CallConfirmationManager"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    
-    private val ttsHelper = TTSHelper.getInstance(context)
-    private val prefsManager = PreferencesManager.getInstance(context)
-    private val iviraManager = IviraIntegrationManager.getInstance(context)
-    private val onlineSTT = OnlineSTTService.getInstance(context)
-    private val voiceEngine = UnifiedVoiceEngine.getInstance(context)
-    
+    private val ttsHelper = TTSHelper(context)
+    private val prefsManager = PreferencesManager(context)
+    private val iviraManager = IviraIntegrationManager(context)
+    private val onlineSTT = OnlineSTTService(context)
+    private val voiceEngine = UnifiedVoiceEngine(context)
     private var retryCount = 0
     private val maxRetries = 2
     
-    // کلمات کلیدی برای تشخیص پاسخ
+    // کلمات کلیدی برای تأیید و لغو
     private val positiveKeywords = listOf(
-        "بله", "آره", "باشه", "تماس", "بگیر", "زنگ بزن", "برقرار کن", "اوکی", "ok", "yes"
+        "بله", "آره", "تماس", "بگیر", "اوکی", "باشه", "انجام بده", "دقیقا", "میخوام", "می‌خوام", "بزن", "تماس بگیر"
     )
     
     private val negativeKeywords = listOf(
-        "نه", "خیر", "لغو", "نمیخوام", "نمی خوام", "بیخیال", "cancel", "no"
+        "لغو", "کنسل", "نه", "انصراف", "نمیخوام", "نمی‌خوام", "متوقف", "برو", "بسه", "بیخیر", "نهه"
     )
     
+    // کلمات کلیدی برای کنترل بلندگو
     private val speakerOnKeywords = listOf(
-        "بلندگو", "اسپیکر", "بلند", "speaker", "speakerphone"
+        "بلندگو روشن", "اسپیکر روشن", "روشن شدن بلندگو", "روشن کردن بلندگو", 
+        "بلندگو", "اسپیکر", "speaker", "خانوادگی", "جمعی", "گروهی"
     )
     
     private val speakerOffKeywords = listOf(
-        "گوشی", "عادی", "normal", "earpiece"
+        "بلندگو خاموش", "اسپیکر خاموش", "خاموش شدن بلندگو", "خاموش کردن بلندگو",
+        "گوشی", "موبایل", "دستگاه", "عادی", "معمولی", "خصوصی", "speaker off", "مخفی"
     )
     
-    // حالت‌های تماس هوشمند
-    private val smartCallModes = listOf(
-        "بلندگو", "اسپیکر", "گوشی", "عادی", "speaker", "speakerphone", "normal", "earpiece"
+    // حالت‌های هوشمند تماس
+    private val smartCallModes = mapOf(
+        "خصوصی" to false,      // بلندگو خاموش
+        "مخفی" to false,       // بلندگو خاموش  
+        "عادی" to false,       // بلندگو خاموش
+        "معمولی" to false,     // بلندگو خاموش
+        "خانوادگی" to true,    // بلندگو روشن
+        "جمعی" to true,        // بلندگو روشن
+        "گروهی" to true,       // بلندگو روشن
+        "گفتگو" to true        // بلندگو روشن
     )
     
     private var currentCallSession: CallSession? = null
     
-    inner class CallSession(
-        val contact: Contact,
-        val phoneNumber: String
-    ) {
-        var isActive = false
-        
-        fun start() {
-            isActive = true
-            scope.launch {
-                try {
-                    Log.d(TAG, "🎯 شروع جلسه تأیید تماس با ${contact.name}")
-                    askForConfirmation()
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ خطا در شروع جلسه تأیید", e)
-                    isActive = false
-                }
-            }
-        }
-        
-        fun cancel() {
-            isActive = false
-            Log.d(TAG, "❌ لغو جلسه تأیید تماس")
-        }
-    }
-    
+    /**
+     * شروع فرآیند تأیید تماس
+     */
     fun startCallConfirmation(contact: Contact, phoneNumber: String) {
-        Log.d(TAG, "📞 درخواست تأیید تماس با ${contact.name}")
+        Log.d(TAG, "🚀 شروع فرآیند تأیید تماس با ${contact.name}")
         
-        // لغو جلسه قبلی در صورت وجود
+        // لغو جلسه قبلی اگر وجود دارد
         currentCallSession?.cancel()
         
-        // ایجاد جلسه جدید
         currentCallSession = CallSession(contact, phoneNumber).apply {
             start()
         }
     }
     
+    /**
+     * لغو فرآیند تأیید تماس فعلی
+     */
     fun cancelCurrentConfirmation() {
         currentCallSession?.cancel()
         currentCallSession = null
-        retryCount = 0
     }
     
-    private suspend fun askForConfirmation() {
-        val session = currentCallSession ?: return
+    /**
+     * جلسه تأیید تماس
+     */
+    inner class CallSession(
+        private val contact: Contact,
+        private val phoneNumber: String
+    ) {
+        private var job: Job? = null
+        private var isActive = false
         
-        if (!session.isActive) {
-            Log.d(TAG, "⚠️ جلسه غیرفعال است")
-            return
-        }
-        
-        retryCount = 0
-        
-        // نمایش overlay تأیید
-        showConfirmationOverlay()
-        
-        val message = "آیا می‌خواهید با ${session.contact.name} تماس بگیرید؟"
-        Log.d(TAG, "🎤 پرسش تأیید: $message")
-        
-        // پخش پیام و انتظار واقعی برای پایان TTS
-        ttsHelper.speakOnlineFirstAndWait(message)
-        
-        // شروع شنود پاسخ بدون delay ثابت
-        listenForResponse()
-    }
-    
-    private suspend fun listenForResponse() {
-        val session = currentCallSession ?: return
-        
-        if (!session.isActive) {
-            Log.d(TAG, "⚠️ جلسه غیرفعال است")
-            return
-        }
-        
-        Log.d(TAG, "👂 شروع شنود پاسخ کاربر...")
-        
-        try {
-            // شروع ضبط صدا بدون delay
-            voiceEngine.startRecording()
-            
-            // انتظار برای دریافت فایل صوتی
-            delay(3000) // زمان ضبط
-            
-            val audioFile = voiceEngine.stopRecording()
-            
-            if (audioFile == null || !audioFile.exists()) {
-                Log.e(TAG, "❌ فایل صوتی دریافت نشد")
-                handleRetry("فایل صوتی دریافت نشد")
-                return
-            }
-            
-            Log.d(TAG, "🎵 فایل صوتی دریافت شد: ${audioFile.absolutePath}")
-            
-            // ارسال به STT
-            val transcription = onlineSTT.transcribeAudio(audioFile)
-            
-            if (transcription.isNullOrBlank()) {
-                Log.w(TAG, "⚠️ متن خالی دریافت شد")
-                handleRetry("SILENCE_TIMEOUT")
-            } else {
-                Log.d(TAG, "📝 متن دریافتی: $transcription")
-                processResponse(transcription)
-            }
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در شنود پاسخ", e)
-            handleRetry("خطا در شنود")
-        }
-    }
-    
-    private suspend fun handleRetry(reason: String) {
-        val session = currentCallSession ?: return
-        
-        if (!session.isActive) return
-        
-        retryCount++
-        
-        if (retryCount >= maxRetries) {
-            Log.w(TAG, "⚠️ تعداد تلاش‌ها به حداکثر رسید")
-            ttsHelper.speakOnlineFirstAndWait("متأسفم، پاسخی دریافت نشد. تماس لغو شد")
-            cancelCurrentConfirmation()
-            hideConfirmationOverlay()
-        } else {
-            Log.d(TAG, "🔄 تلاش مجدد ($retryCount از $maxRetries)")
-            ttsHelper.speakOnlineFirstAndWait("متوجه نشدم. لطفاً دوباره بگویید: بله یا خیر؟")
-            listenForResponse()
-        }
-    }
-    
-    private suspend fun processResponse(response: String) {
-        val session = currentCallSession ?: return
-        
-        if (!session.isActive) {
-            Log.d(TAG, "⚠️ جلسه غیرفعال است")
-            return
-        }
-        
-        Log.d(TAG, "🔍 پردازش پاسخ: $response")
-        
-        val normalizedResponse = response.lowercase().trim()
-        
-        // ریست تعداد تلاش برای پاسخ‌های معتبر
-        if (normalizedResponse.isNotBlank() && normalizedResponse != "silence_timeout") {
-            retryCount = 0
-        }
-        
-        when {
-            normalizedResponse == "silence_timeout" -> {
-                handleRetry("SILENCE_TIMEOUT")
-            }
-            
-            // بررسی حالت‌های تماس هوشمند
-            smartCallModes.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "🔊 تشخیص حالت تماس هوشمند")
-                
-                when {
-                    speakerOnKeywords.any { normalizedResponse.contains(it) } -> {
-                        enableSpeakerphone()
-                        ttsHelper.speakOnlineFirstAndWait("بلندگو فعال شد. آیا تماس برقرار شود?")
+        fun start() {
+            this@CallSession.isActive = true
+            retryCount = 0 // ریست شمارنده تلاش برای هر جلسه جدید
+            job = scope.launch {
+                try {
+                    // مرحله ۱: پرسش تأیید
+                    askForConfirmation()
+                    
+                    // مرحله ۲: فعال کردن شناسایی صدا
+                    val response = listenForResponse()
+                    
+                    // مرحله ۳: تحلیل پاسخ و اجرا
+                    processResponse(response)
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ خطا در جلسه تأیید تماس", e)
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("خطا در تأیید تماس")
                     }
-                    speakerOffKeywords.any { normalizedResponse.contains(it) } -> {
-                        disableSpeakerphone()
-                        ttsHelper.speakOnlineFirstAndWait("حالت عادی فعال شد. آیا تماس برقرار شود?")
-                    }
+                } finally {
+                    this@CallSession.isActive = false
                 }
-                
-                // انتظار برای پاسخ نهایی
-                delay(500)
-                listenForResponse()
-                val finalResponse = onlineSTT.transcribeAudio(voiceEngine.stopRecording() ?: return)
-                processFinalConfirmation(finalResponse ?: "")
-            }
-            
-            // بررسی کلمات کلیدی بلندگو
-            speakerOnKeywords.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "🔊 درخواست فعال‌سازی بلندگو")
-                enableSpeakerphone()
-                ttsHelper.speakOnlineFirstAndWait("بلندگو فعال شد. آیا تماس برقرار شود?")
-                listenForResponse()
-            }
-            
-            speakerOffKeywords.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "🔇 درخواست غیرفعال‌سازی بلندگو")
-                disableSpeakerphone()
-                ttsHelper.speakOnlineFirstAndWait("حالت عادی فعال شد. آیا تماس برقرار شود?")
-                listenForResponse()
-            }
-            
-            // بررسی پاسخ مثبت
-            positiveKeywords.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "✅ پاسخ مثبت دریافت شد")
-                ttsHelper.speakOnlineFirstAndWait("در حال برقراری تماس...")
-                makePhoneCall()
-            }
-            
-            // بررسی پاسخ منفی
-            negativeKeywords.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "❌ پاسخ منفی دریافت شد")
-                ttsHelper.speakOnlineFirstAndWait("تماس لغو شد")
-                cancelCurrentConfirmation()
-                hideConfirmationOverlay()
-            }
-            
-            // پاسخ خالی
-            normalizedResponse.isBlank() -> {
-                handleRetry("پاسخ خالی")
-            }
-            
-            // پاسخ نامشخص
-            else -> {
-                Log.d(TAG, "❓ پاسخ نامشخص - تلاش مجدد")
-                handleRetry("پاسخ نامشخص")
             }
         }
         
-        hideConfirmationOverlay()
-    }
-    
-    private suspend fun processFinalConfirmation(response: String) {
-        val normalizedResponse = response.lowercase().trim()
+        fun cancel() {
+            this@CallSession.isActive = false
+            job?.cancel()
+        }
         
-        when {
-            positiveKeywords.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "✅ تأیید نهایی دریافت شد")
-                ttsHelper.speakOnlineFirstAndWait("در حال برقراری تماس...")
-                makePhoneCall()
-            }
+        private suspend fun askForConfirmation() {
+            if (!this@CallSession.isActive) return
             
-            negativeKeywords.any { normalizedResponse.contains(it) } -> {
-                Log.d(TAG, "❌ لغو نهایی دریافت شد")
-                ttsHelper.speakOnlineFirstAndWait("تماس لغو شد")
-                cancelCurrentConfirmation()
-            }
+            // بلندگو به طور پیش‌فرض فعال نمی‌شود - کاربر انتخاب می‌کند
+            val formattedPhone = TTSHelper.formatPhoneNumberForTTS(phoneNumber)
+            val message = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟ برای تأیید بگویید بله، برای لغو بگویید لغو. اگر می‌خواهید با بلندگو صحبت کنید، بگویید بلندگو روشن"
+            Log.d(TAG, "📢 پرسش تأیید: $message")
             
-            else -> {
-                Log.d(TAG, "❓ پاسخ نهایی نامشخص")
-                ttsHelper.speakOnlineFirstAndWait("پاسخ نامشخص بود، تماس لغو شد")
-                cancelCurrentConfirmation()
+            // استفاده از TTSHelper با اولویت GapGPT آنلاین
+            ttsHelper.speakOnlineFirstAndWait(message)
+            
+            // نمایش صفحه تأیید تماس
+            showConfirmationOverlay()
+        }
+        
+        private fun enableSpeakerphone() {
+            try {
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                audioManager.isSpeakerphoneOn = true
+                Log.d(TAG, "🔊 بلندگو فعال شد")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ خطا در فعال کردن بلندگو", e)
             }
         }
         
-        hideConfirmationOverlay()
-    }
-    
-    private suspend fun makePhoneCall() {
-        val session = currentCallSession ?: return
+        private fun disableSpeakerphone() {
+            try {
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                audioManager.isSpeakerphoneOn = false
+                Log.d(TAG, "🔇 بلندگو غیرفعال شد")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ خطا در غیرفعال کردن بلندگو", e)
+            }
+        }
         
-        disableSpeakerphone()
-        
-        val callMode = prefsManager.getCallMode()
-        
-        Log.d(TAG, "📞 برقراری تماس با ${session.contact.name} - حالت: $callMode")
-        
-        try {
-            val intent = when (callMode) {
-                PreferencesManager.CallMode.DIALER -> {
-                    Intent(Intent.ACTION_DIAL).apply {
-                        data = Uri.parse("tel:${session.phoneNumber}")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    }
-                }
-                
-                PreferencesManager.CallMode.DIRECT -> {
-                    // بررسی مجوز CALL_PHONE
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) 
-                        != PackageManager.PERMISSION_GRANTED) {
-                        Log.e(TAG, "❌ مجوز CALL_PHONE وجود ندارد")
-                        ttsHelper.speakOnlineFirstAndWait("مجوز تماس مستقیم وجود ندارد")
-                        return
+        private suspend fun listenForResponse(): String {
+            if (!this@CallSession.isActive) return ""
+
+            delay(300)
+            
+            Log.d(TAG, "🎤 فعال کردن شناسایی صدا برای پاسخ کاربر...")
+            
+            // منتظر ماندن برای پاسخ با timeout و VAD
+            val timeoutMs = 12000L // 12 ثانیه برای پاسخ
+            val silenceStopMs = 2000L // 2 ثانیه سکوت
+            val startTime = System.currentTimeMillis()
+            var lastSpeechTime = startTime
+            var hasSpeech = false
+            
+            return withContext(Dispatchers.Main) {
+                try {
+                    // شروع ضبط صدا
+                    val recordResult = voiceEngine.startRecording()
+                    if (recordResult.isFailure) {
+                        Log.e(TAG, "❌ خطا در شروع ضبط صدا", recordResult.exceptionOrNull())
+                        return@withContext ""
                     }
                     
-                    Intent(Intent.ACTION_CALL).apply {
-                        data = Uri.parse("tel:${session.phoneNumber}")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    // حلقه VAD برای قطع ضبط روی سکوت
+                    while (System.currentTimeMillis() - startTime < timeoutMs) {
+                        val now = System.currentTimeMillis()
+                        val amplitude = voiceEngine.getCurrentAmplitude()
+                        
+                        if (amplitude > 100) { // threshold برای تشخیص صدا
+                            hasSpeech = true
+                            lastSpeechTime = now
+                        }
+                        
+                        if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
+                            Log.d(TAG, "🔇 سکوت تشخیص داده شد - توقف ضبط")
+                            break
+                        }
+                        
+                        delay(100)
+                    }
+                    
+                    // توقف ضبط و گرفتن فایل
+                    val stopResult = voiceEngine.stopRecording()
+                    if (stopResult.isFailure) {
+                        Log.e(TAG, "❌ خطا در توقف ضبط صدا", stopResult.exceptionOrNull())
+                        return@withContext ""
+                    }
+                    
+                    val audioFile = voiceEngine.getRecordingFile()
+                    if (audioFile == null || !audioFile.exists()) {
+                        Log.e(TAG, "❌ فایل ضبط شده یافت نشد")
+                        return@withContext ""
+                    }
+                    
+                    Log.d(TAG, "📁 فایل ضبط شده: ${audioFile.absolutePath}")
+                    
+                    // استفاده از OnlineSTTService برای شناسایی صدا (Liara → GapGPT)
+                    val sttResult = withContext(Dispatchers.IO) {
+                        onlineSTT.transcribeAudio(audioFile)
+                    }
+                    
+                    val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
+                    
+                    // بررسی سکوت یا timeout
+                    if (transcribedText.isBlank()) {
+                        Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار تماس")
+                        withContext(Dispatchers.Main) {
+                            ttsHelper.speakOnlineFirst("به دلیل عدم پاسخ، تماس لغو شد")
+                        }
+                        return@withContext "SILENCE_TIMEOUT"
+                    }
+                    
+                    Log.d(TAG, "✅ پاسخ شناسایی شد: $transcribedText")
+                    
+                    transcribedText
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ خطا در شناسایی صدا", e)
+                    ""
+                } finally {
+                    // غیرفعال کردن بلندگو پس از اتمام
+                    withContext(Dispatchers.Main) {
+                        disableSpeakerphone()
+                    }
+                }
+            }
+        }
+        
+        private fun createTempAudioFile(): File {
+            val tempDir = File(context.cacheDir, "temp_audio")
+            if (!tempDir.exists()) tempDir.mkdirs()
+            return File(tempDir, "temp_recording_${System.currentTimeMillis()}.wav")
+        }
+        
+        private suspend fun processResponse(response: String) {
+            if (!this@CallSession.isActive) return
+            
+            Log.d(TAG, "📝 پاسخ کاربر: '$response'")
+            
+            val normalizedResponse = response.lowercase().trim()
+            
+            // ریست کردن شمارنده تلاش برای پاسخهای معتبر
+            if (response != "SILENCE_TIMEOUT" && normalizedResponse.isNotEmpty()) {
+                retryCount = 0
+            }
+            
+            when {
+                response == "SILENCE_TIMEOUT" -> {
+                    Log.d(TAG, "⏰ لغو به دلیل سکوت کاربر")
+                    // پیام قبلاً در listenForResponse گفته شد
+                }
+                
+                // تشخیص هوشمند حالت تماس با مدل آنلاین
+                smartCallModes.containsKey(normalizedResponse) -> {
+                    val enableSpeaker = smartCallModes[normalizedResponse] ?: false
+                    Log.d(TAG, "🎯 حالت هوشمند تشخیص داده شد: $normalizedResponse (بلندگو: $enableSpeaker)")
+                    
+                    if (enableSpeaker) {
+                        enableSpeakerphone()
+                        scope.launch {
+                            ttsHelper.speakOnlineFirst("حالت $normalizedResponse فعال شد. بلندگو روشن است. برای تأیید تماس بگویید بله")
+                        }
+                    } else {
+                        disableSpeakerphone()
+                        scope.launch {
+                            ttsHelper.speakOnlineFirst("حالت $normalizedResponse فعال شد. برای تأیید تماس بگویید بله")
+                        }
+                    }
+                    
+                    // دوباره منتظر تأیید نهایی بمانیم
+                    delay(2000)
+                    val finalResponse = listenForResponse()
+                    processFinalConfirmation(finalResponse)
+                    return
+                }
+                
+                // کنترل مستقیم بلندگو
+                speakerOnKeywords.any { it in normalizedResponse } -> {
+                    Log.d(TAG, "� کاربر خواست بلندگو روشن شود")
+                    enableSpeakerphone()
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("بلندگو روشن شد. برای تأیید تماس بگویید بله یا برای لغو بگویید لغو")
+                    }
+                    delay(2000)
+                    val finalResponse = listenForResponse()
+                    processFinalConfirmation(finalResponse)
+                    return
+                }
+                
+                speakerOffKeywords.any { it in normalizedResponse } -> {
+                    Log.d(TAG, "🔇 کاربر خواست بلندگو خاموش شود")
+                    disableSpeakerphone()
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("بلندگو خاموش شد. برای تأیید تماس بگویید بله یا برای لغو بگویید لغو")
+                    }
+                    delay(2000)
+                    val finalResponse = listenForResponse()
+                    processFinalConfirmation(finalResponse)
+                    return
+                }
+                
+                positiveKeywords.any { it in normalizedResponse } -> {
+                    Log.d(TAG, "✅ پاسخ مثبت دریافت شد - برقراری تماس")
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("در حال برقراری تماس...")
+                    }
+                    makePhoneCall()
+                }
+                
+                negativeKeywords.any { it in normalizedResponse } -> {
+                    Log.d(TAG, "❌ پاسخ منفی دریافت شد - لغو تماس")
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("تماس لغو شد")
+                    }
+                }
+                
+                normalizedResponse.isEmpty() -> {
+                    Log.d(TAG, "❓ پاسخ خالی")
+                    if (retryCount >= maxRetries) {
+                        Log.d(TAG, "⏰ به حداکثر تلاش رسیدیم - لغو تماس")
+                        scope.launch {
+                            ttsHelper.speakOnlineFirst("پاسخ نامشخص بود، تماس لغو شد")
+                        }
+                        return
+                    }
+                    retryCount++
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("لطفاً بگویید بله برای تماس یا لغو برای انصراف")
+                    }
+                    // دوباره تلاش کن
+                    delay(2000)
+                    val retryResponse = listenForResponse()
+                    processResponse(retryResponse)
+                    return
+                }
+                
+                else -> {
+                    Log.d(TAG, "❓ پاسخ نامشخص - تلاش مجدد")
+                    if (retryCount >= maxRetries) {
+                        Log.d(TAG, "⏰ به حداکثر تلاش رسیدیم - لغو تماس")
+                        scope.launch {
+                            ttsHelper.speakOnlineFirst("پاسخ نامشخص بود، تماس لغو شد")
+                        }
+                        return
+                    }
+                    retryCount++
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("متوجه نشدم. لطفاً بگویید بله، لغو، یا حالت تماس را مشخص کنید")
+                    }
+                    // دوباره تلاش کن
+                    delay(2000)
+                    val retryResponse = listenForResponse()
+                    processResponse(retryResponse)
+                    return
+                }
+            }
+            
+            hideConfirmationOverlay()
+        }
+        
+        private suspend fun processFinalConfirmation(response: String) {
+            val normalizedResponse = response.lowercase().trim()
+            
+            when {
+                positiveKeywords.any { it in normalizedResponse } -> {
+                    Log.d(TAG, "✅ تأیید نهایی - برقراری تماس")
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("در حال برقراری تماس...")
+                    }
+                    makePhoneCall()
+                }
+                
+                negativeKeywords.any { it in normalizedResponse } -> {
+                    Log.d(TAG, "❌ لغو نهایی - تماس لغو شد")
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("تماس لغو شد")
+                    }
+                }
+                
+                else -> {
+                    Log.d(TAG, "❓ پاسخ نامشخص - لغو خودکار")
+                    scope.launch {
+                        ttsHelper.speakOnlineFirst("پاسخ نامشخص بود، تماس لغو شد")
                     }
                 }
             }
             
-            // بررسی وجود برنامه مدیریت‌کننده Intent
-            if (intent.resolveActivity(context.packageManager) == null) {
-                Log.e(TAG, "❌ برنامه مدیریت تماس یافت نشد")
-                ttsHelper.speakOnlineFirstAndWait("خطا در برقراری تماس")
-                return
-            }
-            
-            context.startActivity(intent)
-            
-            when (callMode) {
-                PreferencesManager.CallMode.DIALER -> {
-                    ttsHelper.speakOnlineFirstAndWait("شماره در شماره‌گیر باز شد. برای تماس دکمه تماس را بزنید")
-                }
-                PreferencesManager.CallMode.DIRECT -> {
-                    ttsHelper.speakOnlineFirstAndWait("در حال برقراری تماس مستقیم")
-                }
-            }
-            
-            Log.d(TAG, "✅ تماس با موفقیت آغاز شد")
-            
-        } catch (e: SecurityException) {
-            Log.e(TAG, "❌ خطای مجوز در برقراری تماس", e)
-            ttsHelper.speakOnlineFirstAndWait("مجوز تماس وجود ندارد")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در برقراری تماس", e)
-            ttsHelper.speakOnlineFirstAndWait("خطا در برقراری تماس")
-        } finally {
-            cancelCurrentConfirmation()
+            hideConfirmationOverlay()
         }
-    }
-    
-    private fun enableSpeakerphone() {
-        try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            audioManager.isSpeakerphoneOn = true
-            Log.d(TAG, "🔊 بلندگو فعال شد")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در فعال‌سازی بلندگو", e)
-        }
-    }
-    
-    private fun disableSpeakerphone() {
-        try {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.isSpeakerphoneOn = false
-            audioManager.mode = AudioManager.MODE_NORMAL
-            Log.d(TAG, "🔇 بلندگو غیرفعال شد")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در غیرفعال‌سازی بلندگو", e)
-        }
-    }
-    
-    private fun showConfirmationOverlay() {
-        val session = currentCallSession ?: return
         
-        if (!session.isActive) return
+        private fun makePhoneCall() {
+            try {
+                // غیرفعال کردن بلندگو قبل از تماس
+                disableSpeakerphone()
+                
+                // دریافت حالت تماس از تنظیمات
+                val callMode = prefsManager.getCallMode()
+                
+                when (callMode) {
+                    PreferencesManager.CallMode.DIALER -> {
+                        // استفاده از شماره‌گیر گوشی (ACTION_DIAL)
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:$phoneNumber")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                        Log.d(TAG, "📞 شماره‌گیر برای $phoneNumber باز شد")
+                        
+                        // اطلاع به کاربر
+                        scope.launch {
+                            delay(1000)
+                            ttsHelper.speakOnlineFirst("شماره در شماره‌گیر باز شد. برای تماس دکمه تماس را بزنید")
+                        }
+                    }
+                    PreferencesManager.CallMode.DIRECT -> {
+                        // تماس مستقیم (ACTION_CALL)
+                        val intent = Intent(Intent.ACTION_CALL).apply {
+                            data = Uri.parse("tel:$phoneNumber")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                        Log.d(TAG, "📞 تماس مستقیم با $phoneNumber برقرار شد")
+                        
+                        // اطلاع به کاربر
+                        scope.launch {
+                            delay(1000)
+                            ttsHelper.speakOnlineFirst("در حال برقراری تماس مستقیم")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ خطا در برقراری تماس", e)
+                scope.launch {
+                    ttsHelper.speakOnlineFirst("خطا در برقراری تماس")
+                }
+            }
+        }
         
-        Log.d(TAG, "📱 نمایش صفحه تأیید تماس")
-        CallConfirmationActivity.start(context, session.contact)
+        private fun showConfirmationOverlay() {
+            if (!this@CallSession.isActive) return
+            
+            try {
+                Log.d(TAG, "📱 نمایش صفحه تأیید تماس")
+                CallConfirmationActivity.start(context, contact)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ خطا در نمایش صفحه تأیید", e)
+            }
+        }
+        
+        private fun hideConfirmationOverlay() {
+            // TODO: مخفی کردن اورلی تأیید تماس
+            Log.d(TAG, "📱 مخفی کردن صفحه تأیید تماس")
+        }
     }
     
-    private fun hideConfirmationOverlay() {
-        // TODO: پیاده‌سازی مخفی کردن overlay
-        Log.d(TAG, "📱 مخفی کردن صفحه تأیید تماس")
+    /**
+     * آزادسازی منابع
+     */
+    fun cleanup() {
+        scope.cancel()
+        currentCallSession?.cancel()
+        currentCallSession = null
     }
 }
