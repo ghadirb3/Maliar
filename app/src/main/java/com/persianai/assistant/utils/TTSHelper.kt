@@ -7,7 +7,6 @@ import android.util.Log
 import android.media.MediaPlayer
 import java.io.File
 import java.util.*
-import com.persianai.assistant.services.HaaniyeManager
 import com.persianai.assistant.config.RemoteAIConfigManager
 import com.persianai.assistant.tts.GapGPTTTS
 import kotlinx.coroutines.CompletableDeferred
@@ -18,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * کمک‌کننده برای تبدیل متن به گفتار فارسی
- * Online-first: tries online TTS providers first, then offline Haaniye, then Android TTS as final fallback
+ * Online-first: tries online TTS providers first, then Android TTS as final fallback
  */
 class TTSHelper(private val context: Context) {
 
@@ -72,7 +71,6 @@ class TTSHelper(private val context: Context) {
                 if (result == TextToSpeech.LANG_MISSING_DATA || 
                     result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Log.e(TAG, "Persian language not supported on this device; disabling Android TTS")
-                    // If Persian is unavailable, rely solely on Haaniye and skip Android TTS
                     tts?.shutdown()
                     tts = null
                     isInitialized = false
@@ -152,31 +150,29 @@ class TTSHelper(private val context: Context) {
                     }
                 }
 
-                "local" -> {
+                "liara" -> {
                     try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
-                        val success = HaaniyeManager.speak(context, cleanText)
-                        if (success) {
-                            Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
-                            return@withContext
-                        }
+                        Log.d(TAG, "🎤 تلاش برای TTS با Liara...")
+                        // TODO: Implement Liara TTS call
+                        Log.d(TAG, "Liara TTS not yet implemented, skipping")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Haaniye TTS failed: ${e.message}")
+                        Log.w(TAG, "Liara TTS failed: ${e.message}")
+                    }
+                }
+
+                "openai" -> {
+                    try {
+                        Log.d(TAG, "🎤 تلاش برای TTS با OpenAI...")
+                        // TODO: Implement OpenAI TTS call
+                        Log.d(TAG, "OpenAI TTS not yet implemented, skipping")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "OpenAI TTS failed: ${e.message}")
                     }
                 }
             }
         }
 
-        try {
-            val handled = HaaniyeManager.speak(context, cleanText)
-            if (handled) {
-                Log.d(TAG, "TTS via Haaniye (offline)")
-                return@withContext
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-        }
-
+        // Fallback: Android TTS (if initialized)
         if (isInitialized && tts != null) {
             val utteranceId = "tts_${System.currentTimeMillis()}"
             val deferred = CompletableDeferred<Unit>()
@@ -198,7 +194,7 @@ class TTSHelper(private val context: Context) {
     }
 
     /**
-     * Online-first TTS: tries online providers based on remote config priority, then offline Haaniye, then Android TTS
+     * Online-first TTS: tries online providers based on remote config priority, then Android TTS
      */
     suspend fun speakOnlineFirst(text: String, queueMode: Int = TextToSpeech.QUEUE_FLUSH) = withContext(Dispatchers.IO) {
         if (!prefsManager.isTTSEnabled()) {
@@ -232,18 +228,7 @@ class TTSHelper(private val context: Context) {
                         Log.w(TAG, "GapGPT TTS failed: ${e.message}")
                     }
                 }
-                "local" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
-                        val success = HaaniyeManager.speak(context, cleanText)
-                        if (success) {
-                            Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
-                            return@withContext
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-                    }
-                }
+
                 "liara" -> {
                     try {
                         Log.d(TAG, "🎤 تلاش برای TTS با Liara...")
@@ -253,6 +238,7 @@ class TTSHelper(private val context: Context) {
                         Log.w(TAG, "Liara TTS failed: ${e.message}")
                     }
                 }
+
                 "openai" -> {
                     try {
                         Log.d(TAG, "🎤 تلاش برای TTS با OpenAI...")
@@ -262,22 +248,10 @@ class TTSHelper(private val context: Context) {
                         Log.w(TAG, "OpenAI TTS failed: ${e.message}")
                     }
                 }
-                // Skip "haaniye" and "android" here; they will be tried as fallbacks
             }
         }
 
-        // Fallback 1: Haaniye (offline)
-        try {
-            val handled = HaaniyeManager.speak(context, cleanText)
-            if (handled) {
-                Log.d(TAG, "TTS via Haaniye (offline)")
-                return@withContext
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-        }
-
-        // Fallback 2: Android TTS (if initialized)
+        // Fallback: Android TTS (if initialized)
         if (isInitialized && tts != null) {
             Log.d(TAG, "TTS via Android TTS (final fallback)")
             runOnUiThread {
@@ -306,15 +280,6 @@ class TTSHelper(private val context: Context) {
         if (cleanText.isBlank()) {
             Log.d(TAG, "Empty text after cleaning")
             return
-        }
-
-        // Previously: offline-first Haaniye -> Android TTS
-        // Now: try Haaniye first for compatibility, then Android TTS
-        try {
-            val handled = HaaniyeManager.speak(context, cleanText)
-            if (handled) return
-        } catch (e: Exception) {
-            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
         }
 
         Log.d(TAG, "Speaking (Android TTS): $cleanText")
