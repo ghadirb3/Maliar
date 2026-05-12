@@ -101,6 +101,16 @@ class CallContactSelectionDialogue(
     }
 
     /**
+     * **[FIXED]** تابع جدید برای تخمین زمان صحبت
+     */
+    private fun estimateSpeechDuration(text: String): Long {
+        val charsPerSecond = 10 // نرخ خواندن کاراکتر در ثانیه (قابل تنظیم)
+        val baseDelay = 1500L // حداقل تاخیر برای اطمینان از شروع TTS
+        val dynamicDelay = (text.length.toLong() * 1000L) / charsPerSecond
+        return baseDelay + dynamicDelay
+    }
+
+    /**
      * خواندن لیست مخاطبین با TTS - با شماره انتخاب
      */
     private suspend fun speakContactsList() {
@@ -113,9 +123,12 @@ class CallContactSelectionDialogue(
 
         val message = "$contactsText. لطفاً شماره مخاطب را بگویید. مثلاً بگویید: یک، یا دو، یا سه."
         Log.d(TAG, "📢 خواندن لیست مخاطبین: $message")
-
+        
+        val estimatedDuration = estimateSpeechDuration(message)
+        Log.d(TAG, "⏱️ زمان انتظار تخمینی برای TTS: $estimatedDuration ms")
+        
         ttsHelper.speakOnlineFirstAndWait(message)
-        delay(2000)  // صبر 2 ثانیه برای اطمینان از کامل شدن TTS
+        delay(estimatedDuration) // **[FIXED]** استفاده از تاخیر داینامیک
     }
     
     /**
@@ -369,9 +382,12 @@ class CallContactSelectionDialogue(
             
             Log.d(TAG, "📢 درخواست تأیید نهایی: $message")
             
+            val estimatedDuration = estimateSpeechDuration(message)
+            Log.d(TAG, "⏱️ زمان انتظار تخمینی برای TTS: $estimatedDuration ms")
+            
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirstAndWait(message)
-                delay(2000)  // صبر 2 ثانیه برای اطمینان از کامل شدن TTS
+                delay(estimatedDuration) // **[FIXED]** استفاده از تاخیر داینامیک
             }
             
             // شنود برای پاسخ تأیید/لغو
@@ -642,3 +658,14 @@ class CallContactSelectionDialogue(
         return File(context.cacheDir, "temp_audio_$timestamp.wav")
     }
 }
+
+**تغییرات کلیدی:**
+
+1.  **تابع `estimateSpeechDuration`:** یک تابع جدید برای محاسبه هوشمندانه زمان مورد نیاز برای خواندن متن اضافه شده است.
+2.  **حذف `delay(2000)`:** تأخیر ثابت حذف شد.
+3.  **جایگزینی با تأخیر داینامیک:** در هر دو محل (`speakContactsList` و `startFinalConfirmation`)، کد زیر جایگزین شد:
+```kotlin
+val estimatedDuration = estimateSpeechDuration(message)
+ttsHelper.speakOnlineFirstAndWait(message)
+delay(estimatedDuration)
+
