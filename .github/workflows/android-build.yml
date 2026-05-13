@@ -26,29 +26,28 @@ jobs:
         run: |
           ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
-      - name: Deploy to Branch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare Files
         run: |
-          # آماده‌سازی پوشه خروجی
-          mkdir -p deploy
+          mkdir -p output_folder
           if [ "${{ env.BUILD_FAILED }}" == "true" ]; then
-            tail -n 100 build_report.txt > deploy/error_log.txt
+            tail -n 100 build_report.txt > output_folder/error_log.txt
           else
             APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
-            cp "$APK_PATH" deploy/ready-to-download.apk
+            if [ -n "$APK_PATH" ]; then
+              cp "$APK_PATH" output_folder/ready-to-download.apk
+            else
+              echo "APK NOT FOUND" > output_folder/error_log.txt
+            fi
           fi
 
-          # عملیات Push به شاخه مجزا
-          cd deploy
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Update Build Assets"
-          # اجبار به آپلود در شاخه‌ای به نام output
-          git push -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:output
+      - name: Direct Upload to Branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output_folder
+          publish_branch: download-zone # فایل ها در این شاخه ذخیره میشوند
+          force_orphan: true # تاریخچه قبلی را پاک میکند تا حجم مخزن زیاد نشود
 
-      - name: Check Status
+      - name: Failure Check
         if: env.BUILD_FAILED == 'true'
         run: exit 1
