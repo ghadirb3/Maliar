@@ -1,12 +1,10 @@
-name: Android Build Summary
+name: Android Build & Download
 on:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read # نیازی به نوشتن نیست تا خطا ندهد
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,29 +29,29 @@ jobs:
           
           if [ "${{ env.BUILD_FAILED }}" == "true" ]; then
             echo "## ❌ BUILD FAILED" >> $GITHUB_STEP_SUMMARY
-            echo "### Error Details (Last 100 lines):" >> $GITHUB_STEP_SUMMARY
+            echo "### Error Log:" >> $GITHUB_STEP_SUMMARY
             echo '
-```bash' >> $GITHUB_STEP_SUMMARY
+```' >> $GITHUB_STEP_SUMMARY
 tail -n 100 build_log.txt >> $GITHUB_STEP_SUMMARY
 echo '
 ```' >> $GITHUB_STEP_SUMMARY
           else
             echo "## ✅ BUILD SUCCESSFUL" >> $GITHUB_STEP_SUMMARY
             APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
-            echo "APK Location: $APK_PATH" >> $GITHUB_STEP_SUMMARY
-            echo "### APK File Info:" >> $GITHUB_STEP_SUMMARY
-            ls -lh $APK_PATH >> $GITHUB_STEP_SUMMARY
             
-            # تبدیل APK به کد Base64 (فقط برای فایل‌های کوچک زیر 50-60 مگابایت)
-            # اگر فایل بزرگ باشد، این بخش ممکن است کار نکند
-            echo "---" >> $GITHUB_STEP_SUMMARY
-            echo "Note: Download not possible via Summary. Please check Artifacts tab." >> $GITHUB_STEP_SUMMARY
+            echo "### 📦 APK Base64 Data (Manual Download)" >> $GITHUB_STEP_SUMMARY
+            echo "Copy the codes below and save as 'apk_base64.txt' on your computer." >> $GITHUB_STEP_SUMMARY
+            
+            # تبدیل APK به بیس64 و تکه تکه کردن به بخش های 50 هزار کاراکتری
+            base64 -w 0 "$APK_PATH" > apk_base64.txt
+            split -b 50000 -d --additional-suffix=.txt apk_base64.txt part_
+            
+            for f in part_*.txt; do
+              echo "#### Part $f" >> $GITHUB_STEP_SUMMARY
+              echo '
+```' >> $GITHUB_STEP_SUMMARY
+cat "$f" >> $GITHUB_STEP_SUMMARY
+echo '
+```' >> $GITHUB_STEP_SUMMARY
+            done
           fi
-
-      - name: Upload Artifact
-        if: env.BUILD_FAILED != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          retention-days: 1
