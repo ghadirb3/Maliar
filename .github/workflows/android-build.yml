@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # دریافت کل تاریخچه برای جلوگیری از خطای Push
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -30,35 +30,41 @@ jobs:
         run: |
           ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
-      - name: Handle Result (Push APK or Error Log)
+      - name: Upload Result to Repository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # تنظیمات اولیه گیت
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # ست کردن ریموت برای اطمینان از اجازه Push
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          # هماهنگ‌سازی با آخرین تغییرات سرور برای جلوگیری از تداخل
+          git pull origin ${{ github.ref_name }} --rebase
 
           if [ "${{ env.BUILD_FAILED }}" == "true" ]; then
             echo "Build failed. Preparing error log..."
             tail -n 100 build_report.txt > build_error_summary.txt
             git add build_error_summary.txt
-            git commit -m "❌ Build Failed: See build_error_summary.txt [skip ci]" || echo "No changes to commit"
+            git commit -m "❌ Error Log Update [skip ci]" || echo "No changes"
           else
             echo "Build successful. Preparing APK..."
-            if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-              cp app/build/outputs/apk/debug/app-debug.apk ./ready-to-download.apk
+            # پیدا کردن فایل APK در هر مسیری که ساخته شده باشد
+            APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
+            if [ -n "$APK_PATH" ]; then
+              cp "$APK_PATH" ./ready-to-download.apk
               git add ready-to-download.apk
-              git commit -m "📦 Build Success: ready-to-download.apk [skip ci]" || echo "No changes to commit"
+              git commit -m "📦 APK Update [skip ci]" || echo "No changes"
             else
-              echo "APK file not found!"
+              echo "APK NOT FOUND!"
               exit 1
             fi
           fi
           
-          git push origin HEAD:${{ github.ref }} --force
+          # تلاش برای Push با استفاده از توکن
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }} --force
 
-      - name: Final Check
+      - name: Report Build Status
         if: env.BUILD_FAILED == 'true'
-        run: exit 1
+        run: |
+          echo "Build failed! Check the build_error_summary.txt file in your repository."
+          exit 1
