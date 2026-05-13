@@ -4,10 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, master, develop, New ]
-  pull_request:
-    branches: [ main, master, develop, New ]
 
-# اجازه نوشتن در مخزن برای آپلود خودکار لاگ خطا
 permissions:
   contents: write
 
@@ -36,29 +33,29 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build APK (debug)
-        # اجرای بیلد و ذخیره خروجی در فایل. حتی اگر خطا بدهد، به مرحله بعد می‌رود.
+        # اجرای بیلد و ذخیره خروجی. اگر خطا بدهد، BUILD_FAILED ست می‌شود.
         run: |
           ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
-      - name: Push Error Log to Repo
-        if: env.BUILD_FAILED == 'true'
+      - name: Handle Result (Push APK or Error Log)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # فقط ۵۰ خط آخر که مربوط به خطای اصلی است را نگه می‌داریم تا فایل سبک باشد
-          tail -n 100 build_report.txt > build_error_summary.txt
+          if [ "${{ env.BUILD_FAILED }}" == "true" ]; then
+            echo "Build failed. Preparing error log..."
+            tail -n 100 build_report.txt > build_error_summary.txt
+            git add build_error_summary.txt
+            git commit -m "❌ Build Failed: See build_error_summary.txt [skip ci]" || echo "No changes"
+          else
+            echo "Build successful. Preparing APK..."
+            cp app/build/outputs/apk/debug/app-debug.apk ./ready-to-download.apk
+            git add ready-to-download.apk
+            git commit -m "📦 Build Success: ready-to-download.apk [skip ci]" || echo "No changes"
+          fi
           
-          git add build_error_summary.txt
-          git commit -m "docs: add latest build error log [skip ci]"
-          git push origin HEAD:${{ github.ref }}
-          
-          # در نهایت اکشن را قرمز کن تا متوجه شویم تمام شده
-          exit 1
+          git push origin HEAD:${{ github.ref }} --force
 
-      - name: Upload APK
-        if: env.BUILD_FAILED != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Final Check
+        if: env.BUILD_FAILED == 'true'
+        run: exit 1
