@@ -1,0 +1,100 @@
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:662:18 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:1 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:2 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:5 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:6 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:7 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:12 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:36 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:37 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:38 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:40 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:43 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:48 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:53 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:58 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:65 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:75 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:80 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:85 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:90 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:95 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:102 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:106 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:112 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:116 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:664:119 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:1 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:2 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:5 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:6 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:7 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:11 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:24 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:25 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:26 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:28 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:34 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:39 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:43 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:665:45 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:1 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:2 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:5 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:6 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:7 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:16 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:19 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:25 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:33 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:34 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:35 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:37 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:40 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:43 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:46 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:50 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:51 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:71 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:73 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:97 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:98 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:100 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:103 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:107 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:115 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:666:117 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:667:1 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:667:2 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:667:3 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:667:4 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:669:1 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:669:10 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:669:11 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:669:34 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:669:35 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:669:42 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:670:1 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:670:6 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:670:7 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:670:24 Expecting a top level declaration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:668:25 Unresolved reference: estimateSpeechDuration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:668:48 Unresolved reference: message
+
+> Task :app:compileDebugKotlin FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2m 57s
+32 actionable tasks: 32 executed
