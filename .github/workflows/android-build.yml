@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [ main, master, develop, New ]
 
+# اجازه ساخت Issue را به ورک‌فلو می‌دهد
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -43,14 +48,39 @@ jobs:
       - name: Build APK (debug)
         env:
           JAVA_TOOL_OPTIONS: "-Xmx4g"
-        run: ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g"
+        # خروجی بیلد را در فایل build_log.txt ذخیره می‌کنیم
+        run: |
+          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_log.txt 2>&1
 
       - name: Assert libc++_shared packaged
+        if: success()
         run: |
           unzip -l app/build/outputs/apk/debug/app-debug.apk | grep "libc++_shared" || (echo "libc++_shared.so missing in APK" && exit 1)
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # این بخش فقط در صورت شکست (failure) اجرا می‌شود
+      - name: Report Error in Issues
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## ❌ Build Failed - Error Logs" > issue_body.md
+          echo "Last 100 lines of build log:" >> issue_body.md
+          echo '
+```text' >> issue_body.md
+if [ -f build_log.txt ]; then
+tail -n 100 build_log.txt >> issue_body.md
+else
+echo "No build_log.txt found. The error might have happened before the build step." >> issue_body.md
+fi
+echo '
+```' >> issue_body.md
+          
+          # ساخت یک ایشو جدید با متن خطا
+          gh issue create --title "Build Error Report: $GITHUB_SHA" --body-file issue_body.md
