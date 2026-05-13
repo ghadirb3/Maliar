@@ -1,9 +1,15 @@
-name: Android Release Build
+name: Android CI Build
+
 on:
   workflow_dispatch:
+  push:
+    branches: [ main, master, develop, New ]
+  pull_request:
+    branches: [ main, master, develop, New ]
 
+# اجازه نوشتن در مخزن برای آپلود خودکار لاگ خطا
 permissions:
-  contents: write # اجازه حیاتی برای ساخت Release
+  contents: write
 
 jobs:
   build:
@@ -18,28 +24,41 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build APK
-        run: |
-          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_log.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Prepare Error Log
+      - name: Install NDK
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
+      - name: Grant execute to gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build APK (debug)
+        # اجرای بیلد و ذخیره خروجی در فایل. حتی اگر خطا بدهد، به مرحله بعد می‌رود.
+        run: |
+          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+
+      - name: Push Error Log to Repo
         if: env.BUILD_FAILED == 'true'
         run: |
-          echo "# Build Failed" >> $GITHUB_STEP_SUMMARY
-          echo '
-```' >> $GITHUB_STEP_SUMMARY
-tail -n 150 build_log.txt >> $GITHUB_STEP_SUMMARY
-echo '
-```' >> $GITHUB_STEP_SUMMARY
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # فقط ۵۰ خط آخر که مربوط به خطای اصلی است را نگه می‌داریم تا فایل سبک باشد
+          tail -n 100 build_report.txt > build_error_summary.txt
+          
+          git add build_error_summary.txt
+          git commit -m "docs: add latest build error log [skip ci]"
+          git push origin HEAD:${{ github.ref }}
+          
+          # در نهایت اکشن را قرمز کن تا متوجه شویم تمام شده
+          exit 1
 
-      - name: Create Release and Upload APK
+      - name: Upload APK
         if: env.BUILD_FAILED != 'true'
-        uses: softprops/action-gh-release@v1
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v1.${{ github.run_number }}
-          name: Release ${{ github.run_number }}
-          files: |
-            app/build/outputs/apk/debug/*.apk
-          body: "Build completed successfully. Try downloading the APK below."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
