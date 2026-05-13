@@ -35,15 +35,15 @@ class CallContactSelectionDialogue(
     private val ttsHelper = TTSHelper(context)
     private val onlineSTT = OnlineSTTService(context)
     private val aiAssistant = AdvancedPersianAssistant(context)
-    
+
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val NOTIFICATION_ID = 2002
     private val CHANNEL_ID = "call_selection_dialog_channel"
-    
+
     init {
         createNotificationChannel()
     }
-    
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -59,7 +59,7 @@ class CallContactSelectionDialogue(
             notificationManager.createNotificationChannel(channel)
         }
     }
-    
+
     private fun updateNotification(title: String, content: String) {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_mic)
@@ -69,10 +69,10 @@ class CallContactSelectionDialogue(
             .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .build()
-        
+
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
-    
+
     private fun cancelNotification() {
         notificationManager.cancel(NOTIFICATION_ID)
     }
@@ -123,14 +123,14 @@ class CallContactSelectionDialogue(
 
         val message = "$contactsText. لطفاً شماره مخاطب را بگویید. مثلاً بگویید: یک، یا دو، یا سه."
         Log.d(TAG, "📢 خواندن لیست مخاطبین: $message")
-        
+
         val estimatedDuration = estimateSpeechDuration(message)
         Log.d(TAG, "⏱️ زمان انتظار تخمینی برای TTS: $estimatedDuration ms")
-        
+
         ttsHelper.speakOnlineFirstAndWait(message)
         delay(estimatedDuration) // **[FIXED]** استفاده از تاخیر داینامیک
     }
-    
+
     /**
      * تبدیل عدد به فارسی
      */
@@ -149,13 +149,13 @@ class CallContactSelectionDialogue(
             else -> number.toString()
         }
     }
-    
+
     /**
      * استخراج شماره از متن کاربر
      */
     private fun extractNumberFromText(text: String): Int {
         val cleanText = text.lowercase().trim()
-        
+
         // تبدیل اعداد فارسی به انگلیسی
         val normalizedText = cleanText
             .replace("یک", "1")
@@ -173,11 +173,11 @@ class CallContactSelectionDialogue(
             .replace("سوم", "3")
             .replace("چهارم", "4")
             .replace("پنجم", "5")
-        
+
         // جستجوی اعداد در متن
         val numberPattern = """\d+""".toRegex()
         val match = numberPattern.find(normalizedText)
-        
+
         return match?.value?.toIntOrNull() ?: -1
     }
 
@@ -187,10 +187,10 @@ class CallContactSelectionDialogue(
     private suspend fun listenForUserResponse(): String = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "🎤 شروع ضبط صدا برای پاسخ کاربر")
-            
+
             val engine = UnifiedVoiceEngine(context)
             val tempFile = createTempAudioFile()
-            
+
             // شروع ضبط با VAD
             updateNotification("🎧 در حال ضبط صدا", "در حال شنیدن شماره...")
             val startResult = engine.startRecording()
@@ -199,20 +199,20 @@ class CallContactSelectionDialogue(
                 cancelNotification()
                 return@withContext ""
             }
-            
+
             Log.d(TAG, "✅ ضبط صدا شروع شد")
-            
+
             // منتظر مکث یا timeout
             val timeoutMs = 15000L // 15 ثانیه - افزایش برای جلوگیری از گیر کردن
             val silenceStopMs = 2000L // 2 ثانیه سکوت - یکسانسازی با تماس مستقیم
             val startTime = System.currentTimeMillis()
             var lastSpeechTime = startTime
             var hasSpeech = false
-            
+
             while (System.currentTimeMillis() - startTime < timeoutMs) {
                 val now = System.currentTimeMillis()
                 val amplitude = engine.getCurrentAmplitude()
-                
+
                 if (amplitude > 100) {
                     hasSpeech = true
                     lastSpeechTime = now
@@ -220,17 +220,17 @@ class CallContactSelectionDialogue(
                         updateNotification("🎤 در حال ضبط صدا", "صدای شما شنیده شد، ادامه دهید...")
                     }
                 }
-                
+
                 if (hasSpeech && (now - lastSpeechTime) > silenceStopMs) {
                     Log.d(TAG, "🔇 سکوت تشخیص داده شد - توقف ضبط")
                     break
                 }
-                
+
                 delay(100)
             }
-            
+
             updateNotification("📝 پردازش صدا", "در حال تبدیل گفتار به متن...")
-            
+
             // توقف ضبط و دریافت فایل
             val stopResult = engine.stopRecording()
             val recordingResult = if (stopResult.isSuccess) {
@@ -262,7 +262,7 @@ class CallContactSelectionDialogue(
             // ارسال به STT
             val sttResult = onlineSTT.transcribeAudio(recordedFile)
             val transcribedText = if (sttResult.isSuccess) sttResult.text else ""
-            
+
             // بررسی سکوت یا timeout
             if (transcribedText.isBlank()) {
                 Log.d(TAG, "⏰ کاربر سکوت کرد - لغو خودکار")
@@ -272,7 +272,7 @@ class CallContactSelectionDialogue(
                 }
                 return@withContext "SILENCE_TIMEOUT"
             }
-            
+
             // بررسی کلمات لغو (فقط کلمات کامل برای جلوگیری از false positive)
             val normalizedText = transcribedText.lowercase().trim()
             val negativePatterns = listOf(
@@ -295,11 +295,11 @@ class CallContactSelectionDialogue(
                 }
                 return@withContext "CANCEL"
             }
-            
+
             Log.d(TAG, "✅ پاسخ کاربر: $transcribedText")
             cancelNotification()
             transcribedText
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در شناسایی صدا", e)
             cancelNotification()
@@ -345,19 +345,19 @@ class CallContactSelectionDialogue(
                         ttsHelper.speakOnlineFirst("متوجه نشدم. لطفاً شماره را بگویید. مثلاً: یک یا دو")
                     }
                 }
-                
+
                 selectedNumber < 1 || selectedNumber > contacts.size -> {
                     Log.d(TAG, "❌ شماره خارج از محدوده: $selectedNumber (مخاطبین: ${contacts.size})")
                     withContext(Dispatchers.Main) {
                         ttsHelper.speakOnlineFirst("شماره نامعتبر است. لطفاً بین یک تا ${convertToPersianNumber(contacts.size)} انتخاب کنید")
                     }
                 }
-                
+
                 else -> {
                     // انتخاب موفقیت‌آمیز!
                     val selectedContact = contacts[selectedNumber - 1]
                     Log.d(TAG, "✅ مخاطب انتخاب شد: ${selectedContact.name} (${selectedContact.phoneNumber})")
-                    
+
                     // مرحله ۲: تأیید نهایی تماس
                     startFinalConfirmation(selectedContact)
                 }
@@ -370,7 +370,7 @@ class CallContactSelectionDialogue(
             }
         }
     }
-    
+
     /**
      * مرحله ۲: تأیید نهایی تماس
      */
@@ -379,23 +379,23 @@ class CallContactSelectionDialogue(
             // خواندن اطلاعات مخاطب برای تأیید
             val formattedPhone = TTSHelper.formatPhoneNumberForTTS(contact.phoneNumber)
             val message = "با ${contact.name} به شماره $formattedPhone تماس بگیرم؟ برای تأیید بگویید: بله، یا تأیید، یا تماس بگیر. برای لغو بگویید: نه، یا لغو، یا تماس نگیر."
-            
+
             Log.d(TAG, "📢 درخواست تأیید نهایی: $message")
-            
+
             val estimatedDuration = estimateSpeechDuration(message)
             Log.d(TAG, "⏱️ زمان انتظار تخمینی برای TTS: $estimatedDuration ms")
-            
+
             withContext(Dispatchers.Main) {
                 ttsHelper.speakOnlineFirstAndWait(message)
                 delay(estimatedDuration) // **[FIXED]** استفاده از تاخیر داینامیک
             }
-            
+
             // شنود برای پاسخ تأیید/لغو
             val response = listenForUserResponse()
-            
+
             // تحلیل پاسخ نهایی
             processFinalConfirmationResponse(response, contact)
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در تأیید نهایی", e)
             cancelNotification()
@@ -404,13 +404,13 @@ class CallContactSelectionDialogue(
             }
         }
     }
-    
+
     /**
      * تحلیل پاسخ نهایی تأیید/لغو
      */
     private suspend fun processFinalConfirmationResponse(response: String, contact: Contact) {
         Log.d(TAG, "🔍 تحلیل پاسخ نهایی: $response")
-        
+
         when {
             response == "SILENCE_TIMEOUT" -> {
                 Log.d(TAG, "⏰ لغو به دلیل سکوت کاربر")
@@ -419,12 +419,12 @@ class CallContactSelectionDialogue(
                 }
                 return
             }
-            
+
             response == "CANCEL" -> {
                 Log.d(TAG, "❌ کاربر لغو کرد")
                 return
             }
-            
+
             response.isBlank() -> {
                 Log.d(TAG, "❌ پاسخ خالی")
                 withContext(Dispatchers.Main) {
@@ -433,14 +433,14 @@ class CallContactSelectionDialogue(
                 return
             }
         }
-        
+
         // بررسی کلمات تأیید و لغو
         val normalizedResponse = response.lowercase().trim()
-        
+
         when {
             // کلمات تأیید
-            normalizedResponse.contains("بله") || 
-            normalizedResponse.contains("آره") || 
+            normalizedResponse.contains("بله") ||
+            normalizedResponse.contains("آره") ||
             normalizedResponse.contains("تائید") ||
             normalizedResponse.contains("تأیید") ||
             normalizedResponse.contains("تماس") ||
@@ -454,20 +454,20 @@ class CallContactSelectionDialogue(
             normalizedResponse == "تماس" ||
             normalizedResponse == "بگیر" ||
             normalizedResponse == "بزن" -> {
-                
+
                 Log.d(TAG, "✅ تماس تأیید شد با شماره: ${contact.phoneNumber}")
-                
+
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("در حال برقراری تماس با ${contact.name}")
                     delay(1000)
-                    
+
                     makePhoneCall(contact)
                 }
             }
-            
+
             // کلمات لغو
-            normalizedResponse.contains("نه") || 
-            normalizedResponse.contains("لغو") || 
+            normalizedResponse.contains("نه") ||
+            normalizedResponse.contains("لغو") ||
             normalizedResponse.contains("تموم") ||
             normalizedResponse.contains("بس") ||
             normalizedResponse.contains("تمام") ||
@@ -478,13 +478,13 @@ class CallContactSelectionDialogue(
             normalizedResponse == "تموم" ||
             normalizedResponse == "بس" ||
             normalizedResponse == "تمام" -> {
-                
+
                 Log.d(TAG, "❌ تماس لغو شد توسط کاربر")
                 withContext(Dispatchers.Main) {
                     ttsHelper.speakOnlineFirst("تماس لغو شد")
                 }
             }
-            
+
             else -> {
                 Log.d(TAG, "❌ پاسخ نامفهوم: $response")
                 withContext(Dispatchers.Main) {
@@ -493,18 +493,18 @@ class CallContactSelectionDialogue(
             }
         }
     }
-    
+
     /**
      * بررسی وجود مجوز تماس
      */
     private fun hasCallPermission(): Boolean {
-        return android.content.pm.PackageManager.PERMISSION_GRANTED == 
+        return android.content.pm.PackageManager.PERMISSION_GRANTED ==
             androidx.core.content.ContextCompat.checkSelfPermission(
-                context, 
+                context,
                 android.Manifest.permission.CALL_PHONE
             )
     }
-    
+
     /**
      * درخواست مجوز تماس
      */
@@ -516,14 +516,14 @@ class CallContactSelectionDialogue(
                 content = "برای تماس مستقیم، دسترسی تلفن را فعال کنید",
                 showPermissionButton = true
             )
-            
+
             ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را از نوتیفیکیشن فعال کنید")
-            
+
             // شروع مانیتورینگ برای تشخیص دادن مجوز
             startPermissionMonitoring()
         }
     }
-    
+
     /**
      * مانیتورینگ وضعیت مجوز برای بستن نوتیفیکیشن بعد از دادن مجوز
      */
@@ -531,11 +531,11 @@ class CallContactSelectionDialogue(
         scope.launch {
             var attempts = 0
             val maxAttempts = 30 // 30 ثانیه منتظر می‌مونیم
-            
+
             while (attempts < maxAttempts) {
                 delay(1000) // هر ثانیه چک می‌کنیم
                 attempts++
-                
+
                 if (hasCallPermission()) {
                     Log.d(TAG, "✅ مجوز تماس داده شد - بستن نوتیفیکیشن")
                     cancelNotification()
@@ -543,50 +543,50 @@ class CallContactSelectionDialogue(
                     break
                 }
             }
-            
+
             if (attempts >= maxAttempts) {
                 Log.d(TAG, "⏰ زمان انتظار برای مجوز تمام شد")
                 cancelNotification()
             }
         }
     }
-    
+
     /**
      * برقراری تماس تلفنی
      */
     private suspend fun makePhoneCall(contact: Contact) {
         try {
             Log.d(TAG, "📞 شروع تماس با شماره: ${contact.phoneNumber}")
-            
+
             // بررسی وضعیت مجوز تماس
             if (!hasCallPermission()) {
                 Log.d(TAG, "🔐 مجوز تماس وجود ندارد - درخواست مجوز")
                 requestCallPermission()
                 return
             }
-            
+
             // تماس مستقیم با Android Intent
             val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
                 data = android.net.Uri.parse("tel:${contact.phoneNumber}")
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
-            
+
             try {
                 context.startActivity(callIntent)
                 Log.d(TAG, "✅ تماس با موفقیت شروع شد")
                 cancelNotification()
             } catch (e: SecurityException) {
                 Log.e(TAG, "❌ عدم دسترسی به تماس: ${e.message}")
-                
+
                 // نمایش نوتیفیکیشن با دکمه درخواست دسترسی
                 updateNotification(
                     title = "نیاز به دسترسی تماس",
                     content = "برای تماس مستقیم، دسترسی تلفن را فعال کنید",
                     showPermissionButton = true
                 )
-                
+
                 ttsHelper.speakOnlineFirst("لطفاً دسترسی تماس را از نوتیفیکیشن فعال کنید")
-                
+
                 // تلاش با ACTION_DIAL به عنوان جایگزین
                 try {
                     val dialIntent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
@@ -604,7 +604,7 @@ class CallContactSelectionDialogue(
                 Log.e(TAG, "❌ خطا در شروع تماس: ${e.message}")
                 ttsHelper.speakOnlineFirst("خطا در شروع تماس")
             }
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا کلی در makePhoneCall", e)
             withContext(Dispatchers.Main) {
@@ -612,7 +612,7 @@ class CallContactSelectionDialogue(
             }
         }
     }
-    
+
     /**
      * به‌روزرسانی نوتیفیکیشن با دکمه دسترسی
      */
@@ -624,32 +624,32 @@ class CallContactSelectionDialogue(
             .setOngoing(true)
             .setSilent(true)
             .setCategory(androidx.core.app.NotificationCompat.CATEGORY_STATUS)
-        
+
         // اضافه کردن دکمه درخواست دسترسی تماس
         if (showPermissionButton) {
             val permissionIntent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = android.net.Uri.fromParts("package", context.packageName, null)
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            
+
             val pendingIntent = android.app.PendingIntent.getActivity(
-                context, 
-                0, 
-                permissionIntent, 
+                context,
+                0,
+                permissionIntent,
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
             )
-            
+
             builder.addAction(
                 R.drawable.ic_mic,
                 "فعال‌سازی دسترسی تماس",
                 pendingIntent
             )
         }
-        
+
         val notification = builder.build()
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
-    
+
     /**
      * ایجاد فایل صوتی موقت
      */
@@ -658,14 +658,3 @@ class CallContactSelectionDialogue(
         return File(context.cacheDir, "temp_audio_$timestamp.wav")
     }
 }
-
-**تغییرات کلیدی:**
-
-1.  **تابع `estimateSpeechDuration`:** یک تابع جدید برای محاسبه هوشمندانه زمان مورد نیاز برای خواندن متن اضافه شده است.
-2.  **حذف `delay(2000)`:** تأخیر ثابت حذف شد.
-3.  **جایگزینی با تأخیر داینامیک:** در هر دو محل (`speakContactsList` و `startFinalConfirmation`)، کد زیر جایگزین شد:
-```kotlin
-val estimatedDuration = estimateSpeechDuration(message)
-ttsHelper.speakOnlineFirstAndWait(message)
-delay(estimatedDuration)
-
