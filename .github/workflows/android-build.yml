@@ -1,6 +1,15 @@
-name: Android Build & Download
+name: Android CI Build
+
 on:
   workflow_dispatch:
+  push:
+    branches: [ main, master, develop, New ]
+  pull_request:
+    branches: [ main, master, develop, New ]
+
+# اجازه نوشتن در مخزن برای آپلود خودکار لاگ خطا
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -15,43 +24,41 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
       - name: Grant execute to gradlew
         run: chmod +x ./gradlew
 
-      - name: Build APK
+      - name: Build APK (debug)
+        # اجرای بیلد و ذخیره خروجی در فایل. حتی اگر خطا بدهد، به مرحله بعد می‌رود.
         run: |
-          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_log.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
-      - name: Generate Summary Report
-        if: always()
+      - name: Push Error Log to Repo
+        if: env.BUILD_FAILED == 'true'
         run: |
-          echo "# 📱 Android Build Report" >> $GITHUB_STEP_SUMMARY
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          if [ "${{ env.BUILD_FAILED }}" == "true" ]; then
-            echo "## ❌ BUILD FAILED" >> $GITHUB_STEP_SUMMARY
-            echo "### Error Log:" >> $GITHUB_STEP_SUMMARY
-            echo '
-```' >> $GITHUB_STEP_SUMMARY
-tail -n 100 build_log.txt >> $GITHUB_STEP_SUMMARY
-echo '
-```' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## ✅ BUILD SUCCESSFUL" >> $GITHUB_STEP_SUMMARY
-            APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
-            
-            echo "### 📦 APK Base64 Data (Manual Download)" >> $GITHUB_STEP_SUMMARY
-            echo "Copy the codes below and save as 'apk_base64.txt' on your computer." >> $GITHUB_STEP_SUMMARY
-            
-            # تبدیل APK به بیس64 و تکه تکه کردن به بخش های 50 هزار کاراکتری
-            base64 -w 0 "$APK_PATH" > apk_base64.txt
-            split -b 50000 -d --additional-suffix=.txt apk_base64.txt part_
-            
-            for f in part_*.txt; do
-              echo "#### Part $f" >> $GITHUB_STEP_SUMMARY
-              echo '
-```' >> $GITHUB_STEP_SUMMARY
-cat "$f" >> $GITHUB_STEP_SUMMARY
-echo '
-```' >> $GITHUB_STEP_SUMMARY
-            done
-          fi
+          # فقط ۵۰ خط آخر که مربوط به خطای اصلی است را نگه می‌داریم تا فایل سبک باشد
+          tail -n 100 build_report.txt > build_error_summary.txt
+          
+          git add build_error_summary.txt
+          git commit -m "docs: add latest build error log [skip ci]"
+          git push origin HEAD:${{ github.ref }}
+          
+          # در نهایت اکشن را قرمز کن تا متوجه شویم تمام شده
+          exit 1
+
+      - name: Upload APK
+        if: env.BUILD_FAILED != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
