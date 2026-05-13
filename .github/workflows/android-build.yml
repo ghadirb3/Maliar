@@ -1,14 +1,12 @@
-name: Android CI Build
-
+name: Android Build Summary
 on:
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # نیازی به نوشتن نیست تا خطا ندهد
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,30 +22,38 @@ jobs:
 
       - name: Build APK
         run: |
-          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_log.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
-      - name: Prepare Files
+      - name: Generate Summary Report
+        if: always()
         run: |
-          mkdir -p output_folder
+          echo "# 📱 Android Build Report" >> $GITHUB_STEP_SUMMARY
+          
           if [ "${{ env.BUILD_FAILED }}" == "true" ]; then
-            tail -n 100 build_report.txt > output_folder/error_log.txt
+            echo "## ❌ BUILD FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "### Error Details (Last 100 lines):" >> $GITHUB_STEP_SUMMARY
+            echo '
+```bash' >> $GITHUB_STEP_SUMMARY
+tail -n 100 build_log.txt >> $GITHUB_STEP_SUMMARY
+echo '
+```' >> $GITHUB_STEP_SUMMARY
           else
+            echo "## ✅ BUILD SUCCESSFUL" >> $GITHUB_STEP_SUMMARY
             APK_PATH=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
-            if [ -n "$APK_PATH" ]; then
-              cp "$APK_PATH" output_folder/ready-to-download.apk
-            else
-              echo "APK NOT FOUND" > output_folder/error_log.txt
-            fi
+            echo "APK Location: $APK_PATH" >> $GITHUB_STEP_SUMMARY
+            echo "### APK File Info:" >> $GITHUB_STEP_SUMMARY
+            ls -lh $APK_PATH >> $GITHUB_STEP_SUMMARY
+            
+            # تبدیل APK به کد Base64 (فقط برای فایل‌های کوچک زیر 50-60 مگابایت)
+            # اگر فایل بزرگ باشد، این بخش ممکن است کار نکند
+            echo "---" >> $GITHUB_STEP_SUMMARY
+            echo "Note: Download not possible via Summary. Please check Artifacts tab." >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Direct Upload to Branch
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload Artifact
+        if: env.BUILD_FAILED != 'true'
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./output_folder
-          publish_branch: download-zone # فایل ها در این شاخه ذخیره میشوند
-          force_orphan: true # تاریخچه قبلی را پاک میکند تا حجم مخزن زیاد نشود
-
-      - name: Failure Check
-        if: env.BUILD_FAILED == 'true'
-        run: exit 1
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 1
