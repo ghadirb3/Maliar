@@ -1,456 +1,296 @@
-package com.persianai.assistant.utils
+package com.example.maliar.core.tts
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import android.media.MediaPlayer
-import java.io.File
-import java.util.*
-import com.persianai.assistant.services.HaaniyeManager
-import com.persianai.assistant.config.RemoteAIConfigManager
-import com.persianai.assistant.tts.GapGPTTTS
-import kotlinx.coroutines.CompletableDeferred
+import com.example.maliar.core.api.GapGPTService
+import com.example.maliar.core.api.LiaraService
+import com.example.maliar.data.model.GapGPTTTSRequest
+import com.example.maliar.data.model.LiaraTTSRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withTimeout
+import okhttp3.ResponseBody
+import java.io.File
+import java.io.FileOutputStream
+import java.util.Locale
+import kotlin.coroutines.resume
 
-/**
- * کمک‌کننده برای تبدیل متن به گفتار فارسی
- * Online-first: tries online TTS providers first, then offline Haaniye, then Android TTS as final fallback
- */
-class TTSHelper(private val context: Context) {
-
-    private var tts: TextToSpeech? = null
-    private var isInitialized = false
-    private val prefsManager = PreferencesManager(context)
-    private val remoteConfigManager = RemoteAIConfigManager.getInstance(context)
-    private val gapgptTTS = GapGPTTTS(context)
-    private val pendingUtterances = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
-
-    companion object {
-        private const val TAG = "TTSHelper"
-
-        private fun normalizeDigits(input: String): String {
-            if (input.isBlank()) return input
-            return buildString(input.length) {
-                for (ch in input) {
-                    append(
-                        when (ch) {
-                            '۰', '٠' -> '0'
-                            '۱', '١' -> '1'
-                            '۲', '٢' -> '2'
-                            '۳', '٣' -> '3'
-                            '۴', '٤' -> '4'
-                            '۵', '٥' -> '5'
-                            '۶', '٦' -> '6'
-                            '۷', '٧' -> '7'
-                            '۸', '٨' -> '8'
-                            '۹', '٩' -> '9'
-                            else -> ch
-                        }
-                    )
-                }
-            }
+class TTSHelper(
+    private val context: Context,
+    private val gapGPTService: GapGPTService,
+    private val liaraService: LiaraService
+) {
+    private val TAG = "TTSHelper"
+    private var androidTTS: TextToSpeech? = null
+    private var isAndroidTTSReady = false
+    private var mediaPlayer: MediaPlayer? = null
+    
+    // کش برای فایل‌های صوتی
+    private val audioCacheDir = File(context.cacheDir, "tts_audio")
+    
+    init {
+        // ایجاد دایرکتوری کش
+        if (!audioCacheDir.exists()) {
+            audioCacheDir.mkdirs()
         }
         
-        fun formatPhoneNumberForTTS(phoneNumber: String): String {
-            val ltrMark = "\u200E" // LRM
-            val normalized = normalizeDigits(phoneNumber)
-            val digits = normalized.replace(Regex("[^0-9+]"), "")
-            val spaced = digits.toCharArray().joinToString(" ")
-            return "$ltrMark$spaced"
-        }
-    }
-
-    fun initialize(onReady: (() -> Unit)? = null) {
-        tts = TextToSpeech(context) { status ->
+        // راه‌اندازی Android TTS
+        androidTTS = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val result = tts?.setLanguage(Locale("fa", "IR"))
-                
-                if (result == TextToSpeech.LANG_MISSING_DATA || 
-                    result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    Log.e(TAG, "Persian language not supported on this device; disabling Android TTS")
-                    // If Persian is unavailable, rely solely on Haaniye and skip Android TTS
-                    tts?.shutdown()
-                    tts = null
-                    isInitialized = false
-                    return@TextToSpeech
-                }
-
-                // تنظیمات صدا
-                tts?.setPitch(1.0f)
-                tts?.setSpeechRate(0.9f) // کمی آهسته‌تر برای وضوح بیشتر
-                
-                isInitialized = true
-                Log.d(TAG, "TTS initialized successfully")
-                onReady?.invoke()
+                androidTTS?.language = Locale("fa", "IR")
+                isAndroidTTSReady = true
+                Log.d(TAG, "Android TTS initialized successfully")
             } else {
-                Log.e(TAG, "TTS initialization failed")
+                Log.e(TAG, "Android TTS initialization failed")
             }
-        }
-
-        // Listener برای رویدادهای TTS
-        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                Log.d(TAG, "TTS started: $utteranceId")
-            }
-
-            override fun onDone(utteranceId: String?) {
-                Log.d(TAG, "TTS finished: $utteranceId")
-                if (!utteranceId.isNullOrBlank()) {
-                    pendingUtterances.remove(utteranceId)?.complete(Unit)
-                }
-            }
-
-            @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) {
-                Log.e(TAG, "TTS error: $utteranceId")
-                if (!utteranceId.isNullOrBlank()) {
-                    pendingUtterances.remove(utteranceId)?.complete(Unit)
-                }
-            }
-
-            override fun onError(utteranceId: String?, errorCode: Int) {
-                Log.e(TAG, "TTS error: $utteranceId, code: $errorCode")
-                if (!utteranceId.isNullOrBlank()) {
-                    pendingUtterances.remove(utteranceId)?.complete(Unit)
-                }
-            }
-        })
-    }
-
-    suspend fun speakOnlineFirstAndWait(text: String, timeoutMs: Long = 20_000L) = withContext(Dispatchers.IO) {
-        if (!prefsManager.isTTSEnabled()) {
-            Log.d(TAG, "TTS is disabled")
-            return@withContext
-        }
-
-        val cleanText = cleanTextForTTS(text)
-        if (cleanText.isBlank()) {
-            Log.d(TAG, "Empty text after cleaning")
-            return@withContext
-        }
-
-        val ttsPriority = remoteConfigManager.getTTSPriority()
-        Log.d(TAG, "TTS priority from remote config: $ttsPriority")
-
-        for (provider in ttsPriority) {
-            when (provider.lowercase()) {
-                "gapgpt" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT gpt-4o-mini-tts (آنلاین)...")
-                        val audioFile = gapgptTTS.synthesizeSpeech(cleanText)
-                        if (audioFile != null && audioFile.exists()) {
-                            playAudioFileAndWait(audioFile, timeoutMs)
-                            Log.d(TAG, "✅ TTS با موفقیت از GapGPT (آنلاین) اجرا شد")
-                            return@withContext
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "GapGPT TTS failed: ${e.message}")
-                    }
-                }
-
-                "local" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
-                        val success = HaaniyeManager.speak(context, cleanText)
-                        if (success) {
-                            Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
-                            return@withContext
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-                    }
-                }
-            }
-        }
-
-        try {
-            val handled = HaaniyeManager.speak(context, cleanText)
-            if (handled) {
-                Log.d(TAG, "TTS via Haaniye (offline)")
-                return@withContext
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-        }
-
-        if (isInitialized && tts != null) {
-            val utteranceId = "tts_${System.currentTimeMillis()}"
-            val deferred = CompletableDeferred<Unit>()
-            pendingUtterances[utteranceId] = deferred
-
-            Log.d(TAG, "TTS via Android TTS (final fallback) [wait]")
-            runOnUiThread {
-                tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-            }
-
-            withTimeoutOrNull(timeoutMs) {
-                deferred.await()
-            }
-
-            pendingUtterances.remove(utteranceId)
-        } else {
-            Log.w(TAG, "No TTS provider available")
-        }
-    }
-
-    /**
-     * Online-first TTS: tries online providers based on remote config priority, then offline Haaniye, then Android TTS
-     */
-    suspend fun speakOnlineFirst(text: String, queueMode: Int = TextToSpeech.QUEUE_FLUSH) = withContext(Dispatchers.IO) {
-        if (!prefsManager.isTTSEnabled()) {
-            Log.d(TAG, "TTS is disabled")
-            return@withContext
-        }
-
-        val cleanText = cleanTextForTTS(text)
-        if (cleanText.isBlank()) {
-            Log.d(TAG, "Empty text after cleaning")
-            return@withContext
-        }
-
-        val ttsPriority = remoteConfigManager.getTTSPriority()
-        Log.d(TAG, "TTS priority from remote config: $ttsPriority")
-
-        // Try online TTS providers based on remote config priority
-        for (provider in ttsPriority) {
-            when (provider.lowercase()) {
-                "gapgpt" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با GapGPT gpt-4o-mini-tts (آنلاین)...")
-                        val audioFile = gapgptTTS.synthesizeSpeech(cleanText)
-                        if (audioFile != null && audioFile.exists()) {
-                            // پخش فایل صوتی
-                            playAudioFile(audioFile)
-                            Log.d(TAG, "✅ TTS با موفقیت از GapGPT (آنلاین) اجرا شد")
-                            return@withContext
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "GapGPT TTS failed: ${e.message}")
-                    }
-                }
-                "local" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با Haaniye (آفلاین)...")
-                        val success = HaaniyeManager.speak(context, cleanText)
-                        if (success) {
-                            Log.d(TAG, "✅ TTS با موفقیت از Haaniye (آفلاین) اجرا شد")
-                            return@withContext
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-                    }
-                }
-                "liara" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با Liara...")
-                        // TODO: Implement Liara TTS call
-                        Log.d(TAG, "Liara TTS not yet implemented, skipping")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Liara TTS failed: ${e.message}")
-                    }
-                }
-                "openai" -> {
-                    try {
-                        Log.d(TAG, "🎤 تلاش برای TTS با OpenAI...")
-                        // TODO: Implement OpenAI TTS call
-                        Log.d(TAG, "OpenAI TTS not yet implemented, skipping")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "OpenAI TTS failed: ${e.message}")
-                    }
-                }
-                // Skip "haaniye" and "android" here; they will be tried as fallbacks
-            }
-        }
-
-        // Fallback 1: Haaniye (offline)
-        try {
-            val handled = HaaniyeManager.speak(context, cleanText)
-            if (handled) {
-                Log.d(TAG, "TTS via Haaniye (offline)")
-                return@withContext
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-        }
-
-        // Fallback 2: Android TTS (if initialized)
-        if (isInitialized && tts != null) {
-            Log.d(TAG, "TTS via Android TTS (final fallback)")
-            runOnUiThread {
-                tts?.speak(cleanText, queueMode, null, "tts_${System.currentTimeMillis()}")
-            }
-        } else {
-            Log.w(TAG, "No TTS provider available")
-        }
-    }
-
-    /**
-     * Legacy speak method (maintains compatibility)
-     */
-    fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_FLUSH) {
-        if (!prefsManager.isTTSEnabled()) {
-            Log.d(TAG, "TTS is disabled")
-            return
-        }
-
-        if (!isInitialized) {
-            Log.w(TAG, "TTS not initialized yet")
-            return
-        }
-
-        val cleanText = cleanTextForTTS(text)
-        if (cleanText.isBlank()) {
-            Log.d(TAG, "Empty text after cleaning")
-            return
-        }
-
-        // Previously: offline-first Haaniye -> Android TTS
-        // Now: try Haaniye first for compatibility, then Android TTS
-        try {
-            val handled = HaaniyeManager.speak(context, cleanText)
-            if (handled) return
-        } catch (e: Exception) {
-            Log.w(TAG, "Haaniye TTS failed: ${e.message}")
-        }
-
-        Log.d(TAG, "Speaking (Android TTS): $cleanText")
-        tts?.speak(cleanText, queueMode, null, "tts_${System.currentTimeMillis()}")
-    }
-    
-    /**
-     * پخش فایل صوتی MP3 از GapGPT TTS
-     */
-    private fun playAudioFile(audioFile: File) {
-        try {
-            val mediaPlayer = MediaPlayer().apply {
-                setDataSource(audioFile.absolutePath)
-                prepare()
-                setOnCompletionListener {
-                    release()
-                    // پاک کردن فایل بعد از پخش
-                    audioFile.delete()
-                }
-                setOnErrorListener { _, _, _ ->
-                    release()
-                    audioFile.delete()
-                    true
-                }
-                start()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در پخش فایل صوتی", e)
-            audioFile.delete()
-        }
-    }
-
-    private suspend fun playAudioFileAndWait(audioFile: File, timeoutMs: Long) {
-        val done = CompletableDeferred<Unit>()
-        val mediaPlayer = try {
-            MediaPlayer().apply {
-                setDataSource(audioFile.absolutePath)
-                prepare()
-                setOnCompletionListener {
-                    try { release() } catch (_: Exception) {}
-                    try { audioFile.delete() } catch (_: Exception) {}
-                    done.complete(Unit)
-                }
-                setOnErrorListener { _, _, _ ->
-                    try { release() } catch (_: Exception) {}
-                    try { audioFile.delete() } catch (_: Exception) {}
-                    done.complete(Unit)
-                    true
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ خطا در پخش فایل صوتی", e)
-            try { audioFile.delete() } catch (_: Exception) {}
-            return
-        }
-
-        try {
-            mediaPlayer.start()
-            withTimeoutOrNull(timeoutMs) {
-                done.await()
-            }
-        } finally {
-            try { mediaPlayer.release() } catch (_: Exception) {}
-            try { audioFile.delete() } catch (_: Exception) {}
         }
     }
     
     /**
-     * پاک کردن منابع
+     * تبدیل متن به گفتار با اولویت‌بندی: GapGPT -> Liara -> Android TTS
+     * و انتظار تا پایان کامل پخش
      */
-    fun cleanup() {
-        gapgptTTS.cleanupOldAudioFiles()
-    }
-
-    private fun runOnUiThread(action: () -> Unit) {
-        (context as? android.app.Activity)?.runOnUiThread(action) ?: run {
-            // If context is not an Activity, use Handler with main looper
-            android.os.Handler(android.os.Looper.getMainLooper()).post(action)
+    suspend fun speakOnlineFirstAndWait(text: String): Boolean {
+        return withContext(Dispatchers.Main) {
+            try {
+                // اولویت 1: GapGPT
+                if (tryGapGPTTTSAndWait(text)) {
+                    Log.d(TAG, "GapGPT TTS completed successfully")
+                    return@withContext true
+                }
+                
+                // اولویت 2: Liara
+                if (tryLiaraTTSAndWait(text)) {
+                    Log.d(TAG, "Liara TTS completed successfully")
+                    return@withContext true
+                }
+                
+                // اولویت 3: Android TTS
+                if (tryAndroidTTSAndWait(text)) {
+                    Log.d(TAG, "Android TTS completed successfully")
+                    return@withContext true
+                }
+                
+                Log.e(TAG, "All TTS methods failed")
+                return@withContext false
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in speakOnlineFirstAndWait", e)
+                return@withContext false
+            }
         }
     }
-
+    
     /**
-     * توقف اعلام فعلی
+     * تلاش برای استفاده از GapGPT TTS و انتظار تا پایان پخش
+     */
+    private suspend fun tryGapGPTTTSAndWait(text: String): Boolean {
+        return try {
+            withTimeout(15000L) { // 15 ثانیه timeout
+                val response = gapGPTService.textToSpeech(
+                    GapGPTTTSRequest(
+                        text = text,
+                        voice = "fa-IR-DilaraNeural", // صدای فارسی با کیفیت بالا
+                        speed = 0.9 // کمی آهسته‌تر برای وضوح بیشتر
+                    )
+                )
+                
+                if (response.isSuccessful && response.body() != null) {
+                    val audioFile = saveAudioToCache(response.body()!!, "gapgpt_${System.currentTimeMillis()}.mp3")
+                    playAudioFileAndWait(audioFile)
+                } else {
+                    Log.e(TAG, "GapGPT TTS failed: ${response.code()}")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "GapGPT TTS error", e)
+            false
+        }
+    }
+    
+    /**
+     * تلاش برای استفاده از Liara TTS و انتظار تا پایان پخش
+     */
+    private suspend fun tryLiaraTTSAndWait(text: String): Boolean {
+        return try {
+            withTimeout(15000L) { // 15 ثانیه timeout
+                val response = liaraService.textToSpeech(
+                    LiaraTTSRequest(
+                        text = text,
+                        voice = "female", // صدای زنانه
+                        speed = 0.9
+                    )
+                )
+                
+                if (response.isSuccessful && response.body() != null) {
+                    val audioFile = saveAudioToCache(response.body()!!, "liara_${System.currentTimeMillis()}.mp3")
+                    playAudioFileAndWait(audioFile)
+                } else {
+                    Log.e(TAG, "Liara TTS failed: ${response.code()}")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Liara TTS error", e)
+            false
+        }
+    }
+    
+    /**
+     * تلاش برای استفاده از Android TTS و انتظار تا پایان پخش
+     */
+    private suspend fun tryAndroidTTSAndWait(text: String): Boolean {
+        if (!isAndroidTTSReady || androidTTS == null) {
+            Log.e(TAG, "Android TTS not ready")
+            return false
+        }
+        
+        return suspendCancellableCoroutine { continuation ->
+            try {
+                val utteranceId = "utterance_${System.currentTimeMillis()}"
+                
+                androidTTS?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        Log.d(TAG, "Android TTS started")
+                    }
+                    
+                    override fun onDone(utteranceId: String?) {
+                        Log.d(TAG, "Android TTS completed")
+                        if (continuation.isActive) {
+                            continuation.resume(true)
+                        }
+                    }
+                    
+                    override fun onError(utteranceId: String?) {
+                        Log.e(TAG, "Android TTS error")
+                        if (continuation.isActive) {
+                            continuation.resume(false)
+                        }
+                    }
+                })
+                
+                val result = androidTTS?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                
+                if (result != TextToSpeech.SUCCESS) {
+                    Log.e(TAG, "Android TTS speak failed")
+                    if (continuation.isActive) {
+                        continuation.resume(false)
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Android TTS exception", e)
+                if (continuation.isActive) {
+                    continuation.resume(false)
+                }
+            }
+        }
+    }
+    
+    /**
+     * ذخیره فایل صوتی در کش
+     */
+    private suspend fun saveAudioToCache(responseBody: ResponseBody, fileName: String): File {
+        return withContext(Dispatchers.IO) {
+            val audioFile = File(audioCacheDir, fileName)
+            FileOutputStream(audioFile).use { output ->
+                responseBody.byteStream().use { input ->
+                    input.copyTo(output)
+                }
+            }
+            audioFile
+        }
+    }
+    
+    /**
+     * پخش فایل صوتی و انتظار تا پایان پخش
+     */
+    private suspend fun playAudioFileAndWait(audioFile: File): Boolean {
+        return suspendCancellableCoroutine { continuation ->
+            try {
+                // آزادسازی MediaPlayer قبلی
+                mediaPlayer?.release()
+                
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                            .build()
+                    )
+                    
+                    setDataSource(audioFile.absolutePath)
+                    
+                    setOnCompletionListener {
+                        Log.d(TAG, "Audio playback completed")
+                        if (continuation.isActive) {
+                            continuation.resume(true)
+                        }
+                    }
+                    
+                    setOnErrorListener { _, what, extra ->
+                        Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                        if (continuation.isActive) {
+                            continuation.resume(false)
+                        }
+                        true
+                    }
+                    
+                    prepare()
+                    start()
+                }
+                
+                // لغو پخش در صورت لغو coroutine
+                continuation.invokeOnCancellation {
+                    mediaPlayer?.stop()
+                    mediaPlayer?.release()
+                    mediaPlayer = null
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error playing audio file", e)
+                if (continuation.isActive) {
+                    continuation.resume(false)
+                }
+            }
+        }
+    }
+    
+    /**
+     * توقف TTS
      */
     fun stop() {
-        if (isInitialized) {
-            tts?.stop()
+        try {
+            androidTTS?.stop()
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+            mediaPlayer = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping TTS", e)
         }
     }
-
+    
     /**
-     * آزاد کردن منابع
+     * آزادسازی منابع
      */
     fun shutdown() {
-        tts?.stop()
-        tts?.shutdown()
-        isInitialized = false
-        Log.d(TAG, "TTS shutdown")
-    }
-
-    /**
-     * پاکسازی متن برای TTS
-     */
-    private fun cleanTextForTTS(text: String): String {
-        return text
-            // حذف emoji
-            .replace(Regex("[\\p{So}\\p{Sk}]"), "")
-            // حذف لینک‌ها
-            .replace(Regex("https?://\\S+"), "")
-            // حذف کاراکترهای خاص اضافی
-            .replace(Regex("[📱📋✅❌⚠️🔴💬📞🌐⚙️⚡]"), "")
-            // حذف خطوط خالی اضافی
-            .replace(Regex("\\n{2,}"), "\n")
-            // حذف فاصله‌های اضافی
-            .replace(Regex("\\s+"), " ")
-            .trim()
-    }
-
-    /**
-     * چک کردن در دسترس بودن
-     */
-    fun isAvailable(): Boolean {
-        return isInitialized && tts != null
-    }
-
-    /**
-     * تنظیم سرعت گفتار
-     */
-    fun setSpeechRate(rate: Float) {
-        tts?.setSpeechRate(rate)
-    }
-
-    /**
-     * تنظیم pitch صدا
-     */
-    fun setPitch(pitch: Float) {
-        tts?.setPitch(pitch)
+        try {
+            stop()
+            androidTTS?.shutdown()
+            androidTTS = null
+            
+            // پاک کردن کش
+            audioCacheDir.listFiles()?.forEach { it.delete() }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error shutting down TTS", e)
+        }
     }
 }
