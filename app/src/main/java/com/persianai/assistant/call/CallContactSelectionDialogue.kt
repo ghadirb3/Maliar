@@ -11,7 +11,6 @@ import com.persianai.assistant.core.tts.TTSHelper
 import com.persianai.assistant.core.voice.UnifiedVoiceEngine
 import com.persianai.assistant.data.Contact
 import com.persianai.assistant.data.ContactsRepository
-import kotlinx.coroutines.delay
 
 class CallContactSelectionDialogue(
     private val context: Context,
@@ -22,12 +21,12 @@ class CallContactSelectionDialogue(
     private val TAG = "CallSelection"
 
     suspend fun startContactSelection(contactName: String): Boolean {
-        Log.d(TAG, "شروع انتخاب مخاطب برای: $contactName")
+        Log.d(TAG, "شروع فرآیند تماس برای: $contactName")
         val contacts = contactsRepository.searchContacts(contactName)
 
         return when {
             contacts.isEmpty() -> {
-                ttsHelper.speakOnlineFirstAndWait("متأسفانه مخاطبی با نام $contactName پیدا نکردم.")
+                ttsHelper.speakOnlineFirstAndWait("مخاطبی با نام $contactName یافت نشد.")
                 false
             }
             contacts.size == 1 -> {
@@ -44,15 +43,17 @@ class CallContactSelectionDialogue(
         val message = buildContactListMessage(contacts, searchName)
         ttsHelper.speakOnlineFirstAndWait(message)
         
-        // در اینجا منطق دریافت شماره ردیف از کاربر (STT) باید پیاده شود
+        // اینجا باید منتظر پاسخ صوتی کاربر برای انتخاب شماره ردیف بمانیم
+        // فعلاً برای جلوگیری از توقف برنامه، اولین مورد را در نظر می‌گیریم یا منتظر پیاده‌سازی STT می‌مانیم
         return false 
     }
 
     private fun buildContactListMessage(contacts: List<Contact>, searchName: String): String {
-        val sb = StringBuilder("چند مخاطب با نام $searchName پیدا شد. کدام یک را شماره گیری کنم؟\n")
+        val sb = StringBuilder("چند مورد برای $searchName پیدا شد:\n")
         contacts.take(5).forEachIndexed { index, contact ->
             sb.append("${index + 1}: ${contact.name}\n")
         }
+        sb.append("کدام شماره را بگیریم؟")
         return sb.toString()
     }
 
@@ -64,6 +65,8 @@ class CallContactSelectionDialogue(
         }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
             context.startActivity(intent)
+        } else {
+            Log.e(TAG, "مجوز تماس داده نشده است.")
         }
     }
 }
