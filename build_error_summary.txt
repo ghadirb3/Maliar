@@ -63,13 +63,13 @@ WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/co
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
+> Task :app:processDebugManifestForPackage
+> Task :app:l8DexDesugarLibDebug
 > Task :app:desugarDebugFileDependencies
 > Task :app:processDebugJavaRes NO-SOURCE
-> Task :app:l8DexDesugarLibDebug
+> Task :app:processDebugResources
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
-> Task :app:processDebugManifestForPackage
 
 > Task :app:mergeExtDexDebug
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpx
@@ -77,50 +77,32 @@ WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e83
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpp
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpj
 
+> Task :app:compileDebugKotlin
 > Task :app:mergeLibDexDebug
+> Task :app:mergeDebugJniLibFolders
 > Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
-> Task :app:processDebugResources
 > Task :app:stripDebugDebugSymbols
-> Task :app:compileDebugKotlin
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/BaseChatActivity.kt:35:38 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/BaseChatActivity.kt:66:39 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/BaseChatActivity.kt:143:21 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/MainActivity.kt:66:67 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/MainActivity.kt:100:55 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/VoiceCallActivity.kt:261:76 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallConfirmationManager.kt:9:38 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallConfirmationManager.kt:26:29 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallConfirmationManager.kt:134:34 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:10:32 Unresolved reference: stt
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:10:27 Unresolved reference: core
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:11:27 Unresolved reference: core
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:12:27 Unresolved reference: data
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:13:27 Unresolved reference: data
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:18:28 Unresolved reference: STTHelper
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:19:28 Unresolved reference: TTSHelper
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:20:37 Unresolved reference: ContactsRepository
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:55:63 Unresolved reference: Contact
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:77:56 Unresolved reference: Contact
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:81:42 Cannot infer a type for this parameter. Please specify it explicitly.
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:190:49 Unresolved reference: Contact
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/DirectPhoneCallDialogue.kt:14:38 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/DirectPhoneCallDialogue.kt:37:29 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/DirectPhoneCallDialogue.kt:131:30 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/DirectPhoneCallDialogue.kt:329:50 Unresolved reference: TTSHelper
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:38:21 Unresolved reference: LIARA_GPT5_NANO
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:11:37 Unresolved reference: CallContactSelectionDialogue
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:151:39 Unresolved reference: CallContactSelectionDialogue
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/RecordingResult.kt:11:12 Redeclaration: RecordingResult
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/VoiceDataClasses.kt:10:12 Redeclaration: RecordingResult
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:9:32 Unresolved reference: api
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:10:32 Unresolved reference: api
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:11:27 Unresolved reference: data
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:12:27 Unresolved reference: data
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:26:32 Unresolved reference: GapGPTService
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:27:31 Unresolved reference: LiaraService
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:97:21 Unresolved reference: GapGPTTTSRequest
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:125:21 Unresolved reference: LiaraTTSRequest
-
-> Task :app:compileDebugKotlin FAILED
 
 FAILURE: Build failed with an exception.
 
@@ -135,5 +117,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 2m 52s
+BUILD FAILED in 2m 57s
 32 actionable tasks: 32 executed
