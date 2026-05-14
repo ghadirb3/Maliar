@@ -35,7 +35,7 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
         private val FALLBACK_MODEL_PRIORITY = listOf(
             AIModel.IVIRA_GPT5_NANO,
             AIModel.GPT_4O_MINI,
-            AIModel.LIARA_GPT_5_NANO,
+            AIModel.LIARA_GPT5_NANO,
             AIModel.IVIRA_GPT5_MINI,
             AIModel.QWEN_2_5_1B5,
             AIModel.LLAMA_3_2_1B,
@@ -49,7 +49,8 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
             AIModel.AIML_GPT_35
         )
         private val FALLBACK_STT_PRIORITY = listOf("liara", "gapgpt", "openai")
-        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "haaniye", "android")
+        // ✅ اصلاح: حذف "haaniye" از زنجیره TTS
+        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "android")
     }
 
     data class RemoteAIConfig(
