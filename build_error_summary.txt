@@ -1,23 +1,52 @@
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:9:39 Unresolved reference: APIKey
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:12:39 Unresolved reference: ChatMessage
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:13:39 Unresolved reference: MessageRole
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:205:72 Unresolved reference: APIKey
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:213:35 Unresolved reference: ChatMessage
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:213:54 Unresolved reference: MessageRole
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:215:46 Not enough information to infer type variable R
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:224:43 Unresolved reference: GAPGPT_GPT_5_NANO
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:225:43 Unresolved reference: GAPGPT_GPT_4O_MINI_TEST
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:226:43 Unresolved reference: GAPGPT_DEEPSEEK_CHAT
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:227:43 Unresolved reference: GAPGPT_GROK_3_MINI
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:228:43 Unresolved reference: GAPGPT_GEMINI_2_FLASH
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:229:43 Unresolved reference: GAPGPT_GPT_5_2_CHAT_LATEST
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:230:43 Unresolved reference: GAPGPT_DEEPSEEK_V3
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:9:37 Unresolved reference: tts
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:10:37 Unresolved reference: voice
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:11:37 Unresolved reference: ContactsRepository
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:21:39 Unresolved reference: UnifiedVoiceEngine
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:22:37 Unresolved reference: TTSHelper
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:23:46 Unresolved reference: ContactsRepository
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:25:5 'canHandle' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:25:5 Conflicting overloads: public open fun canHandle(intent: AIIntent): Boolean defined in com.persianai.assistant.core.modules.CallModule, public abstract suspend fun canHandle(intent: AIIntent): Boolean defined in com.persianai.assistant.core.modules.BaseModule
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:29:5 'execute' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:29:5 Conflicting overloads: public open fun execute(request: AIIntentRequest, intent: AIIntent): AIIntentResult defined in com.persianai.assistant.core.modules.CallModule, public abstract suspend fun execute(request: AIIntentRequest, intent: AIIntent): AIIntentResult defined in com.persianai.assistant.core.modules.BaseModule
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:37:39 The boolean literal does not conform to the expected type String
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:40:31 The boolean literal does not conform to the expected type String
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/Conversation.kt:13:31 Unresolved reference: ChatMessage
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/Conversation.kt:19:66 Unresolved reference: MessageRole
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/DynamicAIModel.kt:26:73 Unresolved reference: loadCached
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/DynamicAIModel.kt:27:54 Unresolved reference: it
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/DynamicAIModel.kt:28:38 Unresolved reference: it
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/DynamicAIModel.kt:29:40 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/DynamicAIModel.kt:42:99 Unresolved reference: ModelConfig
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/DynamicAIModel.kt:48:32 Unresolved reference: CUSTOM
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelManager.kt:32:21 Unresolved reference: GAPGPT_GPT_5_NANO
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelManager.kt:33:21 Unresolved reference: GAPGPT_GPT_4O_MINI
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelManager.kt:34:21 Unresolved reference: GAPGPT_DEEPSEEK_V3
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelManager.kt:35:21 Unresolved reference: GPT_4O_MINI
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelManager.kt:36:21 Unresolved reference: TINY_LLAMA_OFFLINE
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:17:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:19:80 Unresolved reference: LIARA_GPT_5_NANO
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:20:81 Unresolved reference: LIARA_GPT_4O_MINI
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:21:41 Unresolved reference: LIARA_GPT_5_NANO
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:24:17 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:26:80 Unresolved reference: GAPGPT_GPT_5_NANO
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:27:78 Unresolved reference: GAPGPT_DEEPSEEK_V3
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:28:41 Unresolved reference: GAPGPT_GPT_5_NANO
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:31:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:31:46 Unresolved reference: GPT_4O_MINI
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/models/ModelWrapper.kt:32:33 Unresolved reference: GPT_4O_MINI
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/SimpleVoiceRecorder.kt:51:41 Unresolved reference: RecordingResult
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/SimpleVoiceRecorder.kt:63:26 Unresolved reference: RecordingResult
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/UnifiedVoiceEngine.kt:39:41 Unresolved reference: RecordingResult
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/VoiceCommandService.kt:224:41 Unresolved reference: RecordingResult
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/VoiceConversationManager.kt:261:44 Unresolved reference: RecordingResult
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/VoiceRecordingService.kt:89:64 Unresolved reference: it
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/VoiceRecordingService.kt:89:73 Unresolved reference: it
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:6:39 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:7:39 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:87:39 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:94:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:95:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:96:17 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:99:79 Unresolved reference: it
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:111:51 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:111:66 Unresolved reference: APIKey
@@ -26,18 +55,22 @@ public inline fun <T> compareBy(crossinline selector: (TypeVariable(T)) -> Compa
 public fun <T> compareBy(vararg selectors: (TypeVariable(T)) -> Comparable<*>?): kotlin.Comparator<TypeVariable(T)> /* = java.util.Comparator<TypeVariable(T)> */ defined in kotlin.comparisons
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:114:48 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:114:58 Cannot infer a type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:116:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:117:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:118:17 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:116:17 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:117:17 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:118:17 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:127:73 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:129:13 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:130:13 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:131:13 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/tts/GapGPTTTS.kt:108:90 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:129:13 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:130:13 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/stt/OnlineSTTService.kt:131:13 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceActionButton.kt:146:55 Unresolved reference: file
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceActionButton.kt:146:68 Unresolved reference: duration
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceActionButton.kt:149:66 Unresolved reference: file
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceActionButton.kt:167:75 Unresolved reference: RecordingResult
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:95:16 Unresolved reference: setListener
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:95:95 Unresolved reference: RecordingListener
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:96:13 'onRecordingStarted' overrides nothing
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:106:13 'onRecordingCompleted' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:106:88 Unresolved reference: RecordingResult
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:114:13 'onRecordingCancelled' overrides nothing
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:122:13 'onRecordingError' overrides nothing
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:130:13 'onAmplitudeChanged' overrides nothing
@@ -51,6 +84,7 @@ e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assist
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:91:95 Unresolved reference: RecordingListener
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:92:13 'onRecordingStarted' overrides nothing
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:96:13 'onRecordingCompleted' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:96:91 Unresolved reference: RecordingResult
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:100:13 'onRecordingCancelled' overrides nothing
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:104:13 'onRecordingError' overrides nothing
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:108:13 'onAmplitudeChanged' overrides nothing
@@ -58,56 +92,39 @@ e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assist
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:246:39 Unresolved reference: startRecording
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:260:39 Unresolved reference: stopRecording
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:276:39 Unresolved reference: cancelRecording
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:5:39 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:6:39 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:25:62 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:56:104 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:100:40 Not enough information to infer type variable R
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:100:46 Cannot infer a type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:103:41 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:104:41 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:105:41 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:106:41 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:107:41 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:109:41 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:110:41 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:104:52 Unresolved reference: AIML
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:105:52 Unresolved reference: GLADIA
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:107:52 Unresolved reference: OPENROUTER
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:109:52 Unresolved reference: OPENROUTER
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:120:27 Overload resolution ambiguity: 
 public inline fun <T> Iterable<TypeVariable(T)>.forEach(action: (TypeVariable(T)) -> Unit): Unit defined in kotlin.collections
 public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.forEach(action: (Map.Entry<TypeVariable(K), TypeVariable(V)>) -> Unit): Unit defined in kotlin.collections
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:120:37 Cannot infer a type for this parameter. Please specify it explicitly.
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:141:44 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:142:51 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:143:50 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:153:50 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:154:34 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:163:21 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:183:52 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:189:28 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:190:36 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:191:42 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:192:33 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:193:38 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:194:29 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:195:40 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:196:29 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:216:55 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:221:47 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:224:77 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:227:47 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:231:20 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:234:45 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:237:66 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:244:20 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:248:45 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:251:48 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:192:44 Unresolved reference: OPENROUTER
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:193:49 Unresolved reference: AIML
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:194:40 Unresolved reference: GLADIA
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:195:51 Unresolved reference: OPENROUTER
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:221:58 Unresolved reference: OPENROUTER
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:224:88 Unresolved reference: AIML
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:231:31 Unresolved reference: GLADIA
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:234:56 Unresolved reference: OPENROUTER
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:237:77 Unresolved reference: AIML
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:259:45 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:261:38 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:265:22 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:266:24 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:266:35 Unresolved reference: OPENROUTER
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:274:22 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:275:24 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:282:22 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:283:24 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:283:35 Unresolved reference: AIML
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:290:18 Overload resolution ambiguity: 
 public inline fun <T> Iterable<TypeVariable(T)>.forEach(action: (TypeVariable(T)) -> Unit): Unit defined in kotlin.collections
 public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.forEach(action: (Map.Entry<TypeVariable(K), TypeVariable(V)>) -> Unit): Unit defined in kotlin.collections
@@ -116,10 +133,10 @@ e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assist
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:307:24 Cannot infer a type for this parameter. Please specify it explicitly.
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:309:31 Suspension functions can be called only within coroutine body
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:331:44 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:338:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:346:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:352:17 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:358:17 Unresolved reference: AIProvider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:338:17 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:346:17 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:352:17 Comparison of incompatible enums '[Error type: Error property type]' and 'AIProvider' is always unsuccessful
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/AutoProvisioningManager.kt:358:28 Unresolved reference: CUSTOM
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/IviraProcessingHelper.kt:5:39 Unresolved reference: ChatMessage
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/IviraProcessingHelper.kt:27:35 Unresolved reference: ChatMessage
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/MessageStorage.kt:6:39 Unresolved reference: ChatMessage
@@ -129,30 +146,18 @@ e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assist
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/MessageStorage.kt:51:48 Unresolved reference: ChatMessage
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/MessageStorage.kt:70:48 Type mismatch: inferred type is Unit but Boolean was expected
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:6:39 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:7:39 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:22:58 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:29:20 Unresolved reference: it
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:34:28 Unresolved reference: getDefaultModel
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:44:56 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:45:86 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:55:114 Unresolved reference: provider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:64:24 Unresolved reference: getDefaultModel
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:70:87 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:72:59 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:80:47 Unresolved reference: provider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:80:44 Comparison of incompatible enums 'AIProvider' and '[Error type: Error property type]?' is always unsuccessful
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:89:56 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:91:19 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:91:31 Unresolved reference: AIProvider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:95:66 Unresolved reference: provider
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:91:42 Unresolved reference: LOCAL
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:101:61 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:103:68 Unresolved reference: it
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:108:68 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:111:68 Unresolved reference: provider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:120:63 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:140:23 Unresolved reference: APIKey
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:157:32 Unresolved reference: displayName
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:158:32 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ModelSelector.kt:159:32 Unresolved reference: description
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/PreferencesManager.kt:8:39 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/PreferencesManager.kt:74:32 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/PreferencesManager.kt:79:28 Unresolved reference: APIKey
@@ -160,7 +165,6 @@ e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assist
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/PreferencesManager.kt:144:21 Unresolved reference: fromModelId
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/PreferencesManager.kt:144:53 Unresolved reference: getDefaultModel
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/PreferencesManager.kt:146:21 Unresolved reference: getDefaultModel
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:5:39 Unresolved reference: AIProvider
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:33:30 Not enough information to infer type variable K
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:33:54 Overload resolution ambiguity: 
 public inline fun <T> Iterable<TypeVariable(T)>.forEach(action: (TypeVariable(T)) -> Unit): Unit defined in kotlin.collections
@@ -174,12 +178,8 @@ public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.forEach(actio
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:49:56 Cannot infer a type for this parameter. Please specify it explicitly.
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:51:51 Cannot infer a type for this parameter. Please specify it explicitly.
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:51:58 Cannot infer a type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:62:60 Unresolved reference: displayName
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:63:57 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:64:56 Unresolved reference: description
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:71:57 Unresolved reference: displayName
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/ProvisioningTest.kt:71:79 Unresolved reference: provider
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:27:61 Unresolved reference: getInstance
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:132:45 Unresolved reference: getTTSPriority
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:209:45 Unresolved reference: getTTSPriority
 
 > Task :app:compileDebugKotlin FAILED
 
@@ -196,5 +196,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 3m 20s
+BUILD FAILED in 2m 59s
 32 actionable tasks: 32 executed
