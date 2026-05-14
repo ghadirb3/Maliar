@@ -1,11 +1,15 @@
 package com.persianai.assistant.services
 
 import java.io.File
-import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import android.util.Log
-import kotlinx.coroutines.*
 
-// کلاس RecordingResult از فایل RecordingResult.kt خوانده می‌شود. اینجا حذف شد.
+// کلاس RecordingResult از فایل RecordingResult.kt (در پوشه جدید) خوانده می‌شود.
+// برای جلوگیری از خطای Redeclaration، تعریف آن از اینجا حذف شد اما در پروژه موجود است.
 
 data class HybridAnalysisResult(
     val offlineText: String?,
@@ -15,7 +19,7 @@ data class HybridAnalysisResult(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-class SafeVoiceRecordingHelper(private val context: Context) {
+class SafeVoiceRecordingHelper(private val context: android.content.Context) {
     private var recordingJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO)
 
