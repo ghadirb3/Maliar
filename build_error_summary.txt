@@ -32,23 +32,24 @@ Installing Android SDK Build-Tools 30.0.3 in /usr/local/lib/android/sdk/build-to
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 
 > Task :app:dataBindingMergeDependencyArtifactsDebug
-WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/com.google.android.exoplayer/extension-mediasession/2.19.1/71c188980e3df4cd659307099bcc180952a1c27a/extension-mediasession-2.19.1.aar' contains references to both AndroidX and old support library. This seems like the library is partially migrated. Jetifier will try to rewrite the library anyway.
- Example of androidX reference: 'androidx/annotation/Nullable'
- Example of support library reference: 'android/support/v4/media/session/MediaSessionCompat$Callback'
 WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/com.google.android.exoplayer/exoplayer-ui/2.19.1/f2854c993ee7c931a9970c22ca8a35ace6b3d9af/exoplayer-ui-2.19.1.aar' contains references to both AndroidX and old support library. This seems like the library is partially migrated. Jetifier will try to rewrite the library anyway.
  Example of androidX reference: 'androidx/core/app/NotificationCompat$Builder'
  Example of support library reference: 'android/support/v4/media/session/MediaSessionCompat$Token'
+WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/com.google.android.exoplayer/extension-mediasession/2.19.1/71c188980e3df4cd659307099bcc180952a1c27a/extension-mediasession-2.19.1.aar' contains references to both AndroidX and old support library. This seems like the library is partially migrated. Jetifier will try to rewrite the library anyway.
+ Example of androidX reference: 'androidx/annotation/Nullable'
+ Example of support library reference: 'android/support/v4/media/session/MediaSessionCompat$Callback'
 
 > Task :app:generateDebugResValues
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
+> Task :app:mergeDebugResources
 > Task :app:generateDebugBuildConfig
 > Task :app:parseDebugLocalResources
 > Task :app:checkDebugAarMetadata
+> Task :app:dataBindingGenBaseClassesDebug
 > Task :app:mapDebugSourceSetPaths
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
 
 > Task :app:processDebugMainManifest
 /home/runner/work/Maliar/Maliar/app/src/main/AndroidManifest.xml:24:5-27:44 Warning:
@@ -56,17 +57,17 @@ WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/co
 /home/runner/work/Maliar/Maliar/app/src/main/AndroidManifest.xml:34:5-549:19 Warning:
 	application@android:allowBackup was tagged at AndroidManifest.xml:34 to replace other declarations but no other declaration present
 
-> Task :app:dataBindingGenBaseClassesDebug
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
+> Task :app:processDebugManifestForPackage
+> Task :app:l8DexDesugarLibDebug
 > Task :app:desugarDebugFileDependencies
 > Task :app:processDebugJavaRes NO-SOURCE
-> Task :app:l8DexDesugarLibDebug
-> Task :app:processDebugManifestForPackage
+> Task :app:processDebugResources
 > Task :app:checkDebugDuplicateClasses
 > Task :app:compressDebugAssets
 
@@ -76,7 +77,7 @@ WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e83
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpp
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpj
 
-> Task :app:processDebugResources
+> Task :app:compileDebugKotlin
 > Task :app:mergeLibDexDebug
 > Task :app:mergeDebugJniLibFolders
 > Task :app:mergeDebugNativeLibs
@@ -84,23 +85,57 @@ WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e83
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:stripDebugDebugSymbols
+
 > Task :app:compileDebugKotlin
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:10:27 Unresolved reference: core
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:11:27 Unresolved reference: core
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:12:27 Unresolved reference: data
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:13:27 Unresolved reference: data
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:18:28 Unresolved reference: STTHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:19:28 Unresolved reference: TTSHelper
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:20:37 Unresolved reference: ContactsRepository
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:55:63 Unresolved reference: Contact
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:77:56 Unresolved reference: Contact
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:81:42 Cannot infer a type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:190:49 Unresolved reference: Contact
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:10:37 Unresolved reference: tts
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:11:37 Unresolved reference: voice
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:12:37 Unresolved reference: Contact
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:13:37 Unresolved reference: ContactsRepository
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:17:30 Unresolved reference: UnifiedVoiceEngine
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:18:28 Unresolved reference: TTSHelper
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:19:37 Unresolved reference: ContactsRepository
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:42:63 Unresolved reference: Contact
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:51:56 Unresolved reference: Contact
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:53:43 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:53:50 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/call/CallContactSelectionDialogue.kt:60:35 Unresolved reference: Contact
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:38:21 Unresolved reference: LIARA_GPT5_NANO
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:11:37 Unresolved reference: CallContactSelectionDialogue
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:151:39 Unresolved reference: CallContactSelectionDialogue
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/RecordingResult.kt:11:12 Redeclaration: RecordingResult
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/services/VoiceDataClasses.kt:10:12 Redeclaration: RecordingResult
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:9:37 Unresolved reference: tts
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:10:37 Unresolved reference: voice
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:11:37 Unresolved reference: ContactsRepository
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:21:39 Unresolved reference: UnifiedVoiceEngine
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:22:37 Unresolved reference: TTSHelper
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:23:46 Unresolved reference: ContactsRepository
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:25:5 'canHandle' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:25:5 Conflicting overloads: public open fun canHandle(intent: AIIntent): Boolean defined in com.persianai.assistant.core.modules.CallModule, public abstract suspend fun canHandle(intent: AIIntent): Boolean defined in com.persianai.assistant.core.modules.BaseModule
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:29:5 'execute' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:29:5 Conflicting overloads: public open fun execute(request: AIIntentRequest, intent: AIIntent): AIIntentResult defined in com.persianai.assistant.core.modules.CallModule, public abstract suspend fun execute(request: AIIntentRequest, intent: AIIntent): AIIntentResult defined in com.persianai.assistant.core.modules.BaseModule
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:37:39 The boolean literal does not conform to the expected type String
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/modules/CallModule.kt:40:31 The boolean literal does not conform to the expected type String
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:95:16 Unresolved reference: setListener
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:95:95 Unresolved reference: RecordingListener
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:96:13 'onRecordingStarted' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:106:13 'onRecordingCompleted' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:114:13 'onRecordingCancelled' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:122:13 'onRecordingError' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:130:13 'onAmplitudeChanged' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:140:16 Unresolved reference: setup
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:273:20 Unresolved reference: setup
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:275:38 Unresolved reference: startRecording
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:299:24 Unresolved reference: stopRecording
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:317:24 Unresolved reference: cancelRecording
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:356:22 Unresolved reference: cleanup
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:91:16 Unresolved reference: setListener
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:91:95 Unresolved reference: RecordingListener
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:92:13 'onRecordingStarted' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:96:13 'onRecordingCompleted' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:100:13 'onRecordingCancelled' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:104:13 'onRecordingError' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:108:13 'onAmplitudeChanged' overrides nothing
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:112:16 Unresolved reference: setup
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:246:39 Unresolved reference: startRecording
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:260:39 Unresolved reference: stopRecording
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:276:39 Unresolved reference: cancelRecording
 
 > Task :app:compileDebugKotlin FAILED
 
@@ -117,5 +152,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 3m 8s
+BUILD FAILED in 2m 58s
 32 actionable tasks: 32 executed
