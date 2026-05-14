@@ -7,26 +7,26 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.persianai.assistant.core.tts.TTSHelper
-import com.persianai.assistant.core.voice.UnifiedVoiceEngine
-import com.persianai.assistant.data.Contact
-import com.persianai.assistant.data.ContactsRepository
+import com.persianai.assistant.models.Contact
+import com.persianai.assistant.repository.ContactsRepository
+import com.persianai.assistant.utils.STTHelper
+import com.persianai.assistant.utils.TTSHelper
+import kotlinx.coroutines.delay
 
 class CallContactSelectionDialogue(
     private val context: Context,
-    private val voiceEngine: UnifiedVoiceEngine,
+    private val sttHelper: STTHelper,
     private val ttsHelper: TTSHelper,
     private val contactsRepository: ContactsRepository
 ) {
-    private val TAG = "CallSelection"
+    private val TAG = "CallContactSelection"
 
     suspend fun startContactSelection(contactName: String): Boolean {
-        Log.d(TAG, "شروع فرآیند تماس برای: $contactName")
         val contacts = contactsRepository.searchContacts(contactName)
 
         return when {
             contacts.isEmpty() -> {
-                ttsHelper.speakOnlineFirstAndWait("مخاطبی با نام $contactName یافت نشد.")
+                ttsHelper.speakOnlineFirstAndWait("متاسفانه مخاطبی با نام $contactName پیدا نکردم.")
                 false
             }
             contacts.size == 1 -> {
@@ -42,31 +42,46 @@ class CallContactSelectionDialogue(
     private suspend fun handleMultipleContacts(contacts: List<Contact>, searchName: String): Boolean {
         val message = buildContactListMessage(contacts, searchName)
         ttsHelper.speakOnlineFirstAndWait(message)
-        
-        // اینجا باید منتظر پاسخ صوتی کاربر برای انتخاب شماره ردیف بمانیم
-        // فعلاً برای جلوگیری از توقف برنامه، اولین مورد را در نظر می‌گیریم یا منتظر پیاده‌سازی STT می‌مانیم
-        return false 
+
+        val selection = getUserSelection(contacts.size)
+        return if (selection != null && selection in 1..contacts.size) {
+            makeCall(contacts[selection - 1])
+            true
+        } else {
+            ttsHelper.speakOnlineFirstAndWait("انتخاب نامعتبر بود. عملیات تماس لغو شد.")
+            false
+        }
     }
 
     private fun buildContactListMessage(contacts: List<Contact>, searchName: String): String {
-        val sb = StringBuilder("چند مورد برای $searchName پیدا شد:\n")
-        contacts.take(5).forEachIndexed { index, contact ->
-            sb.append("${index + 1}: ${contact.name}\n")
+        val sb = StringBuilder("چند مخاطب برای $searchName پیدا شد. کدام یک را شماره گیری کنم؟ ")
+        contacts.forEachIndexed { index, contact ->
+            sb.append("شماره ${index + 1}: ${contact.name}. ")
         }
-        sb.append("کدام شماره را بگیریم؟")
         return sb.toString()
     }
 
-    private fun makeCall(contact: Contact) {
-        val number = contact.phoneNumbers.firstOrNull()?.number ?: return
-        val intent = Intent(Intent.ACTION_CALL).apply {
-            data = Uri.parse("tel:$number")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    private suspend fun getUserSelection(maxNumber: Int): Int? {
+        val result = sttHelper.listenAndWait() ?: return null
+        // تبدیل متن عدد به Int (ساده شده)
+        return try {
+            result.filter { it.isDigit() }.toIntOrNull()
+        } catch (e: Exception) {
+            null
         }
+    }
+
+    private fun makeCall(contact: Contact) {
+        val phoneNumber = contact.phoneNumbers.firstOrNull()?.number ?: return
+        val intent = Intent(Intent.ACTION_CALL).apply {
+            data = Uri.parse("tel:$phoneNumber")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
             context.startActivity(intent)
         } else {
-            Log.e(TAG, "مجوز تماس داده نشده است.")
+            Log.e(TAG, "Permission CALL_PHONE not granted")
         }
     }
 }
