@@ -1,64 +1,72 @@
-name: Android CI Build
+name: Android CI
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main, master, develop, New ]
   pull_request:
     branches: [ main, master, develop, New ]
 
-# اجازه نوشتن در مخزن برای آپلود خودکار لاگ خطا
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
+    - name: Install NDK
+      run: |
+        echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
-      - name: Install NDK
-        run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
-      - name: Grant execute to gradlew
-        run: chmod +x ./gradlew
+    - name: Build APK (debug)
+      run: |
+        ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
 
-      - name: Build APK (debug)
-        # اجرای بیلد و ذخیره خروجی در فایل. حتی اگر خطا بدهد، به مرحله بعد می‌رود.
-        run: |
-          ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g" > build_report.txt 2>&1 || echo "BUILD_FAILED=true" >> $GITHUB_ENV
+    - name: Save Error Log on Failure
+      if: env.BUILD_FAILED == 'true'
+      run: |
+        # ذخیره لاگ خطا در پوشه پروژه
+        tail -n 200 build_report.txt > build_error_summary.txt
+        
+        # تنظیم git config
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # اضافه کردن فایل (جایگزین می‌شود اگر وجود داشته باشد)
+        git add build_error_summary.txt
+        
+        # commit فقط اگر تغییری وجود داشته باشد
+        if ! git diff --cached --quiet; then
+          git commit -m "docs: update build error log [skip ci]"
+          git push origin HEAD:${{ github.ref }} || echo "⚠️ Push failed"
+        fi
+        
+        # خروج با کد خطا
+        exit 1
 
-      - name: Push Error Log to Repo
-        if: env.BUILD_FAILED == 'true'
-        run: |
+    - name: Remove Old Error Log on Success
+      if: env.BUILD_FAILED != 'true'
+      run: |
+        # پاک کردن لاگ قبلی اگر build موفق بود
+        if [ -f build_error_summary.txt ]; then
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # فقط ۵۰ خط آخر که مربوط به خطای اصلی است را نگه می‌داریم تا فایل سبک باشد
-          tail -n 100 build_report.txt > build_error_summary.txt
-          
-          git add build_error_summary.txt
-          git commit -m "docs: add latest build error log [skip ci]"
-          git push origin HEAD:${{ github.ref }}
-          
-          # در نهایت اکشن را قرمز کن تا متوجه شویم تمام شده
-          exit 1
+          git rm build_error_summary.txt
+          git commit -m "docs: remove error log after successful build [skip ci]"
+          git push origin HEAD:${{ github.ref }} || echo "⚠️ Push failed"
+        fi
 
-      - name: Upload APK
-        if: env.BUILD_FAILED != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+    - name: Upload APK
+      if: env.BUILD_FAILED != 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
