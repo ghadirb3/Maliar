@@ -1,58 +1,56 @@
-name: Android Build V2
+name: Android CI Build
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches: [ main, master, develop, New ]
+  pull_request:
+    branches: [ main, master, develop, New ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      LLAMA_CPP_DIR: ${{ github.workspace }}/llama.cpp-master
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Clone llama.cpp (for offline GGUF)
-      run: |
-        if [ ! -d "${LLAMA_CPP_DIR}" ]; then
-          git clone --depth=1 https://github.com/ggerganov/llama.cpp.git "${LLAMA_CPP_DIR}"
-        fi
-        ls -la "${LLAMA_CPP_DIR}"
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up NDK r26d (arm64)
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r26d
-        local-cache: true
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-          
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace --info
-      
-    # - name: Upload Debug APK
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: app-debug-v2
-    #     path: app/build/outputs/apk/debug/app-debug.apk
-    #     retention-days: 30
+      - name: Install Android SDK commandline tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK r25c
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
+
+      - name: Export NDK path
+        run: echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
+      - name: Verify libc++_shared present
+        run: |
+          ls -l $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/*/sysroot/usr/lib/*/libc++_shared.so || true
+
+      - name: Grant execute to gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build APK (debug)
+        env:
+          JAVA_TOOL_OPTIONS: "-Xmx4g"
+        run: ./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2g"
+
+      - name: Assert libc++_shared packaged
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep "libc++_shared" || (echo "libc++_shared.so missing in APK" && exit 1)
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
