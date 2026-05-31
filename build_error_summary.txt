@@ -1,3 +1,5 @@
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/ConversationStateManager.kt:128:91 Unresolved reference: ChatMessage
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/ConversationStateManager.kt:156:24 Not enough information to infer type variable R
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:9:39 Unresolved reference: APIKey
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:12:39 Unresolved reference: ChatMessage
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/core/QueryRouter.kt:13:39 Unresolved reference: MessageRole
@@ -181,8 +183,6 @@ e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assist
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:132:45 Unresolved reference: getTTSPriority
 e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/utils/TTSHelper.kt:209:45 Unresolved reference: getTTSPriority
 
-> Task :app:compileDebugKotlin FAILED
-
 FAILURE: Build failed with an exception.
 
 * What went wrong:
@@ -196,5 +196,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 2m 59s
+BUILD FAILED in 2m 56s
 32 actionable tasks: 32 executed
