@@ -34,7 +34,6 @@ class VoiceRecorderView @JvmOverloads constructor(
         fun onRecordingStarted()
         fun onRecordingCompleted(audioFile: File, durationMs: Long)
         fun onRecordingCancelled()
-        fun onAmplitudeChanged(amplitude: Int)
     }
     
     private var listener: VoiceRecorderListener? = null
@@ -43,7 +42,7 @@ class VoiceRecorderView @JvmOverloads constructor(
     private var isCancelled = false
     private var slideOffset = 0f
     private var amplitude = 0
-    private val helper = com.persianai.assistant.services.SafeVoiceRecordingHelper(context)
+    private val helper = com.persianai.assistant.services.VoiceRecordingHelper(context)
     private val scope: CoroutineScope = MainScope()
     
     // UI Elements
@@ -67,7 +66,7 @@ class VoiceRecorderView @JvmOverloads constructor(
     private val textColor = Color.parseColor("#FFFFFF")
     private val waveformColor = Color.parseColor("#4CAF50")
     
-    // Amplitude is provided by `SafeVoiceRecordingHelper`
+    // Amplitude tracking removed - not provided by VoiceRecordingHelper
     
     init {
         textPaint.apply {
@@ -92,7 +91,7 @@ class VoiceRecorderView @JvmOverloads constructor(
         }
         
         startPulseAnimation()
-        helper.setListener(object : com.persianai.assistant.services.SafeVoiceRecordingHelper.RecordingListener {
+        helper.setListener(object : com.persianai.assistant.services.VoiceRecordingHelper.RecordingListener {
             override fun onRecordingStarted() {
                 post {
                     recordingStartTime = System.currentTimeMillis()
@@ -103,10 +102,10 @@ class VoiceRecorderView @JvmOverloads constructor(
                 }
             }
 
-            override fun onRecordingCompleted(result: com.persianai.assistant.services.RecordingResult) {
+            override fun onRecordingCompleted(audioFile: File, durationMs: Long) {
                 post {
                     isRecording = false
-                    listener?.onRecordingCompleted(result.file, result.duration)
+                    listener?.onRecordingCompleted(audioFile, durationMs)
                     invalidate()
                 }
             }
@@ -126,18 +125,7 @@ class VoiceRecorderView @JvmOverloads constructor(
                     invalidate()
                 }
             }
-
-            override fun onAmplitudeChanged(amplitudeValue: Int) {
-                post {
-                    amplitude = amplitudeValue
-                    amplitudes.add(amplitudeValue.toFloat() / 32768f)
-                    if (amplitudes.size > maxAmplitudes) amplitudes.removeAt(0)
-                    listener?.onAmplitudeChanged(amplitudeValue)
-                    invalidate()
-                }
-            }
         })
-        helper.setup()
     }
     
     fun setListener(listener: VoiceRecorderListener) {
@@ -268,17 +256,12 @@ class VoiceRecorderView @JvmOverloads constructor(
     }
     
     private fun startRecording() {
-        // Delegate to SafeVoiceRecordingHelper
+        // Delegate to VoiceRecordingHelper
         try {
-            helper.setup()
             scope.launch {
-                val started = helper.startRecording()
-                if (started) {
-                    // helper listener will update UI
-                    performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                } else {
-                    listener?.onRecordingCancelled()
-                }
+                helper.startRecording()
+                // helper listener will update UI
+                performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -351,8 +334,7 @@ class VoiceRecorderView @JvmOverloads constructor(
         if (isRecording) {
             cancelRecording()
         }
-        // Cancel coroutines and let the helper clean up; amplitude handling is internal to helper
+        // Cancel coroutines
         try { scope.cancel() } catch (_: Exception) {}
-        try { helper.cleanup() } catch (_: Exception) {}
     }
 }

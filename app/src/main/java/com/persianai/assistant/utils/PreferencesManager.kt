@@ -444,4 +444,11 @@ JSON ONLY."""
     fun getDirectCallEnabled(): Boolean {
         return prefs.getBoolean(KEY_DIRECT_CALL_ENABLED, false) // پیش‌فرض: صفحه شماره‌گیر
     }
+
+    /**
+     * Generic getString method for backward compatibility
+     */
+    fun getString(key: String, defaultValue: String? = null): String? {
+        return prefs.getString(key, defaultValue)
+    }
 }

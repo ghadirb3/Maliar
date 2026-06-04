@@ -35,13 +35,12 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
         fun onRecordingStarted()
         fun onRecordingCompleted(audioFile: File, durationMs: Long)
         fun onRecordingCancelled()
-        fun onAmplitudeChanged(amplitude: Int)
     }
     
     private var listener: VoiceRecorderListener? = null
     
     private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
-    private val helper = com.persianai.assistant.services.SafeVoiceRecordingHelper(context)
+    private val helper = com.persianai.assistant.services.VoiceRecordingHelper(context)
     private val mainScope: CoroutineScope = MainScope()
     private var recordingStartTime = 0L
     private var isRecording = false
@@ -70,7 +69,7 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
     private val textColor = Color.parseColor("#FFFFFF")
     private val waveformColor = Color.parseColor("#4CAF50")
     
-    // Amplitude provided by `SafeVoiceRecordingHelper`
+    // Amplitude tracking removed - not provided by VoiceRecordingHelper
     
     init {
         textPaint.apply {
@@ -88,13 +87,13 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
         }
         
         // Initialize helper
-        helper.setListener(object : com.persianai.assistant.services.SafeVoiceRecordingHelper.RecordingListener {
+        helper.setListener(object : com.persianai.assistant.services.VoiceRecordingHelper.RecordingListener {
             override fun onRecordingStarted() {
                 post { isRecording = true; recordingStartTime = System.currentTimeMillis(); listener?.onRecordingStarted(); invalidate() }
             }
 
-            override fun onRecordingCompleted(audioFile: com.persianai.assistant.services.RecordingResult) {
-                post { isRecording = false; listener?.onRecordingCompleted(audioFile.file, audioFile.duration); invalidate() }
+            override fun onRecordingCompleted(audioFile: File, durationMs: Long) {
+                post { isRecording = false; listener?.onRecordingCompleted(audioFile, durationMs); invalidate() }
             }
 
             override fun onRecordingCancelled() {
@@ -104,12 +103,7 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
             override fun onRecordingError(error: String) {
                 post { isRecording = false; listener?.onRecordingCancelled(); invalidate() }
             }
-
-            override fun onAmplitudeChanged(amplitude: Int) {
-                post { this@VoiceRecorderViewNew.amplitude = amplitude; amplitudes.add(amplitude.toFloat() / 32768f); if (amplitudes.size > maxAmplitudes) amplitudes.removeAt(0); listener?.onAmplitudeChanged(amplitude); invalidate() }
-            }
         })
-        helper.setup()
         
         startPulseAnimation()
     }
@@ -263,7 +257,6 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
             listener?.onRecordingCancelled()
         } finally {
             isRecording = false
-            // amplitude handled by helper
             performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
             invalidate()
         }
@@ -278,7 +271,6 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
             e.printStackTrace()
         } finally {
             isRecording = false
-            // amplitude handled by helper
             listener?.onRecordingCancelled()
             
             // Haptic feedback for cancellation
@@ -309,7 +301,6 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
         if (isRecording) {
             cancelRecording()
         }
-        // amplitude handled by helper
         coroutineScope.cancel()
     }
 }
