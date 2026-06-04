@@ -34,11 +34,20 @@ object AutoProvisioningManager {
             }
 
             // فال‌بک به لینک جدید
-            Log.d(TAG, "⚠️ لینک قبلی مناسب نبود، تلاش از لینک جدید...")
+            Log.d(TAG, "⚠️ لینک قبلی کامل نبود، تلاش از لینک جدید...")
             val newResult = tryLoadFromUrl(GIST_KEYS_URL, "لینک جدید (Gist)", context)
             if (newResult.isSuccess) {
                 Log.d(TAG, "✅ کلیدها از لینک جدید بارگذاری شد")
                 return@withContext newResult
+            }
+
+            // اگر لینک قبلی حداقل چند کلید معتبر داشت، همان‌ها را نگه دار تا برنامه بی‌کلید نشود.
+            if (oldResult.isSuccess) {
+                val oldKeys = oldResult.getOrNull().orEmpty()
+                if (oldKeys.isNotEmpty()) {
+                    Log.w(TAG, "⚠️ لینک جدید هم ناموفق بود؛ استفاده از کلیدهای معتبر لینک قبلی: ${oldKeys.size}")
+                    return@withContext oldResult
+                }
             }
 
             // اگر هیچ‌کدام کار نکرد
@@ -181,7 +190,7 @@ object AutoProvisioningManager {
      * فرمت: provider:key:baseUrl (baseUrl اختیاری)
      */
     private fun parseKeyLine(line: String): Triple<AIProvider?, String, String?> {
-        val parts = line.split(":").map { it.trim() }
+        val parts = line.split(":", limit = 3).map { it.trim() }
         
         // Case 1: explicit provider:key(:baseUrl) ONLY if provider token is recognized
         if (parts.size >= 2) {

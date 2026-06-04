@@ -12,7 +12,8 @@ import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.ChatMessage
 import com.persianai.assistant.models.MessageRole
 import com.persianai.assistant.utils.PreferencesManager
-import com.persianai.assistant.utils.ModelSelector
+import com.persianai.assistant.models.ModelManager
+import com.persianai.assistant.models.ModelWrapper
 import com.persianai.assistant.utils.IviraTokenManager
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
@@ -214,29 +215,28 @@ class QueryRouter(private val context: Context) {
 
             val activeProviders = activeKeys.map { it.provider }.toSet()
 
-            // Fixed priority: Liara -> GAPGPT (gpt-5-nano) -> GAPGPT (gpt-4o-mini) -> GAPGPT (deepseek-chat) -> GAPGPT (grok-3-mini) -> GAPGPT (gemini-2.0-flash) -> GAPGPT (gpt-5.2-chat-latest) -> GAPGPT (gapgpt-deepseek-v3)
-            val preferredOrder = mutableListOf<AIModel>()
-            
-            if (activeProviders.contains(AIProvider.LIARA)) {
-                preferredOrder += AIModel.LIARA_GPT_5_NANO
-            }
-            if (activeProviders.contains(AIProvider.GAPGPT)) {
-                preferredOrder += AIModel.GAPGPT_GPT_5_NANO
-                preferredOrder += AIModel.GAPGPT_GPT_4O_MINI_TEST
-                preferredOrder += AIModel.GAPGPT_DEEPSEEK_CHAT
-                preferredOrder += AIModel.GAPGPT_GROK_3_MINI
-                preferredOrder += AIModel.GAPGPT_GEMINI_2_FLASH
-                preferredOrder += AIModel.GAPGPT_GPT_5_2_CHAT_LATEST
-                preferredOrder += AIModel.GAPGPT_DEEPSEEK_V3
-            }
-            
+            // Use the same priority source that startup downloads/caches (remote ai_config first,
+            // built-in priority second). This keeps text chat aligned with the provisioned keys.
+            val preferredOrder = ModelManager.getModelPriority(context)
+                .mapNotNull { wrapper ->
+                    when (wrapper) {
+                        is ModelWrapper.StaticModel -> wrapper.unwrap()
+                        is ModelWrapper.DynamicModel -> {
+                            val dynamic = wrapper.dynamicModel
+                            AIModel.values().find { model ->
+                                model.modelId.equals(dynamic.modelId, ignoreCase = true) &&
+                                    model.provider == dynamic.provider
+                            } ?: AIModel.values().find { model -> model.provider == dynamic.provider }
+                        }
+                    }
+                }
+                .filter { model -> model.provider != AIProvider.LOCAL && activeProviders.contains(model.provider) }
+                .distinct()
+
             if (preferredOrder.isEmpty()) {
-                Log.w(TAG, "No Liara/GAPGPT provider active, skipping online in QueryRouter")
+                Log.w(TAG, "No model matches active providers: ${activeProviders.joinToString(", ")}")
                 return null
             }
-
-            // Allow retries for GAPGPT fallback
-            var attempts = 0
             
             for (model in preferredOrder) {
                 try {
@@ -248,7 +248,6 @@ class QueryRouter(private val context: Context) {
                     Log.w(TAG, "⚠️ ${model.displayName} failed: ${e.message}")
                     // Continue to next model (e.g., GAPGPT fallback)
                 }
-                attempts++
             }
 
             Log.e(TAG, "❌ All online providers failed (retries exhausted), falling back to offline")
