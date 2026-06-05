@@ -1,40 +1,8 @@
 package com.persianai.assistant.activities
 
-import android.os.Bundle
-import android.view.View
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.textfield.TextInputEditText
-import com.persianai.assistant.databinding.ActivityChatBinding
-import com.persianai.assistant.models.ChatMessage
-import com.persianai.assistant.models.MessageRole
-import kotlinx.coroutines.launch
+class DocumentChatActivity : SimpleTopicChatActivity() {
 
-/**
- * بانک اسناد (Document Management)
- * یک چت جداگانه برای مدیریت قراردادها و اسناد مهم
- */
-class DocumentChatActivity : BaseChatActivity() {
-
-    private lateinit var chatBinding: ActivityChatBinding
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        chatBinding = ActivityChatBinding.inflate(layoutInflater)
-        binding = chatBinding
-        setContentView(chatBinding.root)
-        setSupportActionBar(chatBinding.toolbar)
-        
-        supportActionBar?.apply {
-            title = "بانک اسناد"
-            setDisplayHomeAsUpEnabled(true)
-        }
-
-        setupChatUI()
-    }
-    
-    override fun shouldUseOnlinePriority(): Boolean = true
+    override fun getToolbarTitle(): String = "بانک اسناد"
 
     override fun getModuleIdForPrompt(): String = "documents"
 
@@ -59,26 +27,5 @@ class DocumentChatActivity : BaseChatActivity() {
             "🔍 سریع اسناد مورد نیاز را پیدا کنیم\n" +
             "📋 خلاصه و خلاصه‌سازی از اسناد انجام دهیم\n\n" +
             "چی می‌تونم برات انجام بدم؟ (مثل ایجاد چک‌لیست، برچسب‌گذاری، خلاصه‌سازی...)"
-    }
-    
-    override fun getRecyclerView(): RecyclerView {
-        return chatBinding.messagesRecyclerView
-    }
-    
-    override fun getMessageInput(): TextInputEditText {
-        return chatBinding.messageInput
-    }
-    
-    override fun getSendButton(): View {
-        return chatBinding.sendButton
-    }
-    
-    override fun getVoiceButton(): View {
-        return chatBinding.voiceButton
-    }
-    
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 }

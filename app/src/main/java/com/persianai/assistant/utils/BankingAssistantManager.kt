@@ -7,6 +7,7 @@ import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.persianai.assistant.data.Check
+import com.persianai.assistant.utils.FormatUtils
 import com.persianai.assistant.data.Installment
 import java.util.concurrent.TimeUnit
 
@@ -392,12 +393,7 @@ class BankingAssistantManager(private val context: Context) {
         )
     }
     
-    /**
-     * فرمت مبلغ به صورت خوانا
-     */
-    private fun formatAmount(amount: Long): String {
-        return String.format("%,d", amount)
-    }
+    private fun formatAmount(amount: Long): String = FormatUtils.formatMoney(amount)
     
     /**
      * دریافت گزارش مالی

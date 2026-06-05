@@ -1,47 +1,8 @@
 package com.persianai.assistant.activities
 
-import android.content.Intent
-import android.os.Bundle
-import android.view.View
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.textfield.TextInputEditText
-import com.persianai.assistant.R
-import com.persianai.assistant.adapters.ChatAdapter
-import com.persianai.assistant.databinding.ActivityChatBinding
-import com.persianai.assistant.models.ChatMessage
-import com.persianai.assistant.models.MessageRole
-import com.persianai.assistant.utils.PreferencesManager
-import kotlinx.coroutines.launch
+class PsychologyChatActivity : SimpleTopicChatActivity() {
 
-/**
- * مشاور روان شناسی و آرامش
- * یک چت جداگانه برای مشاوره روانی و مدیریت استرس
- */
-class PsychologyChatActivity : BaseChatActivity() {
-
-    private lateinit var chatBinding: ActivityChatBinding
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        chatBinding = ActivityChatBinding.inflate(layoutInflater)
-        binding = chatBinding
-        setContentView(chatBinding.root)
-        setSupportActionBar(chatBinding.toolbar)
-        
-        supportActionBar?.apply {
-            title = "مشاور آرامش و خودشناسی"
-            setDisplayHomeAsUpEnabled(true)
-        }
-
-        setupChatUI()
-    }
-    
-    override fun shouldUseOnlinePriority(): Boolean = true
+    override fun getToolbarTitle(): String = "مشاور آرامش و خودشناسی"
 
     override fun getModuleIdForPrompt(): String = "psychology"
 
@@ -70,9 +31,8 @@ class PsychologyChatActivity : BaseChatActivity() {
     }
 
     override fun offlineDomainRespond(text: String): String? {
-        val t = text.trim()
-        if (t.isBlank()) return null
-        val lower = t.lowercase()
+        val lower = text.trim().lowercase()
+        if (lower.isBlank()) return null
 
         if (lower.contains("اضطراب") || lower.contains("استرس") || lower.contains("دلشوره") || lower.contains("پانیک")) {
             return "برای اضطراب/استرس، لطفاً شدت احساس (0-10) و نشانه‌ها را شرح دهید تا بتوانم راهنمایی دقیق‌تری ارائه دهم."
@@ -83,26 +43,5 @@ class PsychologyChatActivity : BaseChatActivity() {
         }
 
         return null
-    }
-    
-    override fun getRecyclerView(): RecyclerView {
-        return chatBinding.messagesRecyclerView
-    }
-    
-    override fun getMessageInput(): TextInputEditText {
-        return chatBinding.messageInput
-    }
-    
-    override fun getSendButton(): View {
-        return chatBinding.sendButton
-    }
-    
-    override fun getVoiceButton(): View {
-        return chatBinding.voiceButton
-    }
-    
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 }

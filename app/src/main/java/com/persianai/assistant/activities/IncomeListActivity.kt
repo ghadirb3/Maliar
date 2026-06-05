@@ -8,6 +8,7 @@ import com.persianai.assistant.adapters.TransactionAdapter
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.data.TransactionType
 import com.persianai.assistant.databinding.ActivityIncomeListBinding
+import com.persianai.assistant.utils.DialogUtils
 import kotlinx.coroutines.launch
 
 class IncomeListActivity : AppCompatActivity() {
@@ -36,19 +37,13 @@ class IncomeListActivity : AppCompatActivity() {
             binding.recyclerView.adapter = TransactionAdapter(
                 incomes.toMutableList(),
                 onDeleteClick = { transaction ->
-                    // Handle delete click
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@IncomeListActivity)
-                        .setTitle("❌ حذف درآمد")
-                        .setMessage("آیا از حذف این درآمد مطمئن هستید؟")
-                        .setPositiveButton("حذف") { _, _ ->
-                            lifecycleScope.launch {
-                                db.deleteTransaction(transaction.id)
-                                loadIncomes()
-                                android.widget.Toast.makeText(this@IncomeListActivity, "✅ درآمد حذف شد", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                    DialogUtils.showDeleteConfirmation(this@IncomeListActivity, "درآمد") {
+                        lifecycleScope.launch {
+                            db.deleteTransaction(transaction.id)
+                            loadIncomes()
+                            DialogUtils.showSuccessToast(this@IncomeListActivity, "✅ درآمد حذف شد")
                         }
-                        .setNegativeButton("لغو", null)
-                        .show()
+                    }
                 },
                 onEditClick = { transaction ->
                     // Handle edit click

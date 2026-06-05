@@ -3,6 +3,7 @@ package com.persianai.assistant.ai
 import android.content.Context
 import android.util.Log
 import com.persianai.assistant.data.AccountingDB
+import com.persianai.assistant.utils.FormatUtils
 import com.persianai.assistant.data.Transaction
 import com.persianai.assistant.data.TransactionType
 import com.persianai.assistant.api.AIModelManager
@@ -170,9 +171,7 @@ class ContextualAIAssistant(private val context: Context) {
         return AIResponse(false, "برای مسیریابی، لطفا مبدأ و مقصد را مشخص کنید.", "error")
     }
     
-    private fun formatMoney(amount: Double): String {
-        return String.format("%,.0f", amount)
-    }
+    private fun formatMoney(amount: Double): String = FormatUtils.formatMoney(amount)
 }
 
 /**

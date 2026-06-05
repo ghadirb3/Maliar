@@ -5,6 +5,7 @@ import android.view.View
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.persianai.assistant.databinding.ActivityChatBinding
+import com.persianai.assistant.utils.TextParsingUtils
 import com.persianai.assistant.models.MessageRole
 import com.persianai.assistant.models.Reminder
 import com.persianai.assistant.utils.PersianDate
@@ -64,7 +65,7 @@ class ReminderChatActivity : BaseChatActivity() {
         return withContext(Dispatchers.Main) {
             try {
                 // استخراج JSON از پاسخ (ممکن است بین ``` باشد)
-                val jsonStr = extractJsonFromResponse(responseJson)
+                val jsonStr = TextParsingUtils.extractJsonFromResponse(responseJson)
                 val json = Gson().fromJson(jsonStr, JsonObject::class.java)
                 
                 if (json.has("action") && json.get("action").asString == "add_reminder") {
@@ -131,7 +132,7 @@ class ReminderChatActivity : BaseChatActivity() {
     }
 
     private fun handleOfflineLocal(text: String): String? {
-        val input = normalizeDigits(text).trim()
+        val input = TextParsingUtils.persianToEnglishDigits(text).trim()
         if (input.isBlank()) return null
 
         val isReminder = input.contains("یادم بنداز") || input.contains("یادآوری") || input.contains("یادآور") ||
@@ -233,29 +234,7 @@ class ReminderChatActivity : BaseChatActivity() {
         return t.takeIf { it.isNotBlank() }
     }
 
-    private fun normalizeDigits(input: String): String {
-        val map = mapOf(
-            '۰' to '0', '۱' to '1', '۲' to '2', '۳' to '3', '۴' to '4',
-            '۵' to '5', '۶' to '6', '۷' to '7', '۸' to '8', '۹' to '9',
-            '٠' to '0', '١' to '1', '٢' to '2', '٣' to '3', '٤' to '4',
-            '٥' to '5', '٦' to '6', '٧' to '7', '٨' to '8', '٩' to '9'
-        )
-        val sb = StringBuilder(input.length)
-        for (ch in input) sb.append(map[ch] ?: ch)
-        return sb.toString()
-    }
-    
-    private fun extractJsonFromResponse(response: String): String {
-        // جستجو برای JSON بین { و }
-        val startIdx = response.indexOf('{')
-        val endIdx = response.lastIndexOf('}')
-        
-        return if (startIdx >= 0 && endIdx > startIdx) {
-            response.substring(startIdx, endIdx + 1)
-        } else {
-            response
-        }
-    }
+
     
     override fun onSupportNavigateUp(): Boolean {
         onBackPressedDispatcher.onBackPressed()

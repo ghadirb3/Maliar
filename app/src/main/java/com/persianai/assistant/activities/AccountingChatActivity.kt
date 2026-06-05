@@ -3,6 +3,7 @@ package com.persianai.assistant.activities
 import android.os.Bundle
 import android.view.View
 import com.google.gson.Gson
+import com.persianai.assistant.utils.TextParsingUtils
 import com.google.gson.JsonObject
 import com.persianai.assistant.databinding.ActivityChatBinding
 import com.persianai.assistant.finance.CheckManager
@@ -74,7 +75,7 @@ class AccountingChatActivity : BaseChatActivity() {
         val responseJson = super.handleRequest(text)
         return try {
             // استخراج JSON از پاسخ
-            val jsonStr = extractJsonFromResponse(responseJson)
+            val jsonStr = TextParsingUtils.extractJsonFromResponse(responseJson)
             val json = Gson().fromJson(jsonStr, JsonObject::class.java)
             val action = json.get("action").asString
 
@@ -100,7 +101,7 @@ class AccountingChatActivity : BaseChatActivity() {
                     val bankName = json.get("bankName").asString
                     val description = json.get("description").asString
                     
-                    val dueDate = parseDateStringToMillis(dueDateStr)
+                    val dueDate = TextParsingUtils.parseDateStringToMillis(dueDateStr)
                     checkManager.addCheck(
                         checkNumber = checkNumber,
                         amount = amount,
@@ -124,7 +125,7 @@ class AccountingChatActivity : BaseChatActivity() {
                     val recipient = json.get("recipient").asString
                     val description = json.get("description").asString
                     
-                    val startDate = parseDateStringToMillis(startDateStr)
+                    val startDate = TextParsingUtils.parseDateStringToMillis(startDateStr)
                     installmentManager.addInstallment(
                         title = title,
                         totalAmount = totalAmount,
@@ -145,7 +146,7 @@ class AccountingChatActivity : BaseChatActivity() {
     }
 
     private fun handleOfflineLocal(text: String): String? {
-        val input = normalizeDigits(text).trim()
+        val input = TextParsingUtils.persianToEnglishDigits(text).trim()
         if (input.isBlank()) return null
 
         val isIncome = input.contains("درآمد")
@@ -192,47 +193,7 @@ class AccountingChatActivity : BaseChatActivity() {
         return desc.ifBlank { "بدون توضیح" }
     }
 
-    private fun normalizeDigits(input: String): String {
-        val map = mapOf(
-            '۰' to '0', '۱' to '1', '۲' to '2', '۳' to '3', '۴' to '4',
-            '۵' to '5', '۶' to '6', '۷' to '7', '۸' to '8', '۹' to '9',
-            '٠' to '0', '١' to '1', '٢' to '2', '٣' to '3', '٤' to '4',
-            '٥' to '5', '٦' to '6', '٧' to '7', '٨' to '8', '٩' to '9'
-        )
-        val sb = StringBuilder(input.length)
-        for (ch in input) sb.append(map[ch] ?: ch)
-        return sb.toString()
-    }
-    
-    private fun extractJsonFromResponse(response: String): String {
-        val startIdx = response.indexOf('{')
-        val endIdx = response.lastIndexOf('}')
-        
-        return if (startIdx >= 0 && endIdx > startIdx) {
-            response.substring(startIdx, endIdx + 1)
-        } else {
-            response
-        }
-    }
-    
-    private fun parseDateStringToMillis(dateStr: String): Long {
-        return try {
-            val parts = dateStr.split("/")
-            if (parts.size == 3) {
-                val year = parts[0].toInt()
-                val month = parts[1].toInt()
-                val day = parts[2].toInt()
-                
-                val calendar = Calendar.getInstance()
-                calendar.set(year, month - 1, day, 0, 0, 0)
-                calendar.timeInMillis
-            } else {
-                System.currentTimeMillis()
-            }
-        } catch (e: Exception) {
-            System.currentTimeMillis()
-        }
-    }
+
     
     override fun onSupportNavigateUp(): Boolean {
         onBackPressedDispatcher.onBackPressed()

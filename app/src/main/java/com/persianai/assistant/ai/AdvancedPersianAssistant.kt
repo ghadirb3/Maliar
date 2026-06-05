@@ -3,6 +3,8 @@ package com.persianai.assistant.ai
 import android.content.Context
 import android.util.Log
 import com.persianai.assistant.models.AIModel
+import com.persianai.assistant.utils.FormatUtils
+import com.persianai.assistant.utils.TextParsingUtils
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.ChatMessage
@@ -244,18 +246,7 @@ class AdvancedPersianAssistant(private val context: Context) {
     }
     
     private fun normalizeText(text: String): String {
-        // نرمال‌سازی متن فارسی
-        val map = mapOf(
-            '۰' to '0', '۱' to '1', '۲' to '2', '۳' to '3', '۴' to '4',
-            '۵' to '5', '۶' to '6', '۷' to '7', '۸' to '8', '۹' to '9',
-            '٠' to '0', '١' to '1', '٢' to '2', '٣' to '3', '٤' to '4',
-            '٥' to '5', '٦' to '6', '٧' to '7', '٨' to '8', '٩' to '9'
-        )
-
-        val sb = StringBuilder(text.length)
-        for (ch in text) sb.append(map[ch] ?: ch)
-
-        return sb.toString()
+        return TextParsingUtils.persianToEnglishDigits(text)
             .trim()
             .replace("ی", "ی")
             .replace("ک", "ک")
@@ -947,9 +938,7 @@ class AdvancedPersianAssistant(private val context: Context) {
         )
     }
     
-    private fun formatMoney(amount: Double): String {
-        return String.format("%,.0f", amount)
-    }
+    private fun formatMoney(amount: Double): String = FormatUtils.formatMoney(amount)
     
     data class Intent(
         val type: IntentType,
