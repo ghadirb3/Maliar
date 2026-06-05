@@ -421,10 +421,6 @@ abstract class BaseChatActivity : AppCompatActivity() {
                     override fun onRecordingCancelled() {
                         Toast.makeText(this@BaseChatActivity, "❌ ضبط لغو شد", Toast.LENGTH_SHORT).show()
                     }
-                    
-                    override fun onAmplitudeChanged(amplitude: Int) {
-                        // نمایش شدت صدا
-                    }
                 })
                 android.util.Log.d("BaseChatActivity", "VoiceRecorderView initialized successfully")
             } else {
