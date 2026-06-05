@@ -704,7 +704,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
             if (!canUseOnline) return null
             var model = chooseBestModel(apiKeys, prefsManager.getProviderPreference())
             var attempts = 0
-            val maxAttempts = 2 // حداکثر دو تلاش برای GAPGPT
+            val maxAttempts = 3 // حداکثر سه تلاش: Liara → GapGPT → GapGPT fallback
             
             while (attempts < maxAttempts) {
                 try {
@@ -719,12 +719,15 @@ abstract class BaseChatActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     android.util.Log.w("BaseChatActivity", "⚠️ tryOnline failed with ${model.name}: ${e.message}")
                     
-                    // اگر مدل GAPGPT بود و خطا داد، به مدل بعدی فالینک کن
-                    if (model.provider == com.persianai.assistant.models.AIProvider.GAPGPT && attempts == 0) {
+                    // Fallback chain: Liara → GapGPT gpt-5-nano → GapGPT deepseek
+                    if (model.provider == com.persianai.assistant.models.AIProvider.LIARA) {
+                        // لیارا خطا داد → فالبک به GapGPT gpt-5-nano
+                        model = com.persianai.assistant.models.AIModel.GAPGPT_GPT_5_NANO
+                        android.util.Log.d("BaseChatActivity", "🔄 Liara failed, falling back to GapGPT: ${model.name}")
+                    } else if (model.provider == com.persianai.assistant.models.AIProvider.GAPGPT && attempts <= 1) {
                         model = getNextGAPGPTModel(model)
                         android.util.Log.d("BaseChatActivity", "🔄 Retrying with fallback model: ${model.name}")
                     } else {
-                        // برای Liara یا تلاش دوم GAPGPT، دیگر تلاش نکن
                         break
                     }
                     attempts++

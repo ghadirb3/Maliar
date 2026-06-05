@@ -29,53 +29,13 @@ object APIKeyConfig {
      */
     fun getInitialAPIKeys(): List<APIKey> {
         return listOf(
-            // ✅ OpenAI (REQUIRED - سب سے اہم)
+            // ✅ GapGPT (اولویت fallback - همیشه فعال)
             APIKey(
-                provider = AIProvider.OPENAI,
-                key = "",  // ⚠️ یہاں اپنی OpenAI key ڈالیں (sk-proj-...)
-                baseUrl = "https://api.openai.com/v1",
-                isActive = true  // ✅ فعال کریں
+                provider = AIProvider.GAPGPT,
+                key = "sk-Gz3ACu1VPhi7eHKxblbQFAmGGC706T16J4ZtVqoGwyon2ONJ",
+                baseUrl = "https://api.gapgpt.app/v1",
+                isActive = true
             ),
-            
-            // ✅ AIML (Optional - fallback)
-            /*
-            APIKey(
-                provider = AIProvider.AIML,
-                key = "YOUR_AIML_API_KEY",  // اگر موجود ہے تو
-                baseUrl = "https://api.aimlapi.com",
-                isActive = false  // اگر test نہ کرنا ہے تو false
-            ),
-            */
-            
-            // ❌ OpenRouter - DISABLED (insufficient credits)
-            /*
-            APIKey(
-                provider = AIProvider.OPENROUTER,
-                key = "sk-or-v1-...",
-                baseUrl = "https://openrouter.ai/api/v1",
-                isActive = false  // ❌ Insufficient credits
-            ),
-            */
-            
-            // ❌ Gladia - DISABLED (403 forbidden)
-            /*
-            APIKey(
-                provider = AIProvider.GLADIA,
-                key = "gladia-key",
-                baseUrl = "https://api.gladia.io",
-                isActive = false  // ❌ Invalid key
-            ),
-            */
-            
-            // ✅ Liara (Optional - voice features)
-            /*
-            APIKey(
-                provider = AIProvider.LIARA,
-                key = "YOUR_LIARA_API_KEY",
-                baseUrl = "https://ai.liara.ir/api/...",
-                isActive = false  // اگر test نہ کرنا
-            ),
-            */
         )
     }
     
@@ -87,12 +47,12 @@ object APIKeyConfig {
             Log.d(TAG, "🔄 Initializing API Keys...")
             
             val prefs = PreferencesManager(context)
-            val existingKeys = prefs.getAPIKeys()
+            val existingKeys = prefs.getAPIKeys().toMutableList()
             
             if (existingKeys.isEmpty()) {
                 Log.d(TAG, "📝 No existing keys found, setting up defaults...")
                 val initialKeys = getInitialAPIKeys()
-                    .filter { !it.key.isNullOrBlank() }  // صرف non-empty keys
+                    .filter { !it.key.isNullOrBlank() }
                 
                 if (initialKeys.isEmpty()) {
                     Log.w(TAG, "⚠️ No valid keys to initialize - user must add keys manually")
@@ -106,6 +66,19 @@ object APIKeyConfig {
                     Log.d(TAG, "   - ${key.provider.name}: ${if (key.isActive) "✔ ACTIVE" else "✕"}")
                 }
             } else {
+                // اطمینان از وجود GapGPT key به عنوان fallback
+                val hasGapgpt = existingKeys.any { 
+                    it.provider == AIProvider.GAPGPT && it.isActive && it.key.isNotBlank() 
+                }
+                if (!hasGapgpt) {
+                    val fallbackKey = getInitialAPIKeys().find { it.provider == AIProvider.GAPGPT }
+                    if (fallbackKey != null) {
+                        existingKeys.add(fallbackKey)
+                        prefs.saveAPIKeys(existingKeys)
+                        Log.d(TAG, "✅ GapGPT fallback key added to existing keys")
+                    }
+                }
+                
                 Log.d(TAG, "✅ Existing keys found: ${existingKeys.size}")
                 existingKeys.forEach { key ->
                     Log.d(TAG, "   - ${key.provider.name}: ${if (key.isActive) "✔ ACTIVE" else "✕"} (${key.key.take(8)}...)")
@@ -190,15 +163,15 @@ object APIKeyConfig {
         val prefs = PreferencesManager(context)
         val activeKeys = prefs.getAPIKeys().filter { it.isActive }
         
-        // ✅ Priority:
+        // ✅ Priority: Liara اول، GapGPT دوم
         return when {
-            activeKeys.any { it.provider == AIProvider.OPENAI } -> AIProvider.OPENAI
             activeKeys.any { it.provider == AIProvider.LIARA } -> AIProvider.LIARA
+            activeKeys.any { it.provider == AIProvider.GAPGPT } -> AIProvider.GAPGPT
+            activeKeys.any { it.provider == AIProvider.OPENAI } -> AIProvider.OPENAI
             activeKeys.any { it.provider == AIProvider.AIML } -> AIProvider.AIML
             activeKeys.any { it.provider == AIProvider.OPENROUTER } -> AIProvider.OPENROUTER
             activeKeys.any { it.provider == AIProvider.AVALAI } -> AIProvider.AVALAI
             activeKeys.any { it.provider == AIProvider.ANTHROPIC } -> AIProvider.ANTHROPIC
-            activeKeys.any { it.provider == AIProvider.GAPGPT } -> AIProvider.GAPGPT
             activeKeys.any { it.provider == AIProvider.GLADIA } -> AIProvider.GLADIA
             activeKeys.any { it.provider == AIProvider.IVIRA } -> AIProvider.IVIRA
             else -> null

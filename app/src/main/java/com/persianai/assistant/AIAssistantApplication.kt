@@ -7,7 +7,9 @@ import android.os.Build
 import android.util.Log
 import com.persianai.assistant.ai.PuterBridge
 import com.persianai.assistant.config.APIKeyConfig
+import com.persianai.assistant.config.RemoteAIConfigManager
 import com.persianai.assistant.services.UnifiedVoiceEngine
+import com.persianai.assistant.utils.AutoProvisioningManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,15 +24,41 @@ class AIAssistantApplication : Application() {
             private set
     }
 
+    private val appScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     override fun onCreate() {
         super.onCreate()
         instance = this
         createNotificationChannel()
         PuterBridge.setContext(this)
         
-        // ✅ Initialize API Keys configuration
+        // ✅ Initialize API Keys configuration (hardcoded GapGPT fallback)
         Log.d("AIAssistantApplication", "🔄 Initializing API Key configuration...")
         APIKeyConfig.initializeKeys(this)
+        
+        // ✅ Auto-provision keys from remote (Liara + GapGPT)
+        appScope.launch {
+            try {
+                Log.d("AIAssistantApplication", "🔄 Auto-provisioning API keys...")
+                val result = AutoProvisioningManager.autoProvision(this@AIAssistantApplication)
+                if (result.isSuccess) {
+                    val keys = result.getOrNull().orEmpty()
+                    Log.i("AIAssistantApplication", "✅ AutoProvision: ${keys.size} keys loaded")
+                } else {
+                    Log.w("AIAssistantApplication", "⚠️ AutoProvision failed: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                Log.w("AIAssistantApplication", "⚠️ AutoProvision exception: ${e.message}")
+            }
+            
+            // بارگذاری remote AI config (مدل‌ها و پیام‌ها)
+            try {
+                RemoteAIConfigManager.getInstance(this@AIAssistantApplication).refreshAndCache()
+                Log.i("AIAssistantApplication", "✅ Remote AI config loaded")
+            } catch (e: Exception) {
+                Log.w("AIAssistantApplication", "⚠️ Remote AI config failed: ${e.message}")
+            }
+        }
 
         // Dev-only: if a host path is provided via env var, copy Haaniye model into app files
         try {

@@ -77,9 +77,9 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         }
 
         val priority = listOf(
-            AIProvider.OPENAI,
             AIProvider.LIARA,
             AIProvider.GAPGPT,
+            AIProvider.OPENAI,
             AIProvider.AVALAI,
             AIProvider.OPENROUTER,
             AIProvider.AIML,

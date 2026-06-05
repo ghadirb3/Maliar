@@ -30,6 +30,7 @@ object AutoProvisioningManager {
             val oldResult = tryLoadFromUrl(OLD_KEYS_URL, "لینک قبلی", context)
             if (oldResult.isSuccess && hasRequiredKeys(oldResult.getOrThrow())) {
                 Log.d(TAG, "✅ کلیدهای مورد نیاز از لینک قبلی پیدا شد")
+                ensureGapGPTFallback(context, oldResult.getOrThrow())
                 return@withContext oldResult
             }
 
@@ -38,6 +39,7 @@ object AutoProvisioningManager {
             val newResult = tryLoadFromUrl(GIST_KEYS_URL, "لینک جدید (Gist)", context)
             if (newResult.isSuccess) {
                 Log.d(TAG, "✅ کلیدها از لینک جدید بارگذاری شد")
+                ensureGapGPTFallback(context, newResult.getOrThrow())
                 return@withContext newResult
             }
 
@@ -46,16 +48,31 @@ object AutoProvisioningManager {
                 val oldKeys = oldResult.getOrNull().orEmpty()
                 if (oldKeys.isNotEmpty()) {
                     Log.w(TAG, "⚠️ لینک جدید هم ناموفق بود؛ استفاده از کلیدهای معتبر لینک قبلی: ${oldKeys.size}")
+                    ensureGapGPTFallback(context, oldKeys)
                     return@withContext oldResult
                 }
             }
 
-            // اگر هیچ‌کدام کار نکرد
-            return@withContext Result.failure(Exception("هیچ‌کدام از منابع کلید پاسخ ندادند"))
+            // اگر هیچ‌کدام کار نکرد، فعال‌سازی کلید GapGPT hardcoded
+            Log.w(TAG, "⚠️ هیچ‌کدام از منابع کلید پاسخ ندادند - استفاده از GapGPT fallback")
+            val fallbackKeys = getHardcodedFallbackKeys()
+            val prefsManager = PreferencesManager(context)
+            prefsManager.saveAPIKeys(fallbackKeys)
+            prefsManager.setWorkingMode(PreferencesManager.WorkingMode.ONLINE)
+            return@withContext Result.success(fallbackKeys)
 
         } catch (e: Exception) {
             Log.e(TAG, "خطای بارگذاری: ${e.message}", e)
-            Result.failure(e)
+            // حتی در صورت خطا، fallback GapGPT key فعال شود
+            try {
+                val fallbackKeys = getHardcodedFallbackKeys()
+                val prefsManager = PreferencesManager(context)
+                prefsManager.saveAPIKeys(fallbackKeys)
+                prefsManager.setWorkingMode(PreferencesManager.WorkingMode.ONLINE)
+                Result.success(fallbackKeys)
+            } catch (e2: Exception) {
+                Result.failure(e)
+            }
         }
     }
 
@@ -260,6 +277,35 @@ object AutoProvisioningManager {
         if (trimmed.startsWith("AIza")) return AIProvider.OPENAI
 
         return null
+    }
+    
+    /**
+     * کلید GapGPT سخت‌کد شده به عنوان fallback نهایی
+     */
+    private fun getHardcodedFallbackKeys(): List<APIKey> {
+        Log.d(TAG, "📡 استفاده از کلید GapGPT سخت‌کد شده...")
+        return listOf(
+            APIKey(
+                provider = AIProvider.GAPGPT,
+                key = "sk-Gz3ACu1VPhi7eHKxblbQFAmGGC706T16J4ZtVqoGwyon2ONJ",
+                baseUrl = "https://api.gapgpt.app/v1",
+                isActive = true
+            )
+        )
+    }
+    
+    /**
+     * اطمینان از وجود کلید GapGPT در لیست کلیدها (اگر موجود نبود اضافه شود)
+     */
+    private fun ensureGapGPTFallback(context: Context, existingKeys: List<APIKey>) {
+        val hasGapgpt = existingKeys.any { it.provider == AIProvider.GAPGPT && it.isActive && it.key.isNotBlank() }
+        if (!hasGapgpt) {
+            Log.d(TAG, "➕ افزودن کلید GapGPT fallback به لیست کلیدهای موجود")
+            val prefsManager = PreferencesManager(context)
+            val updatedKeys = existingKeys.toMutableList()
+            updatedKeys.addAll(getHardcodedFallbackKeys())
+            prefsManager.saveAPIKeys(updatedKeys)
+        }
     }
     
     /**
