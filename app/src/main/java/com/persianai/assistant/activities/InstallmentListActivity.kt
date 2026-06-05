@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.persianai.assistant.adapters.InstallmentAdapter
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.databinding.ActivityInstallmentListBinding
+import com.persianai.assistant.utils.DialogUtils
 import kotlinx.coroutines.launch
 
 class InstallmentListActivity : AppCompatActivity() {
@@ -37,19 +38,13 @@ class InstallmentListActivity : AppCompatActivity() {
                     // Handle installment click
                 },
                 onDeleteClick = { installment ->
-                    // Handle delete click
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@InstallmentListActivity)
-                        .setTitle("❌ حذف قسط")
-                        .setMessage("آیا از حذف این قسط مطمئن هستید؟")
-                        .setPositiveButton("حذف") { _, _ ->
-                            lifecycleScope.launch {
-                                db.deleteInstallment(installment.id)
-                                loadInstallments()
-                                android.widget.Toast.makeText(this@InstallmentListActivity, "✅ قسط حذف شد", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                    DialogUtils.showDeleteConfirmation(this@InstallmentListActivity, "قسط") {
+                        lifecycleScope.launch {
+                            db.deleteInstallment(installment.id)
+                            loadInstallments()
+                            DialogUtils.showSuccessToast(this@InstallmentListActivity, "✅ قسط حذف شد")
                         }
-                        .setNegativeButton("لغو", null)
-                        .show()
+                    }
                 },
                 onEditClick = { installment ->
                     // Handle edit click

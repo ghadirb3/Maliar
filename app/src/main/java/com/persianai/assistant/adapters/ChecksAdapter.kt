@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.persianai.assistant.databinding.ItemCheckBinding
 import com.persianai.assistant.finance.CheckManager
+import com.persianai.assistant.utils.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -29,7 +30,7 @@ class ChecksAdapter(
         with(holder.binding) {
             // شماره چک و مبلغ
             checkNumberText.text = "💳 چک ${check.checkNumber}"
-            amountText.text = "${formatMoney(check.amount)} تومان"
+            amountText.text = "${FormatUtils.formatMoney(check.amount)} تومان"
             
             // دارنده/گیرنده
             holderNameText.text = "در وجه: ${check.recipient}"
@@ -86,7 +87,4 @@ class ChecksAdapter(
     
     override fun getItemCount() = checks.size
     
-    private fun formatMoney(amount: Double): String {
-        return String.format("%,.0f", amount)
-    }
 }

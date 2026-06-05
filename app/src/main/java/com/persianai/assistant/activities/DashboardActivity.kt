@@ -3,6 +3,7 @@ package com.persianai.assistant.activities
 import android.Manifest
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
+import com.persianai.assistant.utils.FormatUtils
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
@@ -1086,18 +1087,7 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
     
-    /**
-     * فرمت کردن مبلغ پول
-     */
-    private fun formatCurrency(amount: Long): String {
-        return if (amount >= 1_000_000) {
-            "${amount / 1_000_000} میلیون تومان"
-        } else if (amount >= 1_000) {
-            "${amount / 1_000} هزار تومان"
-        } else {
-            "$amount تومان"
-        }
-    }
+    private fun formatCurrency(amount: Long): String = FormatUtils.formatCurrencyHumanReadable(amount)
 
     companion object {
         private const val CALL_PHONE_PERMISSION_REQUEST = 1001

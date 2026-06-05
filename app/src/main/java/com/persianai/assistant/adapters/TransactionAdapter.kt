@@ -7,6 +7,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.persianai.assistant.R
+import com.persianai.assistant.utils.FormatUtils
 import com.persianai.assistant.data.Transaction
 import com.persianai.assistant.data.TransactionType
 import com.persianai.assistant.utils.JalaliCalendar
@@ -42,27 +43,27 @@ class TransactionAdapter(
             TransactionType.INCOME -> {
                 holder.typeIcon.text = "💰"
                 holder.amount.setTextColor(holder.itemView.context.getColor(android.R.color.holo_green_dark))
-                holder.amount.text = "+${formatMoney(transaction.amount)} تومان"
+                holder.amount.text = "+${FormatUtils.formatMoney(transaction.amount)} تومان"
             }
             TransactionType.EXPENSE -> {
                 holder.typeIcon.text = "💸"
                 holder.amount.setTextColor(holder.itemView.context.getColor(android.R.color.holo_red_dark))
-                holder.amount.text = "-${formatMoney(transaction.amount)} تومان"
+                holder.amount.text = "-${FormatUtils.formatMoney(transaction.amount)} تومان"
             }
             TransactionType.CHECK_IN -> {
                 holder.typeIcon.text = "📝"
                 holder.amount.setTextColor(holder.itemView.context.getColor(android.R.color.holo_green_light))
-                holder.amount.text = "+${formatMoney(transaction.amount)} تومان"
+                holder.amount.text = "+${FormatUtils.formatMoney(transaction.amount)} تومان"
             }
             TransactionType.CHECK_OUT -> {
                 holder.typeIcon.text = "📄"
                 holder.amount.setTextColor(holder.itemView.context.getColor(android.R.color.holo_orange_dark))
-                holder.amount.text = "-${formatMoney(transaction.amount)} تومان"
+                holder.amount.text = "-${FormatUtils.formatMoney(transaction.amount)} تومان"
             }
             TransactionType.INSTALLMENT -> {
                 holder.typeIcon.text = "📊"
                 holder.amount.setTextColor(holder.itemView.context.getColor(android.R.color.holo_blue_dark))
-                holder.amount.text = "-${formatMoney(transaction.amount)} تومان"
+                holder.amount.text = "-${FormatUtils.formatMoney(transaction.amount)} تومان"
             }
         }
         
@@ -104,7 +105,4 @@ class TransactionAdapter(
         }
     }
 
-    private fun formatMoney(amount: Double): String {
-        return String.format("%,.0f", amount)
-    }
 }

@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.persianai.assistant.databinding.ItemInstallmentBinding
+import com.persianai.assistant.utils.FormatUtils
 import com.persianai.assistant.finance.InstallmentManager
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,8 +28,8 @@ class InstallmentsAdapter(
         with(holder.binding) {
             // عنوان و مبالغ مطابق layout فعلی
             titleText.text = installment.title
-            totalAmountText.text = formatMoney(installment.totalAmount)
-            monthlyAmountText.text = formatMoney(installment.installmentAmount)
+            totalAmountText.text = FormatUtils.formatMoney(installment.totalAmount)
+            monthlyAmountText.text = FormatUtils.formatMoney(installment.installmentAmount)
 
             // پیشرفت اقساط
             val progressPercent = (installment.paidInstallments.toFloat() / installment.totalInstallments * 100).toInt()
@@ -39,7 +40,7 @@ class InstallmentsAdapter(
             // مبلغ و تعداد اقساط باقی‌مانده
             val remaining = installment.totalInstallments - installment.paidInstallments
             val remainingAmount = remaining * installment.installmentAmount
-            remainingText.text = "باقیمانده: ${formatMoney(remainingAmount)} تومان در $remaining قسط"
+            remainingText.text = "باقیمانده: ${FormatUtils.formatMoney(remainingAmount)} تومان در $remaining قسط"
 
             // محاسبه تاریخ قسط بعدی
             val calendar = Calendar.getInstance()
@@ -75,7 +76,4 @@ class InstallmentsAdapter(
     
     override fun getItemCount() = installments.size
     
-    private fun formatMoney(amount: Double): String {
-        return String.format("%,.0f", amount)
-    }
 }

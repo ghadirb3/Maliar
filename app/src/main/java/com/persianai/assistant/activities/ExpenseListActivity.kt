@@ -8,6 +8,7 @@ import com.persianai.assistant.adapters.TransactionAdapter
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.data.TransactionType
 import com.persianai.assistant.databinding.ActivityExpenseListBinding
+import com.persianai.assistant.utils.DialogUtils
 import kotlinx.coroutines.launch
 
 class ExpenseListActivity : AppCompatActivity() {
@@ -36,19 +37,13 @@ class ExpenseListActivity : AppCompatActivity() {
             binding.recyclerView.adapter = TransactionAdapter(
                 expenses.toMutableList(),
                 onDeleteClick = { transaction ->
-                    // Handle delete click
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@ExpenseListActivity)
-                        .setTitle("❌ حذف هزینه")
-                        .setMessage("آیا از حذف این هزینه مطمئن هستید؟")
-                        .setPositiveButton("حذف") { _, _ ->
-                            lifecycleScope.launch {
-                                db.deleteTransaction(transaction.id)
-                                loadExpenses()
-                                android.widget.Toast.makeText(this@ExpenseListActivity, "✅ هزینه حذف شد", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                    DialogUtils.showDeleteConfirmation(this@ExpenseListActivity, "هزینه") {
+                        lifecycleScope.launch {
+                            db.deleteTransaction(transaction.id)
+                            loadExpenses()
+                            DialogUtils.showSuccessToast(this@ExpenseListActivity, "✅ هزینه حذف شد")
                         }
-                        .setNegativeButton("لغو", null)
-                        .show()
+                    }
                 },
                 onEditClick = { transaction ->
                     // Handle edit click

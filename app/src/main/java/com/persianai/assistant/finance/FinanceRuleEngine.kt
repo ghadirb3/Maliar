@@ -1,6 +1,7 @@
 package com.persianai.assistant.finance
 
 import android.content.Context
+import com.persianai.assistant.utils.FormatUtils
 import com.persianai.assistant.utils.PersianDateConverter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -101,7 +102,7 @@ class FinanceRuleEngine(private val context: Context) {
         EvaluationResult(alerts, recommendations)
     }
 
-    private fun formatAmount(amount: Double): String = String.format("%,.0f", amount)
+    private fun formatAmount(amount: Double): String = FormatUtils.formatMoney(amount)
 
     private fun formatDate(timestamp: Long): String {
         val cal = Calendar.getInstance().apply { timeInMillis = timestamp }

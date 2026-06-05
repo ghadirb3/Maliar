@@ -3,6 +3,7 @@ package com.persianai.assistant.activities
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import com.persianai.assistant.utils.FormatUtils
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -332,9 +333,7 @@ class ChecksManagementActivity : AppCompatActivity() {
             .show()
     }
     
-    private fun formatAmount(amount: Double): String {
-        return String.format("%,.0f تومان", amount)
-    }
+    private fun formatAmount(amount: Double): String = FormatUtils.formatMoneyWithUnit(amount)
     
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         return super.onCreateOptionsMenu(menu)

@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.persianai.assistant.adapters.CheckAdapter
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.databinding.ActivityCheckListBinding
+import com.persianai.assistant.utils.DialogUtils
 import kotlinx.coroutines.launch
 
 class CheckListActivity : AppCompatActivity() {
@@ -37,19 +38,13 @@ class CheckListActivity : AppCompatActivity() {
                     // Handle check click
                 },
                 onDeleteClick = { check ->
-                    // Handle delete click
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@CheckListActivity)
-                        .setTitle("❌ حذف چک")
-                        .setMessage("آیا از حذف این چک مطمئن هستید؟")
-                        .setPositiveButton("حذف") { _, _ ->
-                            lifecycleScope.launch {
-                                db.deleteCheck(check.id)
-                                loadChecks()
-                                android.widget.Toast.makeText(this@CheckListActivity, "✅ چک حذف شد", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                    DialogUtils.showDeleteConfirmation(this@CheckListActivity, "چک") {
+                        lifecycleScope.launch {
+                            db.deleteCheck(check.id)
+                            loadChecks()
+                            DialogUtils.showSuccessToast(this@CheckListActivity, "✅ چک حذف شد")
                         }
-                        .setNegativeButton("لغو", null)
-                        .show()
+                    }
                 },
                 onEditClick = { check ->
                     // Handle edit click

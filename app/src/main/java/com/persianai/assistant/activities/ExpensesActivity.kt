@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.persianai.assistant.R
+import com.persianai.assistant.utils.FormatUtils
 import com.persianai.assistant.databinding.ActivityExpensesBinding
 import com.persianai.assistant.models.Expense
 import com.persianai.assistant.models.ExpenseCategory
@@ -61,9 +62,7 @@ class ExpensesActivity : AppCompatActivity() {
         // Subtitle removed - summary shown in toast instead
     }
     
-    private fun formatMoney(amount: Long): String {
-        return amount.toString().replace(Regex("(\\d)(?=(\\d{3})+$)"), "$1,")
-    }
+    private fun formatMoney(amount: Long): String = FormatUtils.formatMoney(amount)
     
     private fun showAddDialog() {
         MaterialAlertDialogBuilder(this)
@@ -201,9 +200,7 @@ class ExpenseAdapter(
         holder.itemView.setOnClickListener { onItemClick(expense) }
     }
     
-    private fun formatAmount(amount: Long): String {
-        return amount.toString().replace(Regex("(\\d)(?=(\\d{3})+$)"), "$1,")
-    }
+    private fun formatAmount(amount: Long): String = FormatUtils.formatMoney(amount)
     
     override fun getItemCount() = expenses.size
 }
