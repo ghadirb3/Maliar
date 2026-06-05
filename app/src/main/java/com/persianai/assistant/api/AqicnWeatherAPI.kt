@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
+import java.net.URLEncoder
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -14,7 +15,7 @@ import kotlin.math.roundToInt
  */
 object AqicnWeatherAPI {
     
-    private const val API_TOKEN = "4c46cd4f7d1657b953757c292b543a6b41ae1c15"
+    private val API_TOKEN = com.persianai.assistant.BuildConfig.AQICN_API_TOKEN
     private const val BASE_URL = "https://api.waqi.info"
     
     data class WeatherData(
@@ -127,7 +128,8 @@ object AqicnWeatherAPI {
      */
     suspend fun getWeatherByCity(city: String): WeatherData? = withContext(Dispatchers.IO) {
         try {
-            val url = "$BASE_URL/feed/$city/?token=$API_TOKEN"
+            val encodedCity = URLEncoder.encode(city, "UTF-8")
+            val url = "$BASE_URL/feed/$encodedCity/?token=$API_TOKEN"
             Log.d("AqicnAPI", "Fetching weather for $city from: $url")
             
             val response = URL(url).readText()

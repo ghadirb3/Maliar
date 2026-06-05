@@ -4,6 +4,7 @@ import android.util.Log
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /**
  * هواشناسی ساده با OpenWeatherMap
@@ -12,7 +13,7 @@ class WeatherAPI {
     
     companion object {
         private const val TAG = "WeatherAPI"
-        private const val API_KEY = "YOUR_API_KEY_HERE" // جایگزین کنید
+        private val API_KEY = com.persianai.assistant.BuildConfig.OPENWEATHER_API_KEY
         private const val BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
     }
     
@@ -69,7 +70,8 @@ class WeatherAPI {
     fun getWeatherForCity(cityName: String, callback: (WeatherData?) -> Unit) {
         Thread {
             try {
-                val url = "$BASE_URL?q=$cityName&appid=$API_KEY&units=metric&lang=fa"
+                val encodedCity = URLEncoder.encode(cityName, "UTF-8")
+                val url = "$BASE_URL?q=$encodedCity&appid=$API_KEY&units=metric&lang=fa"
                 val connection = URL(url).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 10000

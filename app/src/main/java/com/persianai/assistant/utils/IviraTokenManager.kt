@@ -56,8 +56,8 @@ class IviraTokenManager(private val context: Context) {
      * دریافت توکن‌های رمزشده از لینک
      */
     suspend fun fetchEncryptedTokensFromUrl(
-        url: String = "https://abrehamrahi.ir/o/public/UfAv7lIC/",
-        password: String = "12345"
+        url: String,
+        password: String
     ): Result<Map<String, String>> = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "🔄 Fetching encrypted tokens from $url")

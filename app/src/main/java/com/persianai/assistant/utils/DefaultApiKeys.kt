@@ -10,8 +10,10 @@ import javax.crypto.spec.IvParameterSpec
  */
 object DefaultApiKeys {
     
-    private const val ENCRYPTION_KEY = "PersianAI2024Key"  // 16 کاراکتر
-    private const val ENCRYPTION_IV = "InitVector123456"    // 16 کاراکتر
+    private val ENCRYPTION_KEY: String
+        get() = System.getProperty("default.api.enc.key", "")
+    private val ENCRYPTION_IV: String
+        get() = System.getProperty("default.api.enc.iv", "")
     
     // ⚠️ توجه: این فایل فقط برای توسعه‌دهندگان است
     // کاربران عادی باید از تنظیمات برنامه (API Settings) کلیدهای خود را وارد کنند

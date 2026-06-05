@@ -76,6 +76,12 @@ android {
 
         // Online-only: Native build disabled
         // libc++_shared.so files are now directly in jniLibs folders
+
+        // API keys – read from gradle.properties or environment; empty string as fallback
+        buildConfigField "String", "OPENWEATHER_API_KEY", "\"${project.findProperty('OPENWEATHER_API_KEY') ?: ''}\""
+        buildConfigField "String", "WORLDWEATHER_API_KEY", "\"${project.findProperty('WORLDWEATHER_API_KEY') ?: ''}\""
+        buildConfigField "String", "AQICN_API_TOKEN", "\"${project.findProperty('AQICN_API_TOKEN') ?: ''}\""
+        buildConfigField "String", "GEMINI_API_KEY", "\"${project.findProperty('GEMINI_API_KEY') ?: ''}\""
     }
 
     // Ensure libc++_shared.so is packaged
