@@ -35,8 +35,8 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
         }
 
         private val FALLBACK_MODEL_PRIORITY = listOf(
-            AIModel.LIARA_GPT_5_NANO,
-            AIModel.GAPGPT_GPT_5_NANO,
+            AIModel.LIARA_GPT_5_NANO,       // اولویت اول: Liara gpt-5-nano
+            AIModel.GAPGPT_GPT_5_NANO,      // اولویت دوم: GapGPT gpt-5-nano
             AIModel.GAPGPT_GPT_4O_MINI_TEST,
             AIModel.GAPGPT_DEEPSEEK_CHAT,
             AIModel.GAPGPT_GROK_3_MINI,
@@ -46,8 +46,8 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
             AIModel.GPT_4O_MINI,
             AIModel.TINY_LLAMA_OFFLINE
         )
-        private val FALLBACK_STT_PRIORITY = listOf("liara", "gapgpt", "openai")
-        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "haaniye", "android")
+        private val FALLBACK_STT_PRIORITY = listOf("liara", "gapgpt", "openai")  // لیارا اول، GapGPT دوم
+        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "haaniye", "android")  // GapGPT اول
     }
 
     data class RemoteAIConfig(
@@ -158,14 +158,12 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
     }
 
     fun getSTTModelPriority(): List<AIModel> = listOf(
-        AIModel.LIARA_GEMINI_FLASH,
-        AIModel.GAPGPT_WHISPER,
-        AIModel.GPT_4O_MINI
+        AIModel.LIARA_GEMINI_FLASH,    // اولویت اول: لیارا (gemini-2.0-flash برای STT)
+        AIModel.GAPGPT_WHISPER         // اولویت دوم: GapGPT whisper-1
     )
 
     fun getTTSModelPriority(): List<AIModel> = listOf(
-        AIModel.GAPGPT_TTS_MINI,
-        AIModel.LIARA_GPT_5_NANO
+        AIModel.GAPGPT_TTS_MINI        // GapGPT gpt-4o-mini-tts - بهترین مدل TTS
     )
 
     fun getApiKeyForModel(model: AIModel): String? {
