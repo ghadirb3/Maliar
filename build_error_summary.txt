@@ -66,9 +66,8 @@ WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/co
 > Task :app:desugarDebugFileDependencies
 > Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:l8DexDesugarLibDebug
-> Task :app:processDebugManifestForPackage
 > Task :app:checkDebugDuplicateClasses
-> Task :app:processDebugResources
+> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
 
 > Task :app:mergeExtDexDebug
@@ -77,43 +76,16 @@ WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e83
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpp
 WARNING: /home/runner/.gradle/caches/transforms-3/d9a59aa65713d7d8c90d9dcd475e8370/transformed/jetified-places-3.3.0-runtime.jar: D8: The companion object Companion could not be found in class zzbpj
 
+> Task :app:processDebugManifestForPackage
 > Task :app:mergeLibDexDebug
-> Task :app:mergeDebugJniLibFolders
 > Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:stripDebugDebugSymbols
 > Task :app:compileDebugKotlin
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:173:39 Unresolved reference: getString
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:174:40 Unresolved reference: getString
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:175:40 Unresolved reference: getString
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:176:27 Unresolved reference: getString
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/config/RemoteAIConfigManager.kt:177:26 Unresolved reference: getString
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:95:16 Unresolved reference: setListener
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:95:95 Unresolved reference: RecordingListener
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:96:13 'onRecordingStarted' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:106:13 'onRecordingCompleted' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:114:13 'onRecordingCancelled' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:122:13 'onRecordingError' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:130:13 'onAmplitudeChanged' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:140:16 Unresolved reference: setup
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:273:20 Unresolved reference: setup
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:275:38 Unresolved reference: startRecording
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:299:24 Unresolved reference: stopRecording
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:317:24 Unresolved reference: cancelRecording
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderView.kt:356:22 Unresolved reference: cleanup
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:91:16 Unresolved reference: setListener
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:91:95 Unresolved reference: RecordingListener
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:92:13 'onRecordingStarted' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:96:13 'onRecordingCompleted' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:100:13 'onRecordingCancelled' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:104:13 'onRecordingError' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:108:13 'onAmplitudeChanged' overrides nothing
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:112:16 Unresolved reference: setup
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:246:39 Unresolved reference: startRecording
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:260:39 Unresolved reference: stopRecording
-e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/ui/VoiceRecorderViewNew.kt:276:39 Unresolved reference: cancelRecording
+e: file:///home/runner/work/Maliar/Maliar/app/src/main/java/com/persianai/assistant/activities/BaseChatActivity.kt:425:21 'onAmplitudeChanged' overrides nothing
 
 > Task :app:compileDebugKotlin FAILED
 
@@ -130,5 +102,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 3m 9s
+BUILD FAILED in 3m 6s
 32 actionable tasks: 32 executed
