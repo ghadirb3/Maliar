@@ -94,7 +94,7 @@ class ConversationStorage(private val context: Context) {
     /**
      * تغییر عنوان چت
      */
-    suspend fun updateConversationTitle(id: String, newTitle: String) = withContext(Dispatchers.IO) {
+    suspend fun updateConversationTitle(id: String, newTitle: String): Unit = withContext(Dispatchers.IO) {
         try {
             val conversations = getAllConversations().toMutableList()
             val conversation = conversations.firstOrNull { it.id == id }
