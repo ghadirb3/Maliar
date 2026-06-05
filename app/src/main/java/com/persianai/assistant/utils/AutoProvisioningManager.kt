@@ -53,23 +53,31 @@ object AutoProvisioningManager {
                 }
             }
 
-            // اگر هیچ‌کدام کار نکرد، فعال‌سازی کلید GapGPT hardcoded
-            Log.w(TAG, "⚠️ هیچ‌کدام از منابع کلید پاسخ ندادند - استفاده از GapGPT fallback")
-            val fallbackKeys = getHardcodedFallbackKeys()
+            // اگر هیچ‌کدام کار نکرد، افزودن کلید GapGPT به کلیدهای موجود (بدون حذف کلیدهای قبلی)
+            Log.w(TAG, "⚠️ هیچ‌کدام از منابع کلید پاسخ ندادند - افزودن GapGPT fallback")
             val prefsManager = PreferencesManager(context)
-            prefsManager.saveAPIKeys(fallbackKeys)
+            val existingKeys = prefsManager.getAPIKeys().toMutableList()
+            val hasGapgpt = existingKeys.any { it.provider == AIProvider.GAPGPT && it.isActive && it.key.isNotBlank() }
+            if (!hasGapgpt) {
+                existingKeys.addAll(getHardcodedFallbackKeys())
+                prefsManager.saveAPIKeys(existingKeys)
+            }
             prefsManager.setWorkingMode(PreferencesManager.WorkingMode.ONLINE)
-            return@withContext Result.success(fallbackKeys)
+            return@withContext Result.success(existingKeys)
 
         } catch (e: Exception) {
             Log.e(TAG, "خطای بارگذاری: ${e.message}", e)
-            // حتی در صورت خطا، fallback GapGPT key فعال شود
+            // حتی در صورت خطا، افزودن GapGPT fallback بدون حذف کلیدهای موجود
             try {
-                val fallbackKeys = getHardcodedFallbackKeys()
                 val prefsManager = PreferencesManager(context)
-                prefsManager.saveAPIKeys(fallbackKeys)
+                val existingKeys = prefsManager.getAPIKeys().toMutableList()
+                val hasGapgpt = existingKeys.any { it.provider == AIProvider.GAPGPT && it.isActive && it.key.isNotBlank() }
+                if (!hasGapgpt) {
+                    existingKeys.addAll(getHardcodedFallbackKeys())
+                    prefsManager.saveAPIKeys(existingKeys)
+                }
                 prefsManager.setWorkingMode(PreferencesManager.WorkingMode.ONLINE)
-                Result.success(fallbackKeys)
+                Result.success(existingKeys)
             } catch (e2: Exception) {
                 Result.failure(e)
             }
@@ -262,15 +270,16 @@ object AutoProvisioningManager {
         // AIML often uses 32-char hex tokens (e.g., 3335a3...)
         if (trimmed.matches(Regex("^[a-fA-F0-9]{32}\$"))) return AIProvider.AIML
 
-        // GAPGPT keys start with sk- but are not OpenAI - check before OpenAI
-        // GAPGPT keys are typically longer and have specific patterns
+        // OpenAI project keys start with sk-proj- (check before GAPGPT heuristic)
+        if (lower.startsWith("sk-proj-")) return AIProvider.OPENAI
+
+        // GAPGPT keys start with sk- but are not OpenAI project keys
+        // GAPGPT keys are typically 51 chars (sk- + 48 alphanumeric)
         if (lower.startsWith("sk-") && trimmed.length > 50) {
-            // Additional heuristic: GAPGPT keys often contain specific character patterns
-            // This is a reasonable heuristic for now
             return AIProvider.GAPGPT
         }
 
-        // OpenAI (and some project keys) start with sk- or sk-proj-
+        // Other sk- keys → OpenAI
         if (lower.startsWith("sk-")) return AIProvider.OPENAI
 
         // Google-style API keys (AIza...) -> treat as OpenAI-compatible for now
@@ -294,13 +303,15 @@ object AutoProvisioningManager {
         )
     }
     
+    private const val HARDCODED_GAPGPT_KEY = "sk-Gz3ACu1VPhi7eHKxblbQFAmGGC706T16J4ZtVqoGwyon2ONJ"
+
     /**
-     * اطمینان از وجود کلید GapGPT در لیست کلیدها (اگر موجود نبود اضافه شود)
+     * اطمینان از وجود کلید GapGPT مشخص در لیست کلیدها
      */
     private fun ensureGapGPTFallback(context: Context, existingKeys: List<APIKey>) {
-        val hasGapgpt = existingKeys.any { it.provider == AIProvider.GAPGPT && it.isActive && it.key.isNotBlank() }
-        if (!hasGapgpt) {
-            Log.d(TAG, "➕ افزودن کلید GapGPT fallback به لیست کلیدهای موجود")
+        val hasHardcodedKey = existingKeys.any { it.key == HARDCODED_GAPGPT_KEY && it.isActive }
+        if (!hasHardcodedKey) {
+            Log.d(TAG, "➕ افزودن کلید GapGPT اصلی به لیست کلیدهای موجود")
             val prefsManager = PreferencesManager(context)
             val updatedKeys = existingKeys.toMutableList()
             updatedKeys.addAll(getHardcodedFallbackKeys())

@@ -725,7 +725,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
                         model = com.persianai.assistant.models.AIModel.GAPGPT_GPT_5_NANO
                         android.util.Log.d("BaseChatActivity", "🔄 Liara failed, falling back to GapGPT: ${model.name}")
                     } else if (model.provider == com.persianai.assistant.models.AIProvider.GAPGPT && attempts <= 1) {
-                        model = getNextGAPGPTModel(model)
+                        val nextModel = getNextGAPGPTModel(model)
+                        if (nextModel == model) break // no further fallback available
+                        model = nextModel
                         android.util.Log.d("BaseChatActivity", "🔄 Retrying with fallback model: ${model.name}")
                     } else {
                         break
