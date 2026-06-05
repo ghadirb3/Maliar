@@ -2,6 +2,7 @@ package com.persianai.assistant.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -215,7 +216,9 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.e("SettingsActivity", "Failed to setup recording mode UI", e)
+        }
     }
 
     private fun refreshRecordingModeUI() {

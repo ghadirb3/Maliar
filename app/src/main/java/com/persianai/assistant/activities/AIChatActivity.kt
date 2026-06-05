@@ -93,7 +93,11 @@ class AIChatActivity : BaseChatActivity() {
                 }
 
                 // refresh in background (non-blocking UI) for next launch
-                try { rc.refreshAndCache() } catch (_: Exception) {}
+                try {
+                    rc.refreshAndCache()
+                } catch (e: Exception) {
+                    android.util.Log.w("AIChatActivity", "Remote config refresh failed: ${e.message}")
+                }
             } catch (e: Exception) {
                 android.util.Log.w("AIChatActivity", "Remote message popup failed: ${e.message}")
             }

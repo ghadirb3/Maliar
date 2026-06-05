@@ -78,6 +78,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
     private var voiceConversationJob: Job? = null
     
     companion object {
+        private const val TAG = "BaseChatActivity"
         protected const val CHAT_DISABLED = false
         private const val REQUEST_RECORD_AUDIO = 1001
         const val EXTRA_START_VOICE_CONVERSATION = "extra_start_voice_conversation"
@@ -248,15 +249,23 @@ abstract class BaseChatActivity : AppCompatActivity() {
                 val warn = findViewById<android.widget.TextView?>(R.id.sttWarning)
                 warn?.text = "تشخیص گفتار ممکن است خطا داشته باشد. در صورت نیاز، متن را اصلاح کنید."
                 warn?.visibility = View.VISIBLE
-            } catch (_: Exception) { }
-        } catch (_: Exception) { }
+            } catch (e: Exception) {
+                Log.w(TAG, "STT warning view not available", e)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply transcript to input", e)
+        }
     }
 
     protected fun handleTranscript(text: String) {
         applyTranscriptToInput(text)
         val mode = prefsManager.getRecordingMode()
         if (mode == PreferencesManager.RecordingMode.FAST) {
-            try { sendMessage() } catch (_: Exception) { }
+            try {
+                sendMessage()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to auto-send message in FAST mode", e)
+            }
         }
     }
 
@@ -446,7 +455,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
                     override fun onTranscript(text: String) {
                         try {
                             handleTranscript(text)
-                        } catch (_: Exception) { }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error handling voice transcript", e)
+                        }
                     }
 
                     override fun onRecordingError(error: String) {
@@ -923,16 +934,19 @@ abstract class BaseChatActivity : AppCompatActivity() {
         // Persist message into current conversation
         try {
             currentConversation.messages.add(message)
-            // نام‌گذاری خودکار پس از اولین پیام کاربر
             if (message.role == MessageRole.USER && currentConversation.title == "چت جدید") {
                 currentConversation.title = currentConversation.generateTitle()
             }
             lifecycleScope.launch {
                 try {
                     conversationStorage.saveConversation(currentConversation)
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to persist conversation", e)
+                }
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update conversation with new message", e)
+        }
     }
 
     private fun checkAudioPermissionAndStartRecording() {

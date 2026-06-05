@@ -1,6 +1,7 @@
 package com.persianai.assistant.finance
 
 import android.content.Context
+import android.util.Log
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.utils.PersianDateConverter
 import org.json.JSONArray
@@ -12,6 +13,10 @@ import java.util.*
  */
 class InstallmentManager(private val context: Context) {
     
+    companion object {
+        private const val TAG = "InstallmentManager"
+    }
+
     data class Installment(
         val id: String,
         val title: String, // عنوان (مثلاً: قسط ماشین، قسط خانه)
@@ -63,13 +68,7 @@ class InstallmentManager(private val context: Context) {
         installments.add(installment)
         saveInstallments(installments)
         
-        // Sync to AccountingDB
-        try {
-            // Note: AccountingDB.addInstallment expects different parameter structure
-            // For now, we'll skip this sync as it requires a different model structure
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // TODO: Sync to AccountingDB once model structures are aligned
         
         return id
     }
@@ -177,14 +176,7 @@ class InstallmentManager(private val context: Context) {
     fun deleteInstallment(id: String) {
         val installments = getAllInstallments().filter { it.id != id }
         saveInstallments(installments)
-        
-        // Sync deletion to AccountingDB
-        try {
-            // Note: AccountingDB.deleteInstallment expects Long id, not String
-            // For now, we'll skip this sync
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // TODO: Sync deletion to AccountingDB once id types are aligned
     }
     
     private fun saveInstallments(installments: List<Installment>) {

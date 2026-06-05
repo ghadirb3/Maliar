@@ -1,6 +1,7 @@
 package com.persianai.assistant.finance
 
 import android.content.Context
+import android.util.Log
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.utils.PersianDateConverter
 import org.json.JSONArray
@@ -13,6 +14,10 @@ import java.util.*
  */
 class CheckManager(private val context: Context) {
     
+    companion object {
+        private const val TAG = "CheckManager"
+    }
+
     data class Check(
         val id: String,
         val checkNumber: String,
@@ -72,13 +77,7 @@ class CheckManager(private val context: Context) {
         checks.add(check)
         saveChecks(checks)
         
-        // Sync to AccountingDB
-        try {
-            // Note: AccountingDB.addCheck expects a Check model object, not individual parameters
-            // For now, we'll skip this sync as it requires a different model structure
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // TODO: Sync to AccountingDB once model structures are aligned
         
         return id
     }
@@ -137,14 +136,7 @@ class CheckManager(private val context: Context) {
     fun deleteCheck(id: String) {
         val checks = getAllChecks().filter { it.id != id }
         saveChecks(checks)
-        
-        // Sync deletion to AccountingDB
-        try {
-            // Note: AccountingDB.deleteCheck expects Long id, not String
-            // For now, we'll skip this sync
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // TODO: Sync deletion to AccountingDB once id types are aligned
     }
     
     private fun saveChecks(checks: List<Check>) {

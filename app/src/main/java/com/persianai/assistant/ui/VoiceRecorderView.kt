@@ -5,6 +5,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.os.Build
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -256,15 +257,13 @@ class VoiceRecorderView @JvmOverloads constructor(
     }
     
     private fun startRecording() {
-        // Delegate to VoiceRecordingHelper
         try {
             scope.launch {
                 helper.startRecording()
-                // helper listener will update UI
                 performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("VoiceRecorderView", "Failed to start recording", e)
             listener?.onRecordingCancelled()
         }
     }
@@ -277,12 +276,11 @@ class VoiceRecorderView @JvmOverloads constructor(
         if (!isRecording) return
         
         try {
-            // Ask helper to stop; helper listener will deliver result
             scope.launch {
                 helper.stopRecording()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("VoiceRecorderView", "Failed to stop recording", e)
             listener?.onRecordingCancelled()
         } finally {
             isRecording = false
@@ -295,12 +293,11 @@ class VoiceRecorderView @JvmOverloads constructor(
         if (!isRecording) return
         
         try {
-            // Delegate cancel to helper
             scope.launch {
                 helper.cancelRecording()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("VoiceRecorderView", "Error cancelling recording", e)
         } finally {
             isRecording = false
             // amplitude handling is removed; helper handles it

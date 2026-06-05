@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -801,7 +802,7 @@ class DashboardActivity : AppCompatActivity() {
                 reminderWork
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("DashboardActivity", "Failed to schedule reminder worker", e)
         }
     }
     

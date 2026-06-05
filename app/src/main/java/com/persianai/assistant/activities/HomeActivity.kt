@@ -74,7 +74,8 @@ class HomeActivity : AppCompatActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 4001)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("HomeActivity", "Failed to request audio permission", e)
         }
 
         handleIncomingIntent(intent)
@@ -120,7 +121,8 @@ class HomeActivity : AppCompatActivity() {
                 val i = Intent(this, AIChatActivity::class.java)
                 i.putExtra(com.persianai.assistant.activities.BaseChatActivity.EXTRA_START_VOICE_CONVERSATION, true)
                 startActivity(i)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("HomeActivity", "Failed to start voice conversation activity", e)
             }
         }
     }
@@ -180,7 +182,9 @@ class HomeActivity : AppCompatActivity() {
         try {
             binding.sttWarning.text = "تشخیص گفتار ممکن است خطا داشته باشد. در صورت نیاز، متن را اصلاح کنید."
             binding.sttWarning.visibility = android.view.View.VISIBLE
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("HomeActivity", "STT warning view not available", e)
+        }
 
         when (prefsManager.getRecordingMode()) {
             PreferencesManager.RecordingMode.FAST -> {
@@ -227,7 +231,9 @@ class HomeActivity : AppCompatActivity() {
                             data = Uri.parse("tel:$actionData")
                         }
                         startActivity(i)
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        Log.e("HomeActivity", "Failed to initiate phone call to $actionData", e)
+                        Toast.makeText(this, "خطا در برقراری تماس", Toast.LENGTH_SHORT).show()
                     }
                 }
                 .setNegativeButton("لغو", null)

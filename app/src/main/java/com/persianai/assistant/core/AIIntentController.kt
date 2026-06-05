@@ -219,6 +219,8 @@ import com.persianai.assistant.models.MessageRole
                 "Source=${request.source.name} | " +
                 "Mode=${request.workingModeName ?: "N/A"}"
             )
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w("AIIntentController", "Failed to log intent", e)
+        }
     }
 }

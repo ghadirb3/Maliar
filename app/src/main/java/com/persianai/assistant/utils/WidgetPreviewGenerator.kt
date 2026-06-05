@@ -5,6 +5,7 @@ import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.persianai.assistant.R
 import java.io.File
@@ -317,7 +318,7 @@ class WidgetPreviewGenerator(private val context: Context) {
             outputStream.close()
             file
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("WidgetPreviewGenerator", "Failed to save bitmap to file: $fileName", e)
             null
         }
     }
