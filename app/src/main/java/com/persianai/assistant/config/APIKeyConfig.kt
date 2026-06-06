@@ -185,20 +185,21 @@ object APIKeyConfig {
     
     /**
      * ✅ Priority order for model selection
+     * Priority: LIARA -> GAPGPT -> others
      */
     fun getPreferredProvider(context: Context): AIProvider? {
         val prefs = PreferencesManager(context)
         val activeKeys = prefs.getAPIKeys().filter { it.isActive }
-        
-        // ✅ Priority:
+
+        // ✅ Priority: LIARA first, then GAPGPT, then others
         return when {
-            activeKeys.any { it.provider == AIProvider.OPENAI } -> AIProvider.OPENAI
             activeKeys.any { it.provider == AIProvider.LIARA } -> AIProvider.LIARA
+            activeKeys.any { it.provider == AIProvider.GAPGPT } -> AIProvider.GAPGPT
+            activeKeys.any { it.provider == AIProvider.OPENAI } -> AIProvider.OPENAI
             activeKeys.any { it.provider == AIProvider.AIML } -> AIProvider.AIML
             activeKeys.any { it.provider == AIProvider.OPENROUTER } -> AIProvider.OPENROUTER
             activeKeys.any { it.provider == AIProvider.AVALAI } -> AIProvider.AVALAI
             activeKeys.any { it.provider == AIProvider.ANTHROPIC } -> AIProvider.ANTHROPIC
-            activeKeys.any { it.provider == AIProvider.GAPGPT } -> AIProvider.GAPGPT
             activeKeys.any { it.provider == AIProvider.GLADIA } -> AIProvider.GLADIA
             activeKeys.any { it.provider == AIProvider.IVIRA } -> AIProvider.IVIRA
             else -> null

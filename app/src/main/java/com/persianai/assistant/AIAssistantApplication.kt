@@ -27,10 +27,26 @@ class AIAssistantApplication : Application() {
         instance = this
         createNotificationChannel()
         PuterBridge.setContext(this)
-        
+
         // ✅ Initialize API Keys configuration
         Log.d("AIAssistantApplication", "🔄 Initializing API Key configuration...")
         APIKeyConfig.initializeKeys(this)
+
+        // ✅ Auto-provision keys from remote URLs (download, decrypt, activate)
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try {
+                Log.d("AIAssistantApplication", "🔄 Auto-provisioning API keys...")
+                val result = com.persianai.assistant.utils.AutoProvisioningManager.autoProvision(this@AIAssistantApplication)
+                if (result.isSuccess) {
+                    val keys = result.getOrNull() ?: emptyList()
+                    Log.d("AIAssistantApplication", "✅ ${keys.size} API keys auto-provisioned and activated")
+                } else {
+                    Log.w("AIAssistantApplication", "⚠️ Auto-provisioning failed: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                Log.e("AIAssistantApplication", "❌ Error in auto-provisioning", e)
+            }
+        }
 
         // Dev-only: if a host path is provided via env var, copy Haaniye model into app files
         try {

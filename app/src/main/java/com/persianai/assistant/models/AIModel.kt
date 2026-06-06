@@ -119,7 +119,7 @@ enum class AIModel(
         32000
     ),
     LIARA_GEMINI_FLASH(
-        "gemini-2.0-flash",
+        "google/gemini-2.0-flash-001",
         "Gemini 2.0 Flash (Liara)",
         AIProvider.LIARA,
         "مدل Gemini 2.0 Flash از لیارا",
@@ -217,7 +217,7 @@ enum class AIModel(
         8000
     ),
     GAPGPT_WHISPER(
-        "whisper-1",
+        "gapgpt/whisper-1",
         "Whisper (GAPGPT)",
         AIProvider.GAPGPT,
         "مدل تبدیل گفتار به متن از GAPGPT",
@@ -229,6 +229,27 @@ enum class AIModel(
         AIProvider.GAPGPT,
         "مدل تبدیل متن به گفتار از GAPGPT",
         4096
+    ),
+    GAPGPT_GEMINI_FLASH_TTS(
+        "gemini-2.5-flash-preview-tts",
+        "Gemini 2.5 Flash TTS (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل تبدیل متن به گفتار سریع از GAPGPT",
+        4096
+    ),
+    GAPGPT_GEMINI_PRO_TTS(
+        "gemini-2.5-pro-preview-tts",
+        "Gemini 2.5 Pro TTS (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل تبدیل متن به گفتار حرفه‌ای از GAPGPT",
+        4096
+    ),
+    GAPGPT_TTS_1(
+        "tts-1",
+        "TTS-1 (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل تبدیل متن به گفتار استاندارد از GAPGPT",
+        4096
     );
 
     companion object {
@@ -236,7 +257,7 @@ enum class AIModel(
             return values().find { it.modelId == modelId }
         }
 
-        fun getDefaultModel(): AIModel = GPT_4O_MINI
+        fun getDefaultModel(): AIModel = LIARA_GPT_5_NANO
     }
 }
 

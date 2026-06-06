@@ -120,22 +120,9 @@ class MainActivity : AppCompatActivity() {
             // Setup Voice Recording Helper
             voiceHelper = VoiceRecordingHelper(this)
             setupVoiceRecording()
-            
-            // بارگذاری خودکار کلیدهای API (fallback)
-            lifecycleScope.launch {
-                try {
-                    val result = AutoProvisioningManager.autoProvision(this@MainActivity)
-                    if (result.isSuccess) {
-                        val keys = result.getOrNull() ?: emptyList()
-                        android.util.Log.d("MainActivity", "✅ ${keys.size} کلید API بارگذاری شد (fallback)")
-                        
-                        // راه‌اندازی مجدد AIClient
-                        setupAIClient()
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "خطا در بارگذاری خودکار کلیدها", e)
-                }
-            }
+
+            // Note: Auto-provisioning is now handled in AIAssistantApplication.onCreate()
+            // Keys are downloaded, decrypted, and activated at app startup
             
             android.util.Log.d("MainActivity", "Managers initialized")
             

@@ -158,14 +158,16 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
     }
 
     fun getSTTModelPriority(): List<AIModel> = listOf(
-        AIModel.LIARA_GEMINI_FLASH,
         AIModel.GAPGPT_WHISPER,
+        AIModel.LIARA_GEMINI_FLASH,
         AIModel.GPT_4O_MINI
     )
 
     fun getTTSModelPriority(): List<AIModel> = listOf(
-        AIModel.GAPGPT_TTS_MINI,
-        AIModel.LIARA_GPT_5_NANO
+        AIModel.GAPGPT_GEMINI_PRO_TTS,
+        AIModel.GAPGPT_TTS_1,
+        AIModel.GAPGPT_GEMINI_FLASH_TTS,
+        AIModel.GAPGPT_TTS_MINI
     )
 
     fun getApiKeyForModel(model: AIModel): String? {

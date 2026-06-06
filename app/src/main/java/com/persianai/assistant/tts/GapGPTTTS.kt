@@ -35,12 +35,18 @@ class GapGPTTTS(private val context: Context) {
     companion object {
         private const val BASE_URL = "https://api.gapgpt.app/v1"
         private const val TTS_ENDPOINT = "$BASE_URL/audio/speech"
-        private const val MODEL = "gpt-4o-mini-tts"
+        // Priority: gemini-2.5-pro-preview-tts -> tts-1 -> gpt-4o-mini-tts
+        private val MODELS = listOf(
+            "gemini-2.5-pro-preview-tts",
+            "tts-1",
+            "gpt-4o-mini-tts"
+        )
         private const val VOICE = "alloy" // می‌توان به voice فارسی تغییر داد
     }
     
     /**
      * تبدیل متن به گفتار با استفاده از GapGPT API
+     * با مکانیزم فال‌بک روی مدل‌ها
      * @param text متنی که باید به گفتار تبدیل شود
      * @return مسیر فایل صوتی تولید شده یا null در صورت خطا
      */
@@ -55,40 +61,50 @@ class GapGPTTTS(private val context: Context) {
                 return@withContext null
             }
             
-            // ایجاد درخواست API
-            val requestBody = JSONObject().apply {
-                put("model", MODEL)
-                put("input", text)
-                put("voice", VOICE)
-                put("response_format", "mp3")
-                put("speed", 1.0)
-            }.toString().toRequestBody("application/json".toMediaType())
-            
-            val request = Request.Builder()
-                .url(TTS_ENDPOINT)
-                .addHeader("Authorization", "Bearer $apiKey")
-                .addHeader("Content-Type", "application/json")
-                .post(requestBody)
-                .build()
-            
-            // ارسال درخواست
-            val response = client.newCall(request).execute()
-            
-            if (!response.isSuccessful) {
-                Log.e(TAG, "❌ خطا در پاسخ GapGPT: ${response.code} - ${response.message}")
-                return@withContext null
+            // تلاش با هر مدل به ترتیب اولویت
+            for (model in MODELS) {
+                try {
+                    Log.d(TAG, "🔄 تلاش با مدل: $model")
+                    
+                    // ایجاد درخواست API
+                    val requestBody = JSONObject().apply {
+                        put("model", model)
+                        put("input", text)
+                        put("voice", VOICE)
+                        put("response_format", "mp3")
+                        put("speed", 1.0)
+                    }.toString().toRequestBody("application/json".toMediaType())
+                    
+                    val request = Request.Builder()
+                        .url(TTS_ENDPOINT)
+                        .addHeader("Authorization", "Bearer $apiKey")
+                        .addHeader("Content-Type", "application/json")
+                        .post(requestBody)
+                        .build()
+                    
+                    // ارسال درخواست
+                    val response = client.newCall(request).execute()
+                    
+                    if (response.isSuccessful) {
+                        // ذخیره فایل صوتی
+                        val audioFile = saveAudioFile(response.body?.bytes())
+                        
+                        if (audioFile != null) {
+                            Log.d(TAG, "✅ فایل صوتی با موفقیت تولید شد با مدل $model: ${audioFile.absolutePath}")
+                            return@withContext audioFile
+                        } else {
+                            Log.e(TAG, "❌ خطا در ذخیره فایل صوتی با مدل $model")
+                        }
+                    } else {
+                        Log.w(TAG, "⚠️ مدل $model ناموفق بود: ${response.code} - ${response.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "⚠️ خطا در مدل $model: ${e.message}")
+                }
             }
             
-            // ذخیره فایل صوتی
-            val audioFile = saveAudioFile(response.body?.bytes())
-            
-            if (audioFile != null) {
-                Log.d(TAG, "✅ فایل صوتی با موفقیت تولید شد: ${audioFile.absolutePath}")
-            } else {
-                Log.e(TAG, "❌ خطا در ذخیره فایل صوتی")
-            }
-            
-            return@withContext audioFile
+            Log.e(TAG, "❌ هیچ‌کدام از مدل‌ها کار نکرد")
+            return@withContext null
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ خطا در تبدیل متن به گفتار با GapGPT", e)
