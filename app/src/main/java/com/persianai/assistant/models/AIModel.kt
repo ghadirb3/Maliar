@@ -219,7 +219,9 @@ enum class AIModel(
 
     companion object {
         fun fromModelId(modelId: String): AIModel? {
-            return values().find { it.modelId == modelId }
+            // اولویت با مدل‌های Liara است اگر modelId یکسان باشد
+            return values().find { it.modelId == modelId && it.provider == AIProvider.LIARA }
+                ?: values().find { it.modelId == modelId }
         }
 
         fun getDefaultModel(): AIModel = LIARA_GPT_5_NANO

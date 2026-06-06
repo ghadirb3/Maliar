@@ -106,15 +106,15 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی دقیق مانند AIClient - Liara اول طبق مستندات
+     * اولویت‌بندی STT - GapGPT اول چون Liara STT منسوخ شده (410 Gone)
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
         return activeKeys.sortedWith(compareBy<APIKey> { key ->
             when (key.provider) {
-                AIProvider.LIARA -> 0      // اولویت اول: Liara (google/gemini-2.0-flash-001)
-                AIProvider.GAPGPT -> 1    // دوم: GapGPT (whisper-1, gapgpt/whisper-1)
+                AIProvider.GAPGPT -> 0    // اولویت اول: GapGPT (whisper-1, gapgpt/whisper-1) - Liara STT منسوخ شده
+                AIProvider.LIARA -> 1    // دوم: Liara (google/gemini-2.0-flash-001) - endpoint منسوخ شده
                 AIProvider.OPENAI -> 2    // سوم: OpenAI (اگر موجود)
                 else -> 3
             }
@@ -205,6 +205,7 @@ class OnlineSTTService(private val context: Context) {
         
         // تلاش اول: gapgpt/whisper-1
         // تلاش دوم: whisper-1 (اگر 504 بود)
+        // تلاش سوم: retry با تاخیر (اگر 429 بود)
         return try {
             var request = buildRequest("gapgpt/whisper-1")
             var response = gapgptHttpClient.newCall(request).execute()
@@ -238,6 +239,29 @@ class OnlineSTTService(private val context: Context) {
                 }
                 
                 return STTResult.error("GapGPT API error after retry: ${response.code}")
+            }
+            
+            // اگر خطای 429 بود (Too Many Requests)، با تاخیر دوباره امتحان کن
+            if (response.code == 429) {
+                Log.w(TAG, "GapGPT returned 429 (rate limit), waiting 2 seconds and retrying")
+                kotlinx.coroutines.delay(2000) // تاخیر 2 ثانیه
+                
+                // retry با whisper-1
+                request = buildRequest("whisper-1")
+                response = gapgptHttpClient.newCall(request).execute()
+                responseBody = response.body?.string() ?: ""
+                
+                if (response.isSuccessful) {
+                    val json = JSONObject(responseBody)
+                    val text = json.optString("text", "")
+                    return if (text.isNotBlank()) {
+                        STTResult.success(text)
+                    } else {
+                        STTResult.error("Empty response from GapGPT after retry (whisper-1)")
+                    }
+                }
+                
+                return STTResult.error("GapGPT API error after 429 retry: ${response.code}")
             }
             
             // سایر خطاها

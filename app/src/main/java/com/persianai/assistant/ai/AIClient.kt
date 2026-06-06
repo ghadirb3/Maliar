@@ -193,11 +193,10 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         }
 
         val requestBody: Any = if (model.provider == AIProvider.GAPGPT) {
+            // طبق مستندات GapGPT، فقط model و messages لازم است
             mapOf(
                 "model" to model.modelId,
-                "messages" to messageList,
-                "temperature" to 0.0,
-                "max_tokens" to 500
+                "messages" to messageList
             )
         } else {
             ChatRequest(

@@ -115,6 +115,8 @@ abstract class BaseChatActivity : AppCompatActivity() {
         }
 
         android.util.Log.d("BaseChatActivity", "📊 Selected Model: ${selected.modelId}")
+        // ذخیره مدل انتخاب شده در preferences
+        prefsManager.saveSelectedModel(selected)
         return selected
     }
     
