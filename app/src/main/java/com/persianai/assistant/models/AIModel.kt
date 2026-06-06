@@ -160,13 +160,6 @@ enum class AIModel(
         "مدل اقتصادی OpenAI",
         4000
     ),
-    GAPGPT_GPT_4O_MINI(
-        "gpt-4o-mini",
-        "GPT-4o Mini (GAPGPT)",
-        AIProvider.GAPGPT,
-        "مدل GPT-4o Mini از GAPGPT",
-        16000
-    ),
     GAPGPT_GPT_5_NANO(
         "gpt-5-nano",
         "GPT-5 Nano (GAPGPT)",

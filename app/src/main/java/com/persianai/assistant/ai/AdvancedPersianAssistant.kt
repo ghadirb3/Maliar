@@ -92,9 +92,9 @@ class AdvancedPersianAssistant(private val context: Context) {
             models.add(AIModel.GAPGPT_GPT_4O_MINI)
         }
         
-        // اولویت ۵: deepseek از GAPGPT (درخواست کاربر)
+        // اولویت ۵: gpt-5-nano از GAPGPT (درخواست کاربر)
         if (activeProviders.contains(AIProvider.GAPGPT)) {
-            models.add(AIModel.GAPGPT_DEEPSEEK_V3)
+            models.add(AIModel.GAPGPT_GPT_5_NANO)
         }
         
         // اولویت ۶: مدل اصلی OpenAI (backup)

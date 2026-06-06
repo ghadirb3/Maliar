@@ -123,7 +123,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
         return when (currentModel) {
             com.persianai.assistant.models.AIModel.GAPGPT_GPT_5_NANO -> {
                 android.util.Log.d("BaseChatActivity", "� فالینک به GAPGPT: gapgpt-deepseek-v3")
-                com.persianai.assistant.models.AIModel.GAPGPT_DEEPSEEK_V3
+                com.persianai.assistant.models.AIModel.GAPGPT_GPT_4O_MINI
             }
             else -> currentModel
         }

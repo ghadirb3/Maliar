@@ -24,7 +24,7 @@ sealed class ModelWrapper {
                 AIProvider.GAPGPT -> {
                     when {
                         dynamicModel.modelId.contains("gpt-5-nano") -> AIModel.GAPGPT_GPT_5_NANO
-                        dynamicModel.modelId.contains("deepseek") -> AIModel.GAPGPT_DEEPSEEK_V3
+                        dynamicModel.modelId.contains("gpt-4o-mini") -> AIModel.GAPGPT_GPT_4O_MINI
                         else -> AIModel.GAPGPT_GPT_5_NANO
                     }
                 }
