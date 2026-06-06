@@ -106,15 +106,15 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی دقیق مانند AIClient - Liara اول برای سرعت بیشتر
+     * اولویت‌بندی دقیق مانند AIClient - Liara اول طبق مستندات
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
         return activeKeys.sortedWith(compareBy<APIKey> { key ->
             when (key.provider) {
-                AIProvider.LIARA -> 0      // اولویت اول: Liara (4 ثانیه)
-                AIProvider.GAPGPT -> 1    // دوم: GapGPT (3 دقیقه timeout)
+                AIProvider.LIARA -> 0      // اولویت اول: Liara (google/gemini-2.0-flash-001)
+                AIProvider.GAPGPT -> 1    // دوم: GapGPT (whisper-1, gapgpt/whisper-1)
                 AIProvider.OPENAI -> 2    // سوم: OpenAI (اگر موجود)
                 else -> 3
             }

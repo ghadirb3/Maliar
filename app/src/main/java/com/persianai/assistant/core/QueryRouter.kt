@@ -213,11 +213,21 @@ class QueryRouter(private val context: Context) {
             val aiClient = AIClient(context, activeKeys)
             val messages = listOf(ChatMessage(role = MessageRole.USER, content = query))
 
+            // ✅ Use the user's selected model first (from preferences)
+            val selectedModel = prefs.getSelectedModel()
             val activeProviders = activeKeys.map { it.provider }.toSet()
 
-            // Use the same priority source that startup downloads/caches (remote ai_config first,
-            // built-in priority second). This keeps text chat aligned with the provisioned keys.
-            val preferredOrder = ModelManager.getModelPriority(context)
+            // Build priority list: selected model first, then fallback to ModelManager priority
+            val preferredOrder = mutableListOf<AIModel>()
+
+            // Add selected model first if it's available and active
+            if (selectedModel != null && activeProviders.contains(selectedModel.provider)) {
+                preferredOrder.add(selectedModel)
+                Log.d(TAG, "🎯 Using selected model: ${selectedModel.displayName} (${selectedModel.modelId})")
+            }
+
+            // Then add fallback models from ModelManager (excluding the selected model to avoid duplicates)
+            val fallbackModels = ModelManager.getModelPriority(context)
                 .mapNotNull { wrapper ->
                     when (wrapper) {
                         is ModelWrapper.StaticModel -> wrapper.unwrap()
@@ -230,14 +240,20 @@ class QueryRouter(private val context: Context) {
                         }
                     }
                 }
-                .filter { model -> model.provider != AIProvider.LOCAL && activeProviders.contains(model.provider) }
+                .filter { model ->
+                    model.provider != AIProvider.LOCAL &&
+                    activeProviders.contains(model.provider) &&
+                    model != selectedModel // Avoid duplicate
+                }
                 .distinct()
+
+            preferredOrder.addAll(fallbackModels)
 
             if (preferredOrder.isEmpty()) {
                 Log.w(TAG, "No model matches active providers: ${activeProviders.joinToString(", ")}")
                 return null
             }
-            
+
             for (model in preferredOrder) {
                 try {
                     Log.d(TAG, "🌐 Trying online model: ${model.displayName} (${model.modelId})")
