@@ -106,19 +106,13 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی STT - GapGPT اول چون Liara STT منسوخ شده (410 Gone)
+     * اولویت‌بندی STT - فقط GapGPT چون Liara STT منسوخ شده (410 Gone)
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        return activeKeys.sortedWith(compareBy<APIKey> { key ->
-            when (key.provider) {
-                AIProvider.GAPGPT -> 0    // اولویت اول: GapGPT (whisper-1, gapgpt/whisper-1) - Liara STT منسوخ شده
-                AIProvider.LIARA -> 1    // دوم: Liara (google/gemini-2.0-flash-001) - endpoint منسوخ شده
-                AIProvider.OPENAI -> 2    // سوم: OpenAI (اگر موجود)
-                else -> 3
-            }
-        })
+        // Liara STT endpoint منسوخ شده (410 Gone) - فقط GapGPT برای STT استفاده می‌شود
+        return activeKeys.filter { it.provider == AIProvider.GAPGPT }
     }
     
     /**
@@ -243,8 +237,8 @@ class OnlineSTTService(private val context: Context) {
             
             // اگر خطای 429 بود (Too Many Requests)، با تاخیر دوباره امتحان کن
             if (response.code == 429) {
-                Log.w(TAG, "GapGPT returned 429 (rate limit), waiting 2 seconds and retrying")
-                kotlinx.coroutines.delay(2000) // تاخیر 2 ثانیه
+                Log.w(TAG, "GapGPT returned 429 (rate limit), waiting 10 seconds and retrying")
+                kotlinx.coroutines.delay(10000) // تاخیر 10 ثانیه
                 
                 // retry با whisper-1
                 request = buildRequest("whisper-1")

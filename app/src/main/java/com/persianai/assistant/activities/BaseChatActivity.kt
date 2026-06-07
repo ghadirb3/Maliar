@@ -628,17 +628,15 @@ abstract class BaseChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                Log.d("BaseChatActivity", "💬 Processing message via QueryRouter (no Ivira)")
-
-                val router = com.persianai.assistant.core.QueryRouter(this@BaseChatActivity)
-                val result = router.routeQuery(text)
-                val responseContent = result.response
-                val modelUsed = "${result.model ?: "Unknown"} | منبع: ${result.source}"
+                Log.d("BaseChatActivity", "💬 Processing message via handleRequest")
+                
+                // استفاده از handleRequest که در Activity های مختلف override می‌شود
+                val responseContent = handleRequest(text)
 
                 if (!responseContent.isNullOrBlank()) {
                     val responseMessage = ChatMessage(
                         role = MessageRole.ASSISTANT,
-                        content = "$responseContent\n📝 [مدل: $modelUsed]",
+                        content = responseContent,
                         timestamp = System.currentTimeMillis()
                     )
                     addMessage(responseMessage)
