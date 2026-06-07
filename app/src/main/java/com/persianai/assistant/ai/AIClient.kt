@@ -192,19 +192,29 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             ))
         }
 
-        val requestBody: Any = if (model.provider == AIProvider.GAPGPT) {
-            // طبق مستندات GapGPT، فقط model و messages لازم است
-            mapOf(
-                "model" to model.modelId,
-                "messages" to messageList
-            )
-        } else {
-            ChatRequest(
-                model = model.modelId,
-                messages = messageList,
-                temperature = 0.0,
-                maxTokens = 500
-            )
+        val requestBody: Any = when (model.provider) {
+            AIProvider.GAPGPT -> {
+                // طبق مستندات GapGPT، فقط model و messages لازم است
+                mapOf(
+                    "model" to model.modelId,
+                    "messages" to messageList
+                )
+            }
+            AIProvider.LIARA -> {
+                // طبق مستندات Liara، فقط model و messages لازم است
+                mapOf(
+                    "model" to model.modelId,
+                    "messages" to messageList
+                )
+            }
+            else -> {
+                ChatRequest(
+                    model = model.modelId,
+                    messages = messageList,
+                    temperature = 0.0,
+                    maxTokens = 500
+                )
+            }
         }
 
         val jsonBody = gson.toJson(requestBody)
@@ -214,9 +224,9 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         val requestId = "req_${System.currentTimeMillis()}"
         android.util.Log.d("AIClient", "[$requestId] Sending to ${model.provider.name}: url=$apiUrl, model=${model.modelId}")
         
-        // Log full request for GAPGPT debugging
-        if (model.provider == AIProvider.GAPGPT) {
-            android.util.Log.d("AIClient", "[$requestId] GAPGPT request body: $jsonBody")
+        // Log full request for GAPGPT and LIARA debugging
+        if (model.provider == AIProvider.GAPGPT || model.provider == AIProvider.LIARA) {
+            android.util.Log.d("AIClient", "[$requestId] ${model.provider.name} request body: $jsonBody")
         }
 
         // Remove prefix from API key (e.g., "gapgpt:" or "liara:")
