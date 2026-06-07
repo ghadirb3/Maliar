@@ -98,15 +98,15 @@ abstract class BaseChatActivity : AppCompatActivity() {
         // اولویت ثابت: ۱. Liara (gpt-5-nano) -> ۲. GAPGPT (gpt-5-nano) -> ۳. GAPGPT (gapgpt-deepseek-v3) -> ۴. آفلاین
         val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
         
+        // اولویت GAPGPT برای چت چون Liara کلیدها دسترسی به chat ندارند (410 base plan not available)
         val selected = when {
+            activeProviders.contains(com.persianai.assistant.models.AIProvider.GAPGPT) -> {
+                android.util.Log.d("BaseChatActivity", "✅ استفاده از GAPGPT: gpt-5-nano")
+                com.persianai.assistant.models.AIModel.GAPGPT_GPT_5_NANO
+            }
             activeProviders.contains(com.persianai.assistant.models.AIProvider.LIARA) -> {
                 android.util.Log.d("BaseChatActivity", "✅ استفاده از Liara: openai/gpt-5-nano")
                 com.persianai.assistant.models.AIModel.LIARA_GPT_5_NANO
-            }
-            activeProviders.contains(com.persianai.assistant.models.AIProvider.GAPGPT) -> {
-                // برای GAPGPT باید مدل اول را امتحان کنیم و اگر کار نکرد، مدل دوم
-                android.util.Log.d("BaseChatActivity", "✅ استفاده از GAPGPT: gpt-5-nano")
-                com.persianai.assistant.models.AIModel.GAPGPT_GPT_5_NANO
             }
             else -> {
                 android.util.Log.w("BaseChatActivity", "⚠️ هیچ کلید آنلاین فعال نیست، استفاده از مدل آفلاین")

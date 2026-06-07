@@ -235,27 +235,22 @@ class OnlineSTTService(private val context: Context) {
                 return STTResult.error("GapGPT API error after retry: ${response.code}")
             }
             
-            // اگر خطای 429 بود (Too Many Requests)، با تاخیر دوباره امتحان کن
+            // Exponential backoff for 429: 15s, 30s, 60s
             if (response.code == 429) {
-                Log.w(TAG, "GapGPT returned 429 (rate limit), waiting 10 seconds and retrying")
-                kotlinx.coroutines.delay(10000) // تاخیر 10 ثانیه
-                
-                // retry با whisper-1
-                request = buildRequest("whisper-1")
-                response = gapgptHttpClient.newCall(request).execute()
-                responseBody = response.body?.string() ?: ""
-                
-                if (response.isSuccessful) {
-                    val json = JSONObject(responseBody)
-                    val text = json.optString("text", "")
-                    return if (text.isNotBlank()) {
-                        STTResult.success(text)
-                    } else {
-                        STTResult.error("Empty response from GapGPT after retry (whisper-1)")
+                val delays = listOf(15000L, 30000L, 60000L)
+                for ((i, delay) in delays.withIndex()) {
+                    Log.w(TAG, "429 retry ${i+1}/${delays.size}, wait ${delay/1000}s")
+                    kotlinx.coroutines.delay(delay)
+                    request = buildRequest("whisper-1")
+                    response = gapgptHttpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val json = JSONObject(response.body?.string() ?: "")
+                        val text = json.optString("text", "")
+                        return if (text.isNotBlank()) STTResult.success(text)
+                        else STTResult.error("Empty response after retry")
                     }
                 }
-                
-                return STTResult.error("GapGPT API error after 429 retry: ${response.code}")
+                return STTResult.error("GapGPT 429 after all retries")
             }
             
             // سایر خطاها
