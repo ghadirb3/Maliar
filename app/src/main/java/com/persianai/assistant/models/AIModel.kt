@@ -241,6 +241,7 @@ enum class AIProvider {
     AVALAI,
     IVIRA,
     GAPGPT,
+    HUGGINGFACE,
     LOCAL,
     CUSTOM
 }
