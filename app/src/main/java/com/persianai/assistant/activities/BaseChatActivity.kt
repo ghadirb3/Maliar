@@ -98,6 +98,10 @@ abstract class BaseChatActivity : AppCompatActivity() {
         // اولویت ثابت: ۱. Liara (gpt-5-nano) -> ۲. GAPGPT (gpt-5-nano) -> بدون فال‌بک به آفلاین
         val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
         
+        android.util.Log.d("BaseChatActivity", "📊 Active providers: $activeProviders")
+        android.util.Log.d("BaseChatActivity", "📊 All providers: ${apiKeys.map { it.provider }}")
+        android.util.Log.d("BaseChatActivity", "📊 Active keys: ${apiKeys.filter { it.isActive }.map { "${it.provider}: ${it.key.take(10)}..." }}")
+        
         // اولویت LIARA برای چت، سپس GAPGPT - بدون فال‌بک به آفلاین
         val selected = when {
             activeProviders.contains(com.persianai.assistant.models.AIProvider.LIARA) -> {
@@ -355,6 +359,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
 
     private fun setupAIClient() {
         val apiKeys = prefsManager.getAPIKeys()
+        Log.d("BaseChatActivity", "📊 Total API keys: ${apiKeys.size}, Active: ${apiKeys.count { it.isActive }}")
+        Log.d("BaseChatActivity", "📊 API keys by provider: ${apiKeys.groupBy { it.provider }.mapValues { it.value.count { it.isActive } }}")
+        
         if (apiKeys.isNotEmpty()) {
             aiClient = AIClient(this, apiKeys)
             val resolved = chooseBestModel(apiKeys, prefsManager.getProviderPreference())
@@ -756,21 +763,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
     }
 
     private fun offlineRespond(text: String): String? {
-        // 1) دامنه اختصاصی فرزند کلاس
-        offlineDomainRespond(text)?.let { return it }
-
-        // 2) پاسخ ساده آفلاین (بدون GGUF)
-        SimpleOfflineResponder.respond(this, text)?.let { return it }
-
-        // 2.5) جستجوی سبک وب با DuckDuckGo (بدون کلید) در صورت اتصال اینترنت
-        tryDuckDuckGo(text)?.let { return it }
-
-        // 3) اگر مدل GGUF دانلود شده ولی ران‌تایم موجود نیست، مسیر را اعلام کنیم
-        val modelPath = findOfflineModelPath()
-        if (!modelPath.isNullOrBlank()) {
-            return "⚠️ مدل آفلاین دانلود شده ولی موتور GGUF در این دستگاه در دسترس نیست.\nمسیر فایل: $modelPath"
-        }
-
+        // فال‌بک آفلاین حذف شده - فقط خطا برمی‌گردانیم
         return null
     }
 

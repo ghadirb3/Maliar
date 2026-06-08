@@ -106,13 +106,16 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی STT - فقط GapGPT چون Liara STT منسوخ شده (410 Gone)
+     * اولویت‌بندی STT - اول Liara سپس GapGPT
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        // Liara STT endpoint منسوخ شده (410 Gone) - فقط GapGPT برای STT استفاده می‌شود
-        return activeKeys.filter { it.provider == AIProvider.GAPGPT }
+        // اولویت: LIARA → GAPGPT
+        val liaraKeys = activeKeys.filter { it.provider == AIProvider.LIARA }
+        val gapgptKeys = activeKeys.filter { it.provider == AIProvider.GAPGPT }
+        
+        return liaraKeys + gapgptKeys
     }
     
     /**
