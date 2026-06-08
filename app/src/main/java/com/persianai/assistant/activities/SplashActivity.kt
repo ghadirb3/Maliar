@@ -364,6 +364,9 @@ class SplashActivity : AppCompatActivity() {
                 AIProvider.AIML -> editor.putString("aiml_api_key", key.key)
                 AIProvider.GLADIA -> editor.putString("gladia_api_key", key.key)
                 AIProvider.AVALAI -> editor.putString("avalai_api_key", key.key)
+                AIProvider.HUGGINGFACE -> {
+                    // HuggingFace key is stored separately
+                }
                 AIProvider.LOCAL -> {
                     // مدل آفلاین کلید ندارد
                 }
@@ -374,7 +377,7 @@ class SplashActivity : AppCompatActivity() {
                     // فعلاً نیازی به سینک مستقیم در SharedPreferences قدیمی نیست
                 }
                 AIProvider.CUSTOM -> {
-                    // مدل‌های سفارشی از remote config بارگذاری می‌شوند
+                    // مدل‌های سفارشی از remote
                 }
             }
         }

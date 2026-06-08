@@ -15,7 +15,7 @@ object AutoProvisioningManager {
     
     private const val TAG = "AutoProvisioning"
     private const val DEFAULT_PASSWORD = "12345"
-    // منبع کلیدها (اولویت با لینک قبلی، فال‌بک به گیت)
+    // منبع کلیدها (اولویت با لینک abrehamrahi.ir برای اینترنت ملی، فال‌بک به گیت)
     private const val OLD_KEYS_URL = "https://abrehamrahi.ir/o/public/UfAv7lIC/"
     private const val GIST_KEYS_URL = "https://gist.githubusercontent.com/ghadirb/626a804df3009e49045a2948dad89fe5/raw/4598062acc8f167b95ae84462722125c325a3d2f/keys.txt"
 
