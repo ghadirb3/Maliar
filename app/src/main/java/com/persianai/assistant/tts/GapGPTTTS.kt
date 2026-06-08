@@ -35,9 +35,10 @@ class GapGPTTTS(private val context: Context) {
     companion object {
         private const val BASE_URL = "https://api.gapgpt.app/v1"
         private const val TTS_ENDPOINT = "$BASE_URL/audio/speech"
-        // Priority: gemini-2.5-pro-preview-tts -> tts-1 -> gpt-4o-mini-tts
+        // Priority: gemini-2.5-pro-preview-tts -> gemini-2.5-flash-preview-tts -> tts-1 -> gpt-4o-mini-tts
         private val MODELS = listOf(
             "gemini-2.5-pro-preview-tts",
+            "gemini-2.5-flash-preview-tts",
             "tts-1",
             "gpt-4o-mini-tts"
         )
@@ -114,18 +115,23 @@ class GapGPTTTS(private val context: Context) {
     
     /**
      * دریافت API key از PreferencesManager (همان سیستم STT و چت متنی)
+     * با قابلیت جابجایی بین کلیدهای مختلف GAPGPT
      */
     private fun getGapGPTApiKey(): String {
         return try {
             // استفاده از PreferencesManager که کلیدها را از لینک abrehamrahi بارگیری می‌کند
             val apiKeys = prefsManager.getAPIKeys()
             
-            // جستجو برای کلید GapGPT
-            val gapgptKey = apiKeys.find { it.provider == com.persianai.assistant.models.AIProvider.GAPGPT }
+            // جستجو برای کلیدهای GAPGPT فعال
+            val gapgptKeys = apiKeys.filter { 
+                it.provider == com.persianai.assistant.models.AIProvider.GAPGPT && it.isActive 
+            }
             
-            if (gapgptKey != null && gapgptKey.isActive) {
-                Log.d(TAG, "✅ Found GapGPT API key")
-                gapgptKey.key
+            if (gapgptKeys.isNotEmpty()) {
+                // انتخاب اولین کلید فعال (در آینده می‌توان رندوم یا round-robin کرد)
+                val selectedKey = gapgptKeys.first()
+                Log.d(TAG, "✅ Found ${gapgptKeys.size} GapGPT API keys, using: ${selectedKey.key.take(10)}...")
+                selectedKey.key
             } else {
                 Log.w(TAG, "⚠️ No active GapGPT API key found")
                 ""

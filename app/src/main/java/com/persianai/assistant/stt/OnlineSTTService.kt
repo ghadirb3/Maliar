@@ -46,7 +46,7 @@ class OnlineSTTService(private val context: Context) {
     
     /**
      * تبدیل گفتار به متن با معماری مشابه AIClient چت آنلاین
-     * اولویت: Liara → GapGPT → OpenAI با مدیریت کامل خطا
+     * اولویت: GapGPT → Liara → OpenAI با مدیریت کامل خطا و جابجایی کلیدها
      */
     suspend fun transcribeAudio(audioFile: File): STTResult = withContext(Dispatchers.IO) {
         Log.d(TAG, "🎤 Starting STT with AIClient-like architecture")
@@ -61,19 +61,33 @@ class OnlineSTTService(private val context: Context) {
         // اولویت‌بندی دقیق مانند AIClient
         val sttProviders = prioritizeProviders(apiKeys)
         
-        // تلاش با هر provider با مدیریت خطا مانند AIClient
+        // ردیابی کلیدهای ناموفق برای جابجایی سریع
+        val failedKeys = mutableSetOf<String>()
+        
+        // تلاش با هر provider با مدیریت خطا و جابجایی کلیدها
         for (provider in sttProviders) {
+            // اگر این کلید قبلاً ناموفق بوده، از آن رد شو
+            val keyId = "${provider.provider}_${provider.key.take(10)}"
+            if (failedKeys.contains(keyId)) {
+                Log.d(TAG, "⏭️ Skipping failed key: $keyId")
+                continue
+            }
+            
             try {
-                Log.d(TAG, "🔄 Trying STT with provider: ${provider.provider}")
+                Log.d(TAG, "🔄 Trying STT with provider: ${provider.provider} (key: ${provider.key.take(10)}...)")
                 val result = transcribeWithProvider(audioFile, provider)
                 if (result.isSuccess) {
                     Log.d(TAG, "✅ STT success with ${provider.provider}: ${result.text}")
                     return@withContext result
                 } else {
                     Log.w(TAG, "⚠️ STT failed with ${provider.provider}: ${result.error}")
+                    // کلید ناموفق را به لیست اضافه کن تا دوباره امتحان نشود
+                    failedKeys.add(keyId)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "❌ STT exception with ${provider.provider}: ${e.message}")
+                // کلید ناموفق را به لیست اضافه کن تا دوباره امتحان نشود
+                failedKeys.add(keyId)
             }
         }
         
@@ -106,16 +120,18 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی STT - اول Liara سپس GapGPT
+     * اولویت‌بندی STT - اول GapGPT سپس Liara
+     * GapGPT STT از whisper-1 استفاده می‌کند (سریع‌تر)
+     * Liara STT از chat completions استفاده می‌کند (کندتر)
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        // اولویت: LIARA → GAPGPT
-        val liaraKeys = activeKeys.filter { it.provider == AIProvider.LIARA }
+        // اولویت: GAPGPT → LIARA
         val gapgptKeys = activeKeys.filter { it.provider == AIProvider.GAPGPT }
+        val liaraKeys = activeKeys.filter { it.provider == AIProvider.LIARA }
         
-        return liaraKeys + gapgptKeys
+        return gapgptKeys + liaraKeys
     }
     
     /**
@@ -164,7 +180,8 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * STT با استفاده از GapGPT (gapgpt/whisper-1 -> whisper-1 on 504)
+     * STT با استفاده از GapGPT (whisper-1 -> gapgpt/whisper-1)
+     * اولویت: whisper-1 (قوی‌تر) -> gapgpt/whisper-1
      */
     private suspend fun transcribeWithGapGPT(audioFile: File, apiKey: String): STTResult {
         // Probe اتصال GapGPT (فقط یک بار)
@@ -200,11 +217,11 @@ class OnlineSTTService(private val context: Context) {
                 .build()
         }
         
-        // تلاش اول: gapgpt/whisper-1
-        // تلاش دوم: whisper-1 (اگر 504 بود)
-        // تلاش سوم: retry با تاخیر (اگر 429 بود)
+        // تلاش اول: whisper-1 (قوی‌تر)
+        // تلاش دوم: gapgpt/whisper-1 (اگر خطا بود)
+        // تلاش سوم: retry با تاخیر کم (اگر 429 بود)
         return try {
-            var request = buildRequest("gapgpt/whisper-1")
+            var request = buildRequest("whisper-1")
             var response = gapgptHttpClient.newCall(request).execute()
             var responseBody = response.body?.string() ?: ""
             
@@ -214,14 +231,14 @@ class OnlineSTTService(private val context: Context) {
                 return if (text.isNotBlank()) {
                     STTResult.success(text)
                 } else {
-                    STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
+                    STTResult.error("Empty response from GapGPT (whisper-1)")
                 }
             }
             
-            // اگر خطای 504 بود، با whisper-1 دوباره امتحان کن
-            if (response.code == 504) {
-                Log.w(TAG, "GapGPT returned 504, retrying with whisper-1")
-                request = buildRequest("whisper-1")
+            // اگر خطای 504 یا 400 بود، با gapgpt/whisper-1 دوباره امتحان کن
+            if (response.code == 504 || response.code == 400) {
+                Log.w(TAG, "GapGPT returned ${response.code}, retrying with gapgpt/whisper-1")
+                request = buildRequest("gapgpt/whisper-1")
                 response = gapgptHttpClient.newCall(request).execute()
                 responseBody = response.body?.string() ?: ""
                 
@@ -231,16 +248,16 @@ class OnlineSTTService(private val context: Context) {
                     return if (text.isNotBlank()) {
                         STTResult.success(text)
                     } else {
-                        STTResult.error("Empty response from GapGPT (whisper-1)")
+                        STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
                     }
                 }
                 
                 return STTResult.error("GapGPT API error after retry: ${response.code}")
             }
             
-            // Exponential backoff for 429: 15s, 30s, 60s
+            // Minimal backoff for 429: 2s, 5s, 10s (برای سرعت بیشتر)
             if (response.code == 429) {
-                val delays = listOf(15000L, 30000L, 60000L)
+                val delays = listOf(2000L, 5000L, 10000L)
                 for ((i, delay) in delays.withIndex()) {
                     Log.w(TAG, "429 retry ${i+1}/${delays.size}, wait ${delay/1000}s")
                     kotlinx.coroutines.delay(delay)
