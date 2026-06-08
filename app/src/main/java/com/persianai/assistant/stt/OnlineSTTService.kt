@@ -120,18 +120,20 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی STT - اول GapGPT سپس Liara
-     * GapGPT STT از whisper-1 استفاده می‌کند (سریع‌تر)
-     * Liara STT از chat completions استفاده می‌کند (کندتر)
+     * اولویت‌بندی STT - اول OpenAI سپس GapGPT سپس Liara
+     * OpenAI STT از whisper-1 استفاده می‌کند (پایدارترین)
+     * GapGPT STT از whisper-1 استفاده می‌کند (سریع‌تر اما 429 می‌دهد)
+     * Liara STT از chat completions استفاده می‌کند (کندتر و 410 می‌دهد)
      */
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        // اولویت: GAPGPT → LIARA
+        // اولویت: OPENAI → GAPGPT → LIARA
+        val openaiKeys = activeKeys.filter { it.provider == AIProvider.OPENAI }
         val gapgptKeys = activeKeys.filter { it.provider == AIProvider.GAPGPT }
         val liaraKeys = activeKeys.filter { it.provider == AIProvider.LIARA }
         
-        return gapgptKeys + liaraKeys
+        return openaiKeys + gapgptKeys + liaraKeys
     }
     
     /**

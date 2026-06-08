@@ -95,22 +95,23 @@ abstract class BaseChatActivity : AppCompatActivity() {
     }
 
     private fun chooseBestModel(apiKeys: List<APIKey>, pref: ProviderPreference): AIModel {
-        // اولویت ثابت: ۱. Liara (gpt-5-nano) -> ۲. GAPGPT (gpt-5-nano) -> بدون فال‌بک به آفلاین
+        // اولویت ثابت: ۱. GAPGPT (gpt-5-nano) -> ۲. Liara (gpt-5-nano) -> بدون فال‌بک به آفلاین
+        // LIARA 410 می‌دهد، بنابراین GAPGPT اولویت اول است
         val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
         
         android.util.Log.d("BaseChatActivity", "📊 Active providers: $activeProviders")
         android.util.Log.d("BaseChatActivity", "📊 All providers: ${apiKeys.map { it.provider }}")
         android.util.Log.d("BaseChatActivity", "📊 Active keys: ${apiKeys.filter { it.isActive }.map { "${it.provider}: ${it.key.take(10)}..." }}")
         
-        // اولویت LIARA برای چت، سپس GAPGPT - بدون فال‌بک به آفلاین
+        // اولویت GAPGPT برای چت، سپس LIARA - بدون فال‌بک به آفلاین
         val selected = when {
-            activeProviders.contains(com.persianai.assistant.models.AIProvider.LIARA) -> {
-                android.util.Log.d("BaseChatActivity", "✅ استفاده از Liara: openai/gpt-5-nano")
-                com.persianai.assistant.models.AIModel.LIARA_GPT_5_NANO
-            }
             activeProviders.contains(com.persianai.assistant.models.AIProvider.GAPGPT) -> {
                 android.util.Log.d("BaseChatActivity", "✅ استفاده از GAPGPT: gpt-5-nano")
                 com.persianai.assistant.models.AIModel.GAPGPT_GPT_5_NANO
+            }
+            activeProviders.contains(com.persianai.assistant.models.AIProvider.LIARA) -> {
+                android.util.Log.d("BaseChatActivity", "✅ استفاده از Liara: openai/gpt-5-nano")
+                com.persianai.assistant.models.AIModel.LIARA_GPT_5_NANO
             }
             else -> {
                 android.util.Log.e("BaseChatActivity", "❌ هیچ کلید آنلاین فعال نیست - خطا")
