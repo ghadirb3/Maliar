@@ -105,6 +105,7 @@ class OnlineSTTService(private val context: Context) {
             
             // فیلتر فقط provider های STT معتبر
             val sttKeys = apiKeys.filter { it.provider in setOf(
+                AIProvider.HUGGINGFACE,
                 AIProvider.LIARA,
                 AIProvider.GAPGPT,
                 AIProvider.OPENAI
@@ -120,7 +121,8 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی STT - اول OpenAI سپس GapGPT سپس Liara
+     * اولویت‌بندی STT - اول HuggingFace سپس OpenAI سپس GapGPT سپس Liara
+     * HuggingFace STT از wav2vec2 استفاده می‌کند (پایدارترین و رایگان)
      * OpenAI STT از whisper-1 استفاده می‌کند (پایدارترین)
      * GapGPT STT از whisper-1 استفاده می‌کند (سریع‌تر اما 429 می‌دهد)
      * Liara STT از chat completions استفاده می‌کند (کندتر و 410 می‌دهد)
@@ -128,12 +130,13 @@ class OnlineSTTService(private val context: Context) {
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        // اولویت: OPENAI → GAPGPT → LIARA
+        // اولویت: HUGGINGFACE → OPENAI → GAPGPT → LIARA
+        val hfKeys = activeKeys.filter { it.provider == AIProvider.HUGGINGFACE }
         val openaiKeys = activeKeys.filter { it.provider == AIProvider.OPENAI }
         val gapgptKeys = activeKeys.filter { it.provider == AIProvider.GAPGPT }
         val liaraKeys = activeKeys.filter { it.provider == AIProvider.LIARA }
         
-        return openaiKeys + gapgptKeys + liaraKeys
+        return hfKeys + openaiKeys + gapgptKeys + liaraKeys
     }
     
     /**
@@ -144,6 +147,7 @@ class OnlineSTTService(private val context: Context) {
             AIProvider.LIARA -> transcribeWithLiara(audioFile, apiKey.key)
             AIProvider.GAPGPT -> transcribeWithGapGPT(audioFile, apiKey.key)
             AIProvider.OPENAI -> transcribeWithOpenAI(audioFile, apiKey.key)
+            AIProvider.HUGGINGFACE -> transcribeWithHuggingFace(audioFile, apiKey.key)
             else -> STTResult.error("Provider ${apiKey.provider} not supported for STT")
         }
     }
@@ -385,6 +389,48 @@ class OnlineSTTService(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "OpenAI STT error", e)
             STTResult.error("OpenAI STT failed: ${e.message}")
+        }
+    }
+    
+    /**
+     * STT با HuggingFace Inference API (openai/whisper-large-v3)
+     */
+    private suspend fun transcribeWithHuggingFace(audioFile: File, apiKey: String): STTResult {
+        return try {
+            val audioBytes = audioFile.readBytes()
+            val audioRequestBody = audioBytes
+                .toRequestBody("audio/m4a".toMediaType(), 0, audioBytes.size)
+            
+            val multipartBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("model", "openai/whisper-large-v3")
+                .addFormDataPart("language", "persian")
+                .addFormDataPart("file", audioFile.name, audioRequestBody)
+                .build()
+            
+            val request = Request.Builder()
+                .url("https://api-inference.huggingface.co/models/openai/whisper-large-v3")
+                .addHeader("Authorization", "Bearer $apiKey")
+                .post(multipartBody)
+                .build()
+            
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+            
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                val text = json.optString("text", "")
+                if (text.isNotBlank()) {
+                    STTResult.success(text)
+                } else {
+                    STTResult.error("Empty response from HuggingFace")
+                }
+            } else {
+                STTResult.error("HuggingFace API error: ${response.code} - $responseBody")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "HuggingFace STT error", e)
+            STTResult.error("HuggingFace STT failed: ${e.message}")
         }
     }
 }
