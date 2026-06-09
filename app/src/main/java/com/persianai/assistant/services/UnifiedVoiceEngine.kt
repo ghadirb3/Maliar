@@ -86,7 +86,7 @@ class UnifiedVoiceEngine(private val context: Context) {
      * the app's runtime storage for the offline path the app will use.
      *
      * Example hostPath (Windows):
-     * C:\\github\\PersianAIAssistantOnline\\app\\build\\intermediates\\assets\\debug\\tts\\haaniye
+     * C:\\github\\Maliar\\app\\build\\intermediates\\assets\\debug\\tts\\haaniye
      */
     suspend fun copyHaaniyeFromHost(hostPath: String): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {

@@ -47,9 +47,9 @@ class CallContactSelectionDialogue(
 
     private fun buildContactListMessage(contacts: List<Contact>, searchName: String): String {
         val options = contacts.mapIndexed { index, contact ->
-            "شماره ${index + 1}: ${contact.name}"
+            "شماره ${index + 1}: ${contact.name} (${contact.phoneNumber})"
         }.joinToString(". ")
-        return "چند مخاطب برای $searchName پیدا شد: $options. لطفاً نام را دقیق‌تر بگویید."
+        return "چند مخاطب برای $searchName پیدا شد: $options. لطفاً شماره مورد نظر را بگویید."
     }
 
     private fun makeCall(contact: Contact) {
