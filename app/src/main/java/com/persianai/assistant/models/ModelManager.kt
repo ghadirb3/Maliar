@@ -27,8 +27,8 @@ object ModelManager {
         
         // سپس مدل‌های استاتیک را با اولویت مشخص اضافه کن
         val staticPriority = listOf(
-            AIModel.GAPGPT_GPT_5_NANO,             // اولویت ۱: gpt-5-nano از GAPGPT (LIARA 410 می‌دهد)
-            AIModel.GAPGPT_GPT_4O_MINI,            // اولویت ۲: gpt-4o-mini از GAPGPT
+            AIModel.GAPGPT_GPT_4O_MINI,            // اولویت ۱: gpt-4o-mini از GAPGPT (gpt-5-nano خطای 400 می‌دهد)
+            AIModel.GAPGPT_GPT_5_NANO,             // اولویت ۲: gpt-5-nano از GAPGPT
             AIModel.LIARA_GPT_5_NANO,              // اولویت ۳: gpt-5-nano از لیارا
             AIModel.LIARA_GEMINI_FLASH,            // اولویت ۴: gemini-2.0-flash از لیارا
             AIModel.LIARA_GPT_4O_MINI,             // اولویت ۵: gpt-4o-mini از لیارا
