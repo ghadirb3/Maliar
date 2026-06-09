@@ -35,12 +35,12 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
         }
 
         private val FALLBACK_MODEL_PRIORITY = listOf(
-            AIModel.LIARA_GPT_5_NANO,
-            AIModel.LIARA_GEMINI_FLASH,
-            AIModel.LIARA_GPT_4O_MINI,
-            AIModel.GAPGPT_GPT_5_NANO,
-            AIModel.GAPGPT_GPT_4O_MINI,
-            AIModel.GPT_4O_MINI
+            AIModel.GAPGPT_GPT_5_NANO,             // اولویت ۱: GAPGPT (LIARA 410 می‌دهد)
+            AIModel.GAPGPT_GPT_4O_MINI,            // اولویت ۲: GAPGPT
+            AIModel.LIARA_GPT_5_NANO,              // اولویت ۳: LIARA
+            AIModel.LIARA_GEMINI_FLASH,            // اولویت ۴: LIARA
+            AIModel.LIARA_GPT_4O_MINI,             // اولویت ۵: LIARA
+            AIModel.GPT_4O_MINI                    // fallback عمومی OpenAI
         )
         private val FALLBACK_STT_PRIORITY = listOf("liara", "gapgpt", "openai")
         private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "haaniye", "android")

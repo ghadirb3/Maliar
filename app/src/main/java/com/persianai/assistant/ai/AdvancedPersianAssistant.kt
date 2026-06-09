@@ -71,30 +71,25 @@ class AdvancedPersianAssistant(private val context: Context) {
     private fun getFallbackModels(apiKeys: List<APIKey>): List<AIModel> {
         val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
         val models = mutableListOf<AIModel>()
-        
-        // اولویت ۱: gpt-5-nano از لیارا (درخواست اصلی کاربر - مدل معتبر از مستندات)
-        if (activeProviders.contains(AIProvider.LIARA)) {
-            models.add(AIModel.LIARA_GPT_5_NANO)
-        }
-        
-        // اولویت ۲: gpt-4o-mini از لیارا (fallback معتبر)
-        if (activeProviders.contains(AIProvider.LIARA)) {
-            models.add(AIModel.LIARA_GPT_4O_MINI)
-        }
-        
-        // اولویت ۳: gpt-5-nano از GAPGPT (درخواست کاربر)
+
+        // اولویت ۱: gpt-5-nano از GAPGPT (LIARA 410 می‌دهد)
         if (activeProviders.contains(AIProvider.GAPGPT)) {
             models.add(AIModel.GAPGPT_GPT_5_NANO)
         }
-        
-        // اولویت ۴: gpt-4o-mini از GAPGPT (fallback معتبر)
+
+        // اولویت ۲: gpt-4o-mini از GAPGPT
         if (activeProviders.contains(AIProvider.GAPGPT)) {
             models.add(AIModel.GAPGPT_GPT_4O_MINI)
         }
-        
-        // اولویت ۵: gpt-5-nano از GAPGPT (درخواست کاربر)
-        if (activeProviders.contains(AIProvider.GAPGPT)) {
-            models.add(AIModel.GAPGPT_GPT_5_NANO)
+
+        // اولویت ۳: gpt-5-nano از LIARA
+        if (activeProviders.contains(AIProvider.LIARA)) {
+            models.add(AIModel.LIARA_GPT_5_NANO)
+        }
+
+        // اولویت ۴: gpt-4o-mini از LIARA
+        if (activeProviders.contains(AIProvider.LIARA)) {
+            models.add(AIModel.LIARA_GPT_4O_MINI)
         }
         
         // اولویت ۶: مدل اصلی OpenAI (backup)

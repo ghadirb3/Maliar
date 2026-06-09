@@ -17,7 +17,7 @@ object AutoProvisioningManager {
     private const val DEFAULT_PASSWORD = "12345"
     // منبع کلیدها (اولویت با لینک abrehamrahi.ir برای اینترنت ملی، فال‌بک به گیت)
     private const val OLD_KEYS_URL = "https://abrehamrahi.ir/o/public/UfAv7lIC/"
-    private const val GIST_KEYS_URL = "https://gist.githubusercontent.com/ghadirb/626a804df3009e49045a2948dad89fe5/raw/4598062acc8f167b95ae84462722125c325a3d2f/keys.txt"
+    private const val GIST_KEYS_URL = "https://gist.githubusercontent.com/ghadirb/626a804df3009e49045a2948dad89fe5/raw/a011780ca0ccad8ef838a1d340593fa377f6f75e/keys.txt"
 
     /**
      * بارگذاری و فعال‌سازی کلیدها با مکانیزم فال‌بک

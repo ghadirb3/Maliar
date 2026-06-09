@@ -30,29 +30,11 @@ object HaaniyeManager {
     /**
      * Attempt to synthesize speech with offline Haaniye model.
      * Returns true if synthesis handled; false to allow caller fallback.
+     * DISABLED: Haaniye model removed to reduce app size
      */
     fun speak(context: Context, text: String): Boolean {
-        return try {
-            ensureModelCopied(context)
-            if (!initialized) {
-                initializeSession(context)
-            }
-
-            if (!initialized || ortSession == null || ortEnv == null) {
-                Log.w(TAG, "Haaniye not initialized; fallback to Android TTS")
-                return false
-            }
-
-            val clean = text.trim()
-            if (clean.isBlank()) return false
-
-            val wavFile = synthesizeToFile(context, clean) ?: return false
-            playWithMediaPlayer(context, wavFile)
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Haaniye speak failed: ${e.message}")
-            false
-        }
+        Log.d(TAG, "Haaniye TTS disabled - using online TTS instead")
+        return false
     }
 
     private fun ensureModelCopied(context: Context) {
