@@ -36,13 +36,14 @@ class GapGPTTTS(private val context: Context) {
         private const val BASE_URL = "https://api.gapgpt.app/v1"
         private const val TTS_ENDPOINT = "$BASE_URL/audio/speech"
         // Priority: gemini-2.5-pro-preview-tts -> gemini-2.5-flash-preview-tts -> tts-1 -> gpt-4o-mini-tts
+        // Gemini models support Persian better
         private val MODELS = listOf(
             "gemini-2.5-pro-preview-tts",
             "gemini-2.5-flash-preview-tts",
             "tts-1",
             "gpt-4o-mini-tts"
         )
-        private const val VOICE = "alloy" // می‌توان به voice فارسی تغییر داد
+        private const val VOICE = "alloy" // alloy works best for Persian in most TTS APIs
     }
     
     /**
