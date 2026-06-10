@@ -315,7 +315,11 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         val message = choice.getAsJsonObject("message")
                         val content = message?.get("content")?.asString ?: choice.get("text")?.asString
                         if (!content.isNullOrBlank()) {
-                            return@withContext ChatMessage(MessageRole.ASSISTANT, content, System.currentTimeMillis())
+                            return@withContext ChatMessage(
+                                role = MessageRole.ASSISTANT,
+                                content = content,
+                                timestamp = System.currentTimeMillis()
+                            )
                         }
                     }
                 } catch (_: Exception) {}
@@ -331,16 +335,28 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         if (parts != null && parts.size() > 0) {
                             val part0 = parts[0].asJsonObject
                             val text = part0.get("text")?.asString ?: part0.get("content")?.asString
-                            if (!text.isNullOrBlank()) return@withContext ChatMessage(MessageRole.ASSISTANT, text, System.currentTimeMillis())
+                            if (!text.isNullOrBlank()) return@withContext ChatMessage(
+                                role = MessageRole.ASSISTANT,
+                                content = text,
+                                timestamp = System.currentTimeMillis()
+                            )
                         }
                         val candidateText = first.get("text")?.asString
-                        if (!candidateText.isNullOrBlank()) return@withContext ChatMessage(MessageRole.ASSISTANT, candidateText, System.currentTimeMillis())
+                        if (!candidateText.isNullOrBlank()) return@withContext ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = candidateText,
+                            timestamp = System.currentTimeMillis()
+                        )
                     }
                 } catch (_: Exception) {}
 
                 // 3) generic fields
                 val alt = json.get("response")?.asString ?: json.get("text")?.asString ?: json.get("content")?.asString
-                if (!alt.isNullOrBlank()) return@withContext ChatMessage(MessageRole.ASSISTANT, alt, System.currentTimeMillis())
+                if (!alt.isNullOrBlank()) return@withContext ChatMessage(
+                    role = MessageRole.ASSISTANT,
+                    content = alt,
+                    timestamp = System.currentTimeMillis()
+                )
 
                 android.util.Log.e("AIClient", "Full API response: $responseBody")
                 throw Exception("پاسخ خالی از API")
