@@ -72,12 +72,12 @@ class AdvancedPersianAssistant(private val context: Context) {
         val activeProviders = apiKeys.filter { it.isActive }.map { it.provider }.toSet()
         val models = mutableListOf<AIModel>()
 
-        // اولویت ۱: gpt-5-nano از GAPGPT (LIARA 410 می‌دهد)
+        // اولویت ۱: gpt-5.3-chat-latest از GAPGPT (پشتیبانی بهتر)
         if (activeProviders.contains(AIProvider.GAPGPT)) {
-            models.add(AIModel.GAPGPT_GPT_5_NANO)
+            models.add(AIModel.GAPGPT_GPT_5_3_CHAT_LATEST)
         }
 
-        // اولویت ۲: gpt-4o-mini از GAPGPT
+        // اولویت ۲: gpt-4o-mini از GAPGPT (در صورت نیاز)
         if (activeProviders.contains(AIProvider.GAPGPT)) {
             models.add(AIModel.GAPGPT_GPT_4O_MINI)
         }
@@ -233,7 +233,7 @@ class AdvancedPersianAssistant(private val context: Context) {
                 AIModel.LIARA_GPT_5_NANO
             }
             AIProvider.OPENAI -> AIModel.GPT_4O_MINI
-            AIProvider.GAPGPT -> AIModel.GAPGPT_GPT_5_NANO  // Use GPT-5-nano as priority for GAPGPT
+            AIProvider.GAPGPT -> AIModel.GAPGPT_GPT_5_3_CHAT_LATEST  // Prefer gpt-5.3-chat-latest for GAPGPT
             else -> AIModel.GPT_4O_MINI
         }
     }
