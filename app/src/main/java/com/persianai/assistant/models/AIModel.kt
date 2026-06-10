@@ -160,18 +160,25 @@ enum class AIModel(
         "مدل اقتصادی OpenAI",
         4000
     ),
+    GAPGPT_GPT_5_3_CHAT_LATEST(
+        "gpt-5.3-chat-latest",
+        "GPT-5.3 Chat Latest (GAPGPT)",
+        AIProvider.GAPGPT,
+        "مدل GPT-5.3 Chat Latest از GAPGPT (بهترین مدل)",
+        32000
+    ),
     GAPGPT_GPT_5_NANO(
         "gpt-5-nano",
         "GPT-5 Nano (GAPGPT)",
         AIProvider.GAPGPT,
-        "مدل GPT-5 Nano از GAPGPT",
+        "مدل GPT-5 Nano از GAPGPT (400 error)",
         32000
     ),
     GAPGPT_GPT_4O_MINI(
         "gpt-4o-mini",
         "GPT-4o Mini (GAPGPT)",
         AIProvider.GAPGPT,
-        "مدل GPT-4o Mini از GAPGPT",
+        "مدل GPT-4o Mini از GAPGPT (400 error)",
         16000
     ),
     GAPGPT_WHISPER(
