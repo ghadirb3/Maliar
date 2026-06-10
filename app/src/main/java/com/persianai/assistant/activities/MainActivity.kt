@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -456,7 +457,9 @@ class MainActivity : AppCompatActivity() {
         try {
             binding.sttWarning.text = "تشخیص گفتار ممکن است خطا داشته باشد. در صورت نیاز، متن را اصلاح کنید."
             binding.sttWarning.visibility = View.VISIBLE
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "STT warning view not available", e)
+        }
         
         when (prefsManager.getRecordingMode()) {
             PreferencesManager.RecordingMode.FAST -> sendMessage()

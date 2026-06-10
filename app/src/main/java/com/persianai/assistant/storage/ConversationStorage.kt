@@ -1,6 +1,7 @@
 package com.persianai.assistant.storage
 
 import android.content.Context
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.persianai.assistant.models.Conversation
@@ -12,6 +13,10 @@ import kotlinx.coroutines.withContext
  */
 class ConversationStorage(private val context: Context) {
     
+    companion object {
+        private const val TAG = "ConversationStorage"
+    }
+
     private val prefs = context.getSharedPreferences("conversations", Context.MODE_PRIVATE)
     private val gson = Gson()
     
@@ -24,6 +29,7 @@ class ConversationStorage(private val context: Context) {
             val type = object : TypeToken<List<Conversation>>() {}.type
             gson.fromJson<List<Conversation>>(json, type) ?: emptyList()
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to load conversations", e)
             emptyList()
         }
     }
@@ -46,7 +52,7 @@ class ConversationStorage(private val context: Context) {
             val json = gson.toJson(conversations)
             prefs.edit().putString("conversations_list", json).apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to save conversation id=${conversation.id}", e)
         }
     }
     
@@ -64,7 +70,8 @@ class ConversationStorage(private val context: Context) {
         try {
             val id = getCurrentConversationId() ?: return@withContext null
             getConversation(id)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get active conversation", e)
             null
         }
     }
@@ -80,14 +87,14 @@ class ConversationStorage(private val context: Context) {
             val json = gson.toJson(conversations)
             prefs.edit().putString("conversations_list", json).apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to delete conversation id=$id", e)
         }
     }
     
     /**
      * تغییر عنوان چت
      */
-    suspend fun updateConversationTitle(id: String, newTitle: String) = withContext(Dispatchers.IO) {
+    suspend fun updateConversationTitle(id: String, newTitle: String): Unit = withContext(Dispatchers.IO) {
         try {
             val conversations = getAllConversations().toMutableList()
             val conversation = conversations.firstOrNull { it.id == id }
@@ -100,7 +107,7 @@ class ConversationStorage(private val context: Context) {
                 prefs.edit().putString("conversations_list", json).apply()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to update conversation title id=$id", e)
         }
     }
     

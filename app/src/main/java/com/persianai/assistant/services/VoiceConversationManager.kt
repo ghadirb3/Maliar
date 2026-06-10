@@ -123,15 +123,17 @@ class VoiceConversationManager(
 
     private suspend fun speakWithHaaniyeOrFallback(text: String) = withContext(Dispatchers.Main) {
         if (text.isBlank()) return@withContext
-        // Only Android TTS, then beep fallback
         try {
             speakWithAndroidTTS(text)
             return@withContext
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w(TAG, "Android TTS failed, falling back to beep", e)
+        }
 
         try {
             BeepFallback.beep()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Beep fallback also failed", e)
         }
     }
     

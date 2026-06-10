@@ -218,7 +218,7 @@ class WidgetUpdateService : Service() {
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("WidgetUpdateService", "Failed to update weather widget", e)
             }
         }
     }

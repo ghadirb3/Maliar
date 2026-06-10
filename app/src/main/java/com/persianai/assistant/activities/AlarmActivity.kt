@@ -5,6 +5,7 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.util.Log
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
@@ -64,7 +65,7 @@ class AlarmActivity : AppCompatActivity() {
             ringtone = RingtoneManager.getRingtone(this, alarmUri)
             ringtone?.play()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AlarmActivity", "Failed to play alarm sound", e)
         }
     }
     

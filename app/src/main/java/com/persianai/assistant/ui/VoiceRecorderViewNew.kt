@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.os.Build
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -242,7 +243,7 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
             invalidate()
             
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("VoiceRecorderViewNew", "Failed to start recording", e)
             listener?.onRecordingCancelled()
         }
     }
@@ -253,7 +254,7 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
         try {
             mainScope.launch { helper.stopRecording() }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("VoiceRecorderViewNew", "Failed to stop recording", e)
             listener?.onRecordingCancelled()
         } finally {
             isRecording = false
@@ -268,7 +269,7 @@ class VoiceRecorderViewNew @JvmOverloads constructor(
         try {
             mainScope.launch { helper.cancelRecording() }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("VoiceRecorderViewNew", "Error cancelling recording", e)
         } finally {
             isRecording = false
             listener?.onRecordingCancelled()
