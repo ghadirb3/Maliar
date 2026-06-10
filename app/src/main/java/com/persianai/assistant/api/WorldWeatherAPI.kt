@@ -11,13 +11,12 @@ import kotlin.math.abs
 
 /**
  * WorldWeatherOnline API Client
- * API Key: db4236ef33c64dab8ce194001251110
  */
 class WorldWeatherAPI {
     
     companion object {
         private const val TAG = "WorldWeatherAPI"
-        private const val API_KEY = "db4236ef33c64dab8ce194001251110"
+        private val API_KEY = com.persianai.assistant.BuildConfig.WORLDWEATHER_API_KEY
         private const val BASE_URL = "https://api.worldweatheronline.com/premium/v1"
         private const val CACHE_DURATION = 10 * 60 * 1000L // 10 دقیقه
         

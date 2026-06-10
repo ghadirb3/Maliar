@@ -5,8 +5,14 @@ import urllib.request
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 
-GIST_URL = "https://gist.githubusercontent.com/ghadirb/626a804df3009e49045a2948dad89fe5/raw/5ec50251e01128e0ad8d380350a2002d5c5b585f/keys.txt"
-PASSWORD = "12345"
+import os
+
+GIST_URL = os.environ.get("DECRYPT_KEYS_GIST_URL", "")
+PASSWORD = os.environ.get("DECRYPT_KEYS_PASSWORD", "")
+
+if not GIST_URL or not PASSWORD:
+    print("❌ Set DECRYPT_KEYS_GIST_URL and DECRYPT_KEYS_PASSWORD environment variables")
+    exit(1)
 
 def decrypt_keys(encrypted_base64, password):
     try:

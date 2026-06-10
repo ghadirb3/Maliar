@@ -13,7 +13,7 @@ class GeminiChat {
     
     companion object {
         private const val TAG = "GeminiChat"
-        private const val API_KEY = "YOUR_GEMINI_API_KEY" // جایگزین کن
+        private val API_KEY = com.persianai.assistant.BuildConfig.GEMINI_API_KEY
         private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
     }
     

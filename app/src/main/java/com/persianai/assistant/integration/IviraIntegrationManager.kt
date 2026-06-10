@@ -11,10 +11,18 @@ class IviraIntegrationManager(private val context: Context) {
     
     companion object {
         private const val TAG = "IviraIntegration"
+        private const val PREFS_NAME = "ivira_config"
     }
     
     private val tokenManager = IviraTokenManager(context)
     private val apiClient = IviraAPIClient(context)
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private fun getTokenUrl(): String =
+        prefs.getString("ivira_token_url", "") ?: ""
+
+    private fun getTokenPassword(): String =
+        prefs.getString("ivira_token_password", "") ?: ""
     
     suspend fun initializeIviraTokens(): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -26,7 +34,13 @@ class IviraIntegrationManager(private val context: Context) {
             }
 
             Log.w(TAG, "No Ivira tokens found in prefs; fetching from encrypted URL...")
-            val fetched = tokenManager.fetchEncryptedTokensFromUrl()
+            val url = getTokenUrl()
+            val password = getTokenPassword()
+            if (url.isEmpty() || password.isEmpty()) {
+                Log.w(TAG, "Ivira token URL or password not configured")
+                return@withContext false
+            }
+            val fetched = tokenManager.fetchEncryptedTokensFromUrl(url, password)
             if (fetched.isSuccess && !fetched.getOrNull().isNullOrEmpty()) {
                 Log.d(TAG, "Fetched and saved Ivira tokens from remote")
                 return@withContext true
@@ -67,7 +81,12 @@ class IviraIntegrationManager(private val context: Context) {
     }
 
     suspend fun reloadTokensManually(): Result<Map<String, String>> {
-        return tokenManager.fetchEncryptedTokensFromUrl()
+        val url = getTokenUrl()
+        val password = getTokenPassword()
+        if (url.isEmpty() || password.isEmpty()) {
+            return Result.failure(IllegalStateException("Ivira token URL or password not configured"))
+        }
+        return tokenManager.fetchEncryptedTokensFromUrl(url, password)
     }
 
     fun getTokenStatusForSettings(): String = getTokensStatus()

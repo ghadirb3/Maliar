@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import kotlin.math.roundToInt
 
 /**
@@ -16,8 +17,7 @@ class OpenWeatherAPI {
     
     companion object {
         private const val TAG = "OpenWeatherAPI"
-        // کلید API رایگان OpenWeatherMap
-        private const val API_KEY = "f8366599ed1ede5949ccd3be8959b718"
+        private val API_KEY = com.persianai.assistant.BuildConfig.OPENWEATHER_API_KEY
         private const val BASE_URL = "https://api.openweathermap.org/data/2.5"
         private const val CACHE_DURATION = 10 * 60 * 1000L // 10 دقیقه کش
         
@@ -58,7 +58,8 @@ class OpenWeatherAPI {
             }
             
             try {
-                val url = "$BASE_URL/weather?q=$cityName&appid=$API_KEY&units=metric&lang=fa"
+                val encodedCity = URLEncoder.encode(cityName, "UTF-8")
+                val url = "$BASE_URL/weather?q=$encodedCity&appid=$API_KEY&units=metric&lang=fa"
                 val response = makeRequest(url)
                 
                 if (response != null) {
@@ -138,7 +139,8 @@ class OpenWeatherAPI {
             val forecasts = mutableListOf<ForecastData>()
             
             try {
-                val url = "$BASE_URL/forecast?q=$cityName&appid=$API_KEY&units=metric&lang=fa"
+                val encodedCity = URLEncoder.encode(cityName, "UTF-8")
+                val url = "$BASE_URL/forecast?q=$encodedCity&appid=$API_KEY&units=metric&lang=fa"
                 val response = makeRequest(url)
                 
                 if (response != null) {
