@@ -260,9 +260,42 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         val request = requestBuilder.build()
 
         client.newCall(request).execute().use { response ->
-            val responseBody = response.body?.string() ?: ""
+            var responseBody = response.body?.string() ?: ""
             if (!response.isSuccessful) {
                 android.util.Log.e("AIClient", "API Error ${response.code}: $responseBody")
+
+                // If GAPGPT returns 400 for chat/completions, try /v1/responses as fallback (newer models)
+                if (model.provider == AIProvider.GAPGPT && response.code == 400) {
+                    try {
+                        val altUrl = (apiKey.baseUrl?.trim()?.trimEnd('/') ?: "https://api.gapgpt.app/v1") + "/responses"
+                        android.util.Log.d("AIClient", "Trying GAPGPT /responses fallback: url=$altUrl")
+
+                        val altBodyMap = mapOf(
+                            "model" to model.modelId,
+                            "input" to messageList
+                        )
+                        val altJson = gson.toJson(altBodyMap)
+                        val altRequest = Request.Builder()
+                            .url(altUrl)
+                            .addHeader("Content-Type", "application/json")
+                            .addHeader("Authorization", "Bearer $cleanKey")
+                            .post(altJson.toRequestBody(mediaType))
+                            .build()
+
+                        client.newCall(altRequest).execute().use { altResp ->
+                            responseBody = altResp.body?.string() ?: ""
+                            if (!altResp.isSuccessful) {
+                                android.util.Log.e("AIClient", "GAPGPT /responses Error ${altResp.code}: $responseBody")
+                                throw Exception("API Error ${altResp.code}: ${altResp.message}")
+                            }
+                            // parse below using the same logic
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("AIClient", "GAPGPT /responses fallback failed: ${e.message}")
+                        throw Exception("API Error ${response.code}: ${response.message}")
+                    }
+                }
+
                 throw Exception("API Error ${response.code}: ${response.message}")
             }
 
@@ -272,23 +305,43 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
 
             try {
                 val json = gson.fromJson(responseBody, JsonObject::class.java)
-                val choices = json.getAsJsonArray("choices")
-                if (choices != null && choices.size() > 0) {
-                    val choice = choices[0].asJsonObject
-                    val message = choice.getAsJsonObject("message")
-                    if (message != null) {
-                        val content = message.get("content")?.asString
+
+                // Try multiple common response shapes
+                // 1) choices[0].message.content (chat/completions)
+                try {
+                    val choices = json.getAsJsonArray("choices")
+                    if (choices != null && choices.size() > 0) {
+                        val choice = choices[0].asJsonObject
+                        val message = choice.getAsJsonObject("message")
+                        val content = message?.get("content")?.asString ?: choice.get("text")?.asString
                         if (!content.isNullOrBlank()) {
-                            return@withContext ChatMessage(
-                                role = MessageRole.ASSISTANT,
-                                content = content,
-                                timestamp = System.currentTimeMillis()
-                            )
+                            return@withContext ChatMessage(MessageRole.ASSISTANT, content, System.currentTimeMillis())
                         }
                     }
-                }
-                
-                // Log the full response for debugging
+                } catch (_: Exception) {}
+
+                // 2) output / candidates / data structures (responses API)
+                try {
+                    // responses API may have 'output' array or 'candidates'
+                    val outputArr = json.getAsJsonArray("output") ?: json.getAsJsonArray("candidates")
+                    if (outputArr != null && outputArr.size() > 0) {
+                        val first = outputArr[0].asJsonObject
+                        // try nested content structures
+                        val parts = first.getAsJsonArray("content")
+                        if (parts != null && parts.size() > 0) {
+                            val part0 = parts[0].asJsonObject
+                            val text = part0.get("text")?.asString ?: part0.get("content")?.asString
+                            if (!text.isNullOrBlank()) return@withContext ChatMessage(MessageRole.ASSISTANT, text, System.currentTimeMillis())
+                        }
+                        val candidateText = first.get("text")?.asString
+                        if (!candidateText.isNullOrBlank()) return@withContext ChatMessage(MessageRole.ASSISTANT, candidateText, System.currentTimeMillis())
+                    }
+                } catch (_: Exception) {}
+
+                // 3) generic fields
+                val alt = json.get("response")?.asString ?: json.get("text")?.asString ?: json.get("content")?.asString
+                if (!alt.isNullOrBlank()) return@withContext ChatMessage(MessageRole.ASSISTANT, alt, System.currentTimeMillis())
+
                 android.util.Log.e("AIClient", "Full API response: $responseBody")
                 throw Exception("پاسخ خالی از API")
             } catch (e: Exception) {

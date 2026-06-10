@@ -54,6 +54,9 @@ class CallContactSelectionDialogue(
             return false
         }
 
+        // Small pause to avoid TTS echo being recorded
+        delay(400)
+
         // Start recording with simple VAD (reuse thresholds from VoiceCommandService)
         val start = engine.startRecording()
         if (start.isFailure) {
