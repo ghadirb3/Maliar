@@ -253,6 +253,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         val requestBuilder = Request.Builder()
             .url(apiUrl)
             .addHeader("Content-Type", "application/json")
+            .addHeader("Accept", "application/json")
             .addHeader("Authorization", "Bearer $cleanKey")
             .post(body)
 
@@ -275,6 +276,11 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
 
         client.newCall(request).execute().use { response ->
             var responseBody = response.body?.string() ?: ""
+            android.util.Log.d("AIClient", "[$requestId] Response status=${response.code} message=${response.message}")
+            val respHeaders = response.headers.toMultimap().mapValues { (k, v) ->
+                if (k.equals("authorization", true) || k.equals("x-api-key", true)) v.map { "REDACTED" } else v
+            }
+            android.util.Log.d("AIClient", "[$requestId] Response headers=$respHeaders")
             if (!response.isSuccessful) {
                 android.util.Log.e("AIClient", "API Error ${response.code}: $responseBody")
 
@@ -296,11 +302,18 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         val altRequest = Request.Builder()
                             .url(altUrl)
                             .addHeader("Content-Type", "application/json")
+                            .addHeader("Accept", "application/json")
                             .addHeader("Authorization", "Bearer $cleanKey")
                             .post(altJson.toRequestBody(mediaType))
                             .build()
 
+                        val altRequestId = "${requestId}_alt_${System.currentTimeMillis()}"
                         client.newCall(altRequest).execute().use { altResp ->
+                            android.util.Log.d("AIClient", "[$altRequestId] /responses status=${altResp.code} message=${altResp.message}")
+                            val altHeaders = altResp.headers.toMultimap().mapValues { (k, v) ->
+                                if (k.equals("authorization", true) || k.equals("x-api-key", true)) v.map { "REDACTED" } else v
+                            }
+                            android.util.Log.d("AIClient", "[$altRequestId] /responses headers=$altHeaders")
                             responseBody = altResp.body?.string() ?: ""
                             if (!altResp.isSuccessful) {
                                 android.util.Log.e("AIClient", "GAPGPT /responses Error ${altResp.code}: $responseBody")
@@ -325,11 +338,18 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                             val minimalRequest = Request.Builder()
                                 .url(apiUrl)
                                 .addHeader("Content-Type", "application/json")
+                                .addHeader("Accept", "application/json")
                                 .addHeader("Authorization", "Bearer $cleanKey")
                                 .post(minimalJson.toRequestBody(mediaType))
                                 .build()
 
+                            val minRequestId = "${requestId}_min_${System.currentTimeMillis()}"
                             client.newCall(minimalRequest).execute().use { minResp ->
+                                android.util.Log.d("AIClient", "[$minRequestId] minimal status=${minResp.code} message=${minResp.message}")
+                                val minHeaders = minResp.headers.toMultimap().mapValues { (k, v) ->
+                                    if (k.equals("authorization", true) || k.equals("x-api-key", true)) v.map { "REDACTED" } else v
+                                }
+                                android.util.Log.d("AIClient", "[$minRequestId] minimal headers=$minHeaders")
                                 responseBody = minResp.body?.string() ?: ""
                                 if (!minResp.isSuccessful) {
                                     android.util.Log.e("AIClient", "GAPGPT minimal payload Error ${minResp.code}: $responseBody")
@@ -461,6 +481,7 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         val request = Request.Builder()
             .url(apiUrl)
             .addHeader("Content-Type", "application/json")
+            .addHeader("Accept", "application/json")
             .addHeader("x-api-key", apiKey.key)
             .addHeader("anthropic-version", "2023-06-01")
             .post(body)
@@ -468,6 +489,11 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
 
         client.newCall(request).execute().use { response ->
             val responseBody = response.body?.string() ?: ""
+            android.util.Log.d("AIClient", "[claude_${System.currentTimeMillis()}] status=${response.code} message=${response.message}")
+            val claudeHeaders = response.headers.toMultimap().mapValues { (k, v) ->
+                if (k.equals("authorization", true) || k.equals("x-api-key", true)) v.map { "REDACTED" } else v
+            }
+            android.util.Log.d("AIClient", "[claude_${System.currentTimeMillis()}] headers=$claudeHeaders")
             if (!response.isSuccessful) {
                 android.util.Log.e("AIClient", "Claude API Error ${response.code}: $responseBody")
                 throw Exception("Claude API Error ${response.code}: ${response.message}")
@@ -552,11 +578,17 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", "Bearer ${apiKey.key}")
+            .addHeader("Accept", "application/json")
             .post(requestBody)
             .build()
 
         client.newCall(request).execute().use { response ->
             val responseBody = response.body?.string()
+            android.util.Log.d("AIClient", "[whisper_${System.currentTimeMillis()}] status=${response.code} message=${response.message}")
+            val whHeaders = response.headers.toMultimap().mapValues { (k, v) ->
+                if (k.equals("authorization", true) || k.equals("x-api-key", true)) v.map { "REDACTED" } else v
+            }
+            android.util.Log.d("AIClient", "[whisper_${System.currentTimeMillis()}] headers=$whHeaders")
             if (!response.isSuccessful) {
                 android.util.Log.e("AIClient", "Whisper API Error ${response.code}: $responseBody")
                 return ""
