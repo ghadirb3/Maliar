@@ -143,6 +143,17 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
         }
 
         android.util.Log.e("AIClient", "❌ All keys failed: ${lastError?.message}")
+        // Try selecting a fallback model (different provider/model) before giving up
+        try {
+            val fallback = ModelSelector.selectFallbackModel(context, model, apiKeys)
+            if (fallback != null && fallback != model) {
+                android.util.Log.d("AIClient", "Trying fallback model: ${fallback.modelId} (${fallback.provider})")
+                return@withContext sendMessage(fallback, messages, systemPrompt)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("AIClient", "Fallback selection failed: ${e.message}")
+        }
+
         throw lastError ?: Exception("خطای نامشخص در ارسال پیام")
     }
 
@@ -299,7 +310,38 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("AIClient", "GAPGPT /responses fallback failed: ${e.message}")
-                        throw Exception("API Error ${response.code}: ${response.message}")
+                        // If /responses also fails, try a minimal chat payload (single user message)
+                        try {
+                            android.util.Log.d("AIClient", "GAPGPT: trying minimal single-user-message payload as diagnostic/retry")
+                            val lastUserContent = messages.reversed().firstOrNull { it.role == com.persianai.assistant.models.MessageRole.USER }?.content
+                                ?: messages.lastOrNull()?.content ?: ""
+                            val minimalMessages = listOf(mapOf("role" to "user", "content" to lastUserContent))
+                            val minimalBody = mapOf(
+                                "model" to model.modelId,
+                                "messages" to minimalMessages,
+                                "temperature" to 0.0
+                            )
+                            val minimalJson = gson.toJson(minimalBody)
+                            val minimalRequest = Request.Builder()
+                                .url(apiUrl)
+                                .addHeader("Content-Type", "application/json")
+                                .addHeader("Authorization", "Bearer $cleanKey")
+                                .post(minimalJson.toRequestBody(mediaType))
+                                .build()
+
+                            client.newCall(minimalRequest).execute().use { minResp ->
+                                responseBody = minResp.body?.string() ?: ""
+                                if (!minResp.isSuccessful) {
+                                    android.util.Log.e("AIClient", "GAPGPT minimal payload Error ${minResp.code}: $responseBody")
+                                    throw Exception("API Error ${minResp.code}: ${minResp.message}")
+                                }
+                                android.util.Log.d("AIClient", "GAPGPT minimal payload succeeded")
+                                // continue to parse responseBody below
+                            }
+                        } catch (e2: Exception) {
+                            android.util.Log.e("AIClient", "GAPGPT minimal fallback failed: ${e2.message}")
+                            throw Exception("API Error ${response.code}: ${response.message}")
+                        }
                     }
                 }
 

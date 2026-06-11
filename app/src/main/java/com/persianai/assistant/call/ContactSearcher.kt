@@ -5,6 +5,8 @@ import android.database.Cursor
 import android.provider.ContactsContract
 import android.util.Log
 import com.persianai.assistant.models.Contact
+import com.persianai.assistant.utils.PreferencesManager
+import com.persianai.assistant.call.StaticContactManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -27,6 +29,35 @@ class ContactSearcher(private val context: Context) {
         val results = mutableListOf<Contact>()
         
         try {
+            // If the user enabled static contacts, consult them first (faster and more reliable)
+            try {
+                val prefsManager = PreferencesManager(context)
+                var staticEnabled = prefsManager.isUseStaticContacts()
+
+                // If user didn't explicitly enable, enable automatically when an assets file exists
+                if (!staticEnabled) {
+                    try {
+                        context.assets.open("static_contacts.json").close()
+                        staticEnabled = true
+                        Log.d(TAG, "Static contacts asset found -> enabling static contacts automatically")
+                    } catch (_: Exception) {
+                        // no asset
+                    }
+                }
+
+                if (staticEnabled) {
+                    val staticMgr = StaticContactManager(context)
+                    val staticResults = staticMgr.searchStaticContacts(query, maxResults)
+                    if (staticResults.isNotEmpty()) {
+                        Log.d(TAG, "✅ Static contacts matched ${staticResults.size} results")
+                        return@withContext staticResults
+                    } else {
+                        Log.d(TAG, "🔍 Static contacts enabled but none matched")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Static contacts check failed", e)
+            }
             if (query.isBlank()) {
                 Log.w(TAG, "⚠️ عبارت جستجو خالی است")
                 return@withContext emptyList()

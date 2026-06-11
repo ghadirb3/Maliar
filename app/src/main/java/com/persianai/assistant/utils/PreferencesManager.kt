@@ -50,6 +50,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_REMOTE_AI_CONFIG_TS = "remote_ai_config_ts"
         private const val KEY_CALL_MODE = "call_mode"
         private const val KEY_DIRECT_CALL_ENABLED = "direct_call_enabled"
+        private const val KEY_USE_STATIC_CONTACTS = "use_static_contacts"
+        private const val KEY_STATIC_CONTACTS_JSON = "static_contacts_json"
         
         const val DEFAULT_SYSTEM_PROMPT = """OUTPUT ONLY JSON. NO TEXT.
 
@@ -443,6 +445,27 @@ JSON ONLY."""
     
     fun getDirectCallEnabled(): Boolean {
         return prefs.getBoolean(KEY_DIRECT_CALL_ENABLED, false) // پیش‌فرض: صفحه شماره‌گیر
+    }
+
+    // Static contacts (user-provided smaller contact list for reliable calling)
+    fun setUseStaticContacts(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_USE_STATIC_CONTACTS, enabled).apply()
+    }
+
+    fun isUseStaticContacts(): Boolean {
+        return prefs.getBoolean(KEY_USE_STATIC_CONTACTS, false)
+    }
+
+    fun saveStaticContactsJson(json: String?) {
+        if (json.isNullOrBlank()) {
+            prefs.edit().remove(KEY_STATIC_CONTACTS_JSON).apply()
+        } else {
+            prefs.edit().putString(KEY_STATIC_CONTACTS_JSON, json).apply()
+        }
+    }
+
+    fun getStaticContactsJson(): String? {
+        return prefs.getString(KEY_STATIC_CONTACTS_JSON, null)
     }
 
     /**

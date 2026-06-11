@@ -150,11 +150,14 @@ class CallContactSelectionDialogue(
         val knownNumbers = mapOf(
             // Persian
             "یک" to 1, "اول" to 1, "نخست" to 1, "اولین" to 1,
+            // Common colloquial forms
+            "یه" to 1, "یکی" to 1,
             "دو" to 2, "دوم" to 2,
             "سه" to 3, "سوم" to 3,
             "چهار" to 4, "چهارم" to 4,
             "پنج" to 5,
             "شش" to 6, "هفت" to 7,
+            "دوتا" to 2,
             "هشت" to 8, "نه" to 9, "ده" to 10,
 
             // Latin transliterations (common)
