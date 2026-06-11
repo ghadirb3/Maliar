@@ -128,14 +128,17 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                 lastError = e
                 val errorMsg = e.message ?: ""
                 android.util.Log.w("AIClient", "❌ Key failed for ${model.provider.name}: ${formatExceptionForLog(e)}")
-                
-                // GAPGPT fallback disabled - only use specified models (gpt-5-nano, gapgpt-deepseek-v3)
-                // Per user request: do not fall back to gpt-4o-mini
-                
-                // Disable problematic key temporarily only for this specific model
-                // This allows other models from the same provider to try the same key
+
+                // Only mark a key as failed for this specific model when the error
+                // indicates an authentication/authorization problem (401/403)
+                val lowerErr = errorMsg.lowercase()
                 val keyModelPair = "${apiKey.key}_${model.modelId}"
-                failedKeys.add(keyModelPair)
+                if (lowerErr.contains("401") || lowerErr.contains("403") || lowerErr.contains("unauthorized") || lowerErr.contains("forbidden")) {
+                    failedKeys.add(keyModelPair)
+                    android.util.Log.d("AIClient", "Marked key as failed for model due to auth error: ${apiKey.key.take(8)}... -> $keyModelPair")
+                } else {
+                    android.util.Log.d("AIClient", "Not marking key as failed (non-auth error): $errorMsg")
+                }
             }
         }
 
@@ -270,9 +273,13 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
                         val altUrl = (apiKey.baseUrl?.trim()?.trimEnd('/') ?: "https://api.gapgpt.app/v1") + "/responses"
                         android.util.Log.d("AIClient", "Trying GAPGPT /responses fallback: url=$altUrl")
 
+                        // Some GAPGPT deployments expect a single `input` string rather than
+                        // an array of message objects. Join message contents into a plain string.
+                        val joinedInput = messageList.joinToString("\n\n") { it["content"] ?: "" }
+
                         val altBodyMap = mapOf(
                             "model" to model.modelId,
-                            "input" to messageList
+                            "input" to joinedInput
                         )
                         val altJson = gson.toJson(altBodyMap)
                         val altRequest = Request.Builder()

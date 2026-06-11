@@ -13,6 +13,7 @@ import com.persianai.assistant.services.UnifiedVoiceEngine
 import com.persianai.assistant.stt.OnlineSTTService
 import com.persianai.assistant.services.RecordingResult
 import kotlinx.coroutines.delay
+import java.text.Normalizer
 
 /**
  * دیالوگ انتخاب مخاطب برای ماژول تماس.
@@ -132,26 +133,54 @@ class CallContactSelectionDialogue(
 
     private fun parseNumberFromText(text: String): Int? {
         // Normalize digits first (Persian/Arabic to Latin)
-        val normalized = TTSHelper.normalizeDigits(text)
+        var normalized = TTSHelper.normalizeDigits(text)
 
-        // Try to find explicit digits
+        // Remove diacritics and normalize to ASCII where possible (handles ş -> s, etc.)
+        normalized = Normalizer.normalize(normalized, Normalizer.Form.NFD).replace("\\p{M}".toRegex(), "")
+        val lower = normalized.lowercase().trim()
+
+        // Try to find explicit digits first (Latin digits)
         val digitRegex = Regex("\\d+")
-        val found = digitRegex.find(normalized)
-        if (found != null) return found.value.toIntOrNull()
+        digitRegex.find(lower)?.let { return it.value.toIntOrNull() }
 
-        // Map common Persian words to numbers
-        val map = mapOf(
-            "یک" to 1, "اول" to 1, "نخست" to 1,
+        // Tokenize by non-letter/digit (keeps Persian and Latin words)
+        val tokens = lower.split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotBlank() }
+
+        // Maps for Persian words, common Latin transliterations, and English words
+        val knownNumbers = mapOf(
+            // Persian
+            "یک" to 1, "اول" to 1, "نخست" to 1, "اولین" to 1,
             "دو" to 2, "دوم" to 2,
             "سه" to 3, "سوم" to 3,
             "چهار" to 4, "چهارم" to 4,
-            "پنج" to 5, "شش" to 6, "هفت" to 7,
-            "هشت" to 8, "نه" to 9, "ده" to 10
+            "پنج" to 5,
+            "شش" to 6, "هفت" to 7,
+            "هشت" to 8, "نه" to 9, "ده" to 10,
+
+            // Latin transliterations (common)
+            "yek" to 1, "aval" to 1, "avval" to 1,
+            "do" to 2, "seh" to 3, "se" to 3, "chahar" to 4, "char" to 4,
+            "panj" to 5, "shesh" to 6, "haft" to 7, "hasht" to 8, "noh" to 9, "dah" to 10,
+
+            // English
+            "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
+            "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10
         )
 
-        val lower = normalized.lowercase()
-        for ((k, v) in map) {
-            if (lower.contains(k)) return v
+        // Check each token for a known word
+        for (token in tokens) {
+            knownNumbers[token]?.let { return it }
+        }
+
+        // Handle patterns like "شماره یک" or transliterated "shomare yek" where the index follows a keyword
+        for ((i, token) in tokens.withIndex()) {
+            if (token.startsWith("shom") || token.contains("shom" ) || token.contains("شماره")) {
+                if (i + 1 < tokens.size) {
+                    val next = tokens[i + 1]
+                    digitRegex.find(next)?.let { return it.value.toIntOrNull() }
+                    knownNumbers[next]?.let { return it }
+                }
+            }
         }
 
         return null
