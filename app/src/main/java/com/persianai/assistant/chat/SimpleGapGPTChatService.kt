@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -34,7 +35,7 @@ class SimpleGapGPTChatService(private val context: Context) {
     
     suspend fun sendMessage(userMessage: String): ChatResponse = withContext(Dispatchers.IO) {
         val apiKeys = APIKeyConfig.getAPIKeys(context)
-        val gapgptKey = apiKeys.firstOrNull { it.provider.name == "GAPGPT" && it.isActive }
+        val gapgptKey = apiKeys.firstOrNull { key -> key.provider.name == "GAPGPT" && key.isActive }
         
         if (gapgptKey == null) {
             Log.e(TAG, "No active GAPGPT API key found")
@@ -57,14 +58,15 @@ class SimpleGapGPTChatService(private val context: Context) {
     }
     
     private fun tryModel(model: String, message: String, apiKey: String): ChatResponse {
+        val messagesArray = JSONArray()
+        val messageObj = JSONObject()
+        messageObj.put("role", "user")
+        messageObj.put("content", message)
+        messagesArray.put(messageObj)
+        
         val requestBody = JSONObject().apply {
             put("model", model)
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", message)
-                })
-            })
+            put("messages", messagesArray)
         }.toString().toRequestBody("application/json".toMediaType())
         
         val request = Request.Builder()
