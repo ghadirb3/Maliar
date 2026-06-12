@@ -43,7 +43,7 @@ class RemoteAIConfigManager private constructor(private val context: Context) {
             AIModel.GPT_4O_MINI                    // fallback عمومی OpenAI
         )
         private val FALLBACK_STT_PRIORITY = listOf("liara", "gapgpt", "openai")
-        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "haaniye", "android")
+        private val FALLBACK_TTS_PRIORITY = listOf("gapgpt", "android")
     }
 
     data class RemoteAIConfig(

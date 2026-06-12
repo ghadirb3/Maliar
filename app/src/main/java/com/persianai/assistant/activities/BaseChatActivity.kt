@@ -531,14 +531,14 @@ abstract class BaseChatActivity : AppCompatActivity() {
                         addMessage(ChatMessage(role = MessageRole.USER, content = userText))
 
                         statusText.text = "🤖 در حال پاسخ..."
-                        // Route through QueryRouter تا آنلاین (OpenRouter→Liara) یا آفلاین اجرا شود
-                        val router = com.persianai.assistant.core.QueryRouter(this@BaseChatActivity)
-                        val result = router.routeQuery(userText)
-                        val reply = result.response
+                        // Use SimpleGapGPTChatService for direct GAPGPT API calls
+                        val chatService = com.persianai.assistant.chat.SimpleGapGPTChatService(this@BaseChatActivity)
+                        val result = chatService.sendMessage(userText)
+                        val reply = if (result.success) result.content else "خطا: ${result.error}"
                         addMessage(ChatMessage(role = MessageRole.ASSISTANT, content = reply, isError = !result.success))
                         lastText.text = "دستیار: ${reply.take(300)}"
 
-                        // TTS playback with GapGPT -> Haaniye priority
+                        // TTS playback with GapGPT
                         statusText.text = "🔊 در حال پخش پاسخ..."
                         try {
                             ttsHelper.speakOnlineFirst(reply)
@@ -949,7 +949,7 @@ abstract class BaseChatActivity : AppCompatActivity() {
                     Toast.makeText(
                         this@BaseChatActivity,
                         "⚠️ تبدیل گفتار به متن موفق نبود.\n\n" +
-                            "اگر آنلاین فعال باشد اول لیارا امتحان می‌شود؛ در غیر اینصورت Haaniye آفلاین. واضح‌تر صحبت کنید.",
+                            "اگر آنلاین فعال باشد اول لیارا امتحان می‌شود؛ در غیر اینصورت آنلاین STT. واضح‌تر صحبت کنید.",
                         Toast.LENGTH_LONG
                     ).show()
                 }

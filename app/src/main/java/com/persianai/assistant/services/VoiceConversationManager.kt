@@ -19,7 +19,7 @@ import com.persianai.assistant.stt.OnlineSTTService
  * Features:
  * - Voice-to-Voice conversations (speak → AI responds with voice)
  * - Real-time speech processing
- * - Multi-language TTS support (Haaniye + Android TTS)
+ * - Multi-language TTS support (Android TTS + Online TTS)
  * - Conversation memory and context
  * - Voice activity detection
  * - Background conversation capability
@@ -34,7 +34,6 @@ class VoiceConversationManager(
     
     // TTS Engine
     private var textToSpeech: TextToSpeech? = null
-    private var haaniyeTTS: MediaPlayer? = null
     
     // Conversation state
     private var isConversationActive = false
@@ -52,7 +51,6 @@ class VoiceConversationManager(
     private var conversationListener: ConversationListener? = null
     
     enum class VoiceMode {
-        OFFLINE_ONLY,    // Only Haaniye model
         ONLINE_ONLY,     // Only AI APIs
         HYBRID,          // Combination of both
         VOICE_ONLY       // Voice-to-voice only
@@ -99,31 +97,10 @@ class VoiceConversationManager(
         }
     }
 
-    private fun playWavWithMediaPlayer(wav: File) {
-        try {
-            haaniyeTTS?.reset()
-            haaniyeTTS = (haaniyeTTS ?: MediaPlayer()).apply {
-                setDataSource(wav.absolutePath)
-                setOnCompletionListener {
-                    try { it.reset() } catch (_: Exception) {}
-                }
-                setOnErrorListener { mp, what, extra ->
-                    try { mp.reset() } catch (_: Exception) {}
-                    Log.w(TAG, "MediaPlayer error what=$what extra=$extra")
-                    true
-                }
-                prepare()
-                start()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "playWavWithMediaPlayer failed: ${e.message}")
-            try { haaniyeTTS?.reset() } catch (_: Exception) {}
-        }
-    }
+    // Removed Haaniye MediaPlayer helper (offline TTS removed)
 
-    private suspend fun speakWithHaaniyeOrFallback(text: String) = withContext(Dispatchers.Main) {
+    private suspend fun speakWithAndroidOrBeep(text: String) = withContext(Dispatchers.Main) {
         if (text.isBlank()) return@withContext
-        // Only Android TTS, then beep fallback
         try {
             speakWithAndroidTTS(text)
             return@withContext
@@ -215,7 +192,7 @@ class VoiceConversationManager(
 
                     // In offline voice conversation we must not get stuck in silence.
                     try {
-                        speakWithHaaniyeOrFallback("متوجه نشدم، دوباره بگو")
+                        speakWithAndroidOrBeep("متوجه نشدم، دوباره بگو")
                     } catch (_: Exception) {
                     }
                     continue
@@ -384,8 +361,8 @@ class VoiceConversationManager(
         try {
             Log.d(TAG, "🔊 Speaking response: $response")
 
-            // Audio output preference: Haaniye ONNX -> Android TTS -> beep.
-            speakWithHaaniyeOrFallback(response)
+            // Audio output preference: Android TTS -> beep.
+            speakWithAndroidOrBeep(response)
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error speaking response", e)
@@ -395,26 +372,7 @@ class VoiceConversationManager(
     /**
      * Speak using Haaniye TTS model
      */
-    private suspend fun speakWithHaaniye(text: String) = withContext(Dispatchers.IO) {
-        try {
-            Log.d(TAG, "🎭 Using Haaniye TTS for: $text")
-            
-            // For now, simulate Haaniye TTS
-            // In production, this would:
-            // 1. Send text to Haaniye TTS model
-            // 2. Generate audio from the ONNX model
-            // 3. Return audio file for playback
-            
-            delay(2000) // Simulate TTS processing time
-            
-            // Simulate successful TTS generation
-            Log.d(TAG, "✅ Haaniye TTS completed")
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error with Haaniye TTS", e)
-            throw e
-        }
-    }
+    // Offline Haaniye TTS removed to reduce APK size and dependency surface.
     
     /**
      * Speak using Android TextToSpeech
@@ -473,8 +431,7 @@ class VoiceConversationManager(
                 }
             }
 
-            // Initialize Haaniye TTS (placeholder)
-            Log.d(TAG, "🔧 Haaniye TTS framework ready")
+            // Haaniye offline TTS removed; relying on Android TTS and online providers
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error initializing TTS", e)

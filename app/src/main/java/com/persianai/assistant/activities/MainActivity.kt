@@ -422,13 +422,13 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // استفاده از QueryRouter تا هم آنلاین (OpenRouter→Liara) و هم آفلاین پوشش داده شود
-                val router = com.persianai.assistant.core.QueryRouter(this@MainActivity)
-                val result = router.routeQuery(text)
+                // Use SimpleGapGPTChatService for direct GAPGPT API calls
+                val chatService = com.persianai.assistant.chat.SimpleGapGPTChatService(this@MainActivity)
+                val result = chatService.sendMessage(text)
 
                 val finalMessage = ChatMessage(
                     role = MessageRole.ASSISTANT,
-                    content = result.response,
+                    content = if (result.success) result.content else "خطا: ${result.error}",
                     timestamp = System.currentTimeMillis(),
                     isError = !result.success
                 )

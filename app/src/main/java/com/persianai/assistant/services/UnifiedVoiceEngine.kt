@@ -16,7 +16,6 @@ import java.nio.channels.FileChannel
  * UnifiedVoiceEngine
  * - Thin, safe wrapper around existing recorder implementations
  * - Exposes coroutine-friendly start/stop/cancel APIs
- * - Provides utilities to ensure offline Haaniye model files are available
  *
  * Note: This file intentionally keeps logic small and delegates heavy work to
  * `NewHybridVoiceRecorder` / existing classes. The goal is to centralize
@@ -80,58 +79,6 @@ class UnifiedVoiceEngine(private val context: Context) {
         }
     }
 
-    /**
-     * Copy Haaniye offline model directory from a host path into app files directory.
-     * This is provided so CI / developer machines can push model artifacts into
-     * the app's runtime storage for the offline path the app will use.
-     *
-     * Example hostPath (Windows):
-     * C:\\github\\Maliar\\app\\build\\intermediates\\assets\\debug\\tts\\haaniye
-     */
-    suspend fun copyHaaniyeFromHost(hostPath: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext try {
-            val src = File(hostPath)
-            if (!src.exists() || !src.isDirectory) {
-                Log.w(TAG, "Haaniye host path not found: $hostPath")
-                return@withContext false
-            }
-
-            val dest = File(context.filesDir, "haaniye")
-            if (!dest.exists()) dest.mkdirs()
-
-            // copy recursively
-            src.walkTopDown().forEach { f ->
-                val relative = f.toRelativeString(src)
-                val out = File(dest, relative)
-                if (f.isDirectory) {
-                    if (!out.exists()) out.mkdirs()
-                } else {
-                    // copy file
-                    copyFile(f, out)
-                }
-            }
-
-            Log.d(TAG, "Haaniye files copied to: ${dest.absolutePath}")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to copy Haaniye files", e)
-            false
-        }
-    }
-
-    private fun copyFile(src: File, dst: File) {
-        var inChannel: FileChannel? = null
-        var outChannel: FileChannel? = null
-        try {
-            if (!dst.parentFile.exists()) dst.parentFile.mkdirs()
-            inChannel = FileInputStream(src).channel
-            outChannel = FileOutputStream(dst).channel
-            inChannel.transferTo(0, inChannel.size(), outChannel)
-        } finally {
-            try { inChannel?.close() } catch (_: Exception) {}
-            try { outChannel?.close() } catch (_: Exception) {}
-        }
-    }
 
     /**
      * Analyze audio file using existing hybrid analyzer
@@ -153,16 +100,4 @@ class UnifiedVoiceEngine(private val context: Context) {
         }
     }
 
-    /**
-     * Analyze audio file using offline STT only (Haaniye).
-     */
-    suspend fun analyzeOffline(file: File): Result<String> = withContext(Dispatchers.IO) {
-        return@withContext try {
-            recorder.analyzeOffline(file)
-            Result.success("Offline analysis not available")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error analyzing offline", e)
-            Result.failure(e)
-        }
-    }
 }

@@ -156,14 +156,14 @@ class HomeActivity : AppCompatActivity() {
             val res = controller.handle(req)
             var finalText = res.text.orEmpty()
 
-            // اگر خروجی خالی بود، از QueryRouter (آفلاین) استفاده کن
+            // اگر خروجی خالی بود، از SimpleGapGPTChatService استفاده کن
             if (finalText.isBlank()) {
                 try {
-                    val router = QueryRouter(this@HomeActivity)
-                    val routed = router.routeQuery(text)
-                    finalText = routed.response
+                    val chatService = com.persianai.assistant.chat.SimpleGapGPTChatService(this@HomeActivity)
+                    val result = chatService.sendMessage(text)
+                    finalText = if (result.success) result.content else "خطا: ${result.error}"
                 } catch (e: Exception) {
-                    Log.e("HomeActivity", "Router fallback failed: ${e.message}")
+                    Log.e("HomeActivity", "ChatService fallback failed: ${e.message}")
                 }
             }
 

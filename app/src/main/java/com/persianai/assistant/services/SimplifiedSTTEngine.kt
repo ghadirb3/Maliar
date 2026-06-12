@@ -11,12 +11,11 @@ import java.io.File
 /**
  * SimplifiedSTTEngine
  * 
- * Replaces complex Haaniye logic with robust fallback chain:
+ * Replaces complex offline logic with robust fallback chain:
  * 1. Try Google Speech Recognition (online) if available
  * 2. Fallback to API keys if configured
  * 3. Return empty/error gracefully
  * 
- * ✓ Fixed: Works offline when Haaniye not available
  * ✓ Fixed: Proper fallback chain
  * ✓ Fixed: Better error messages
  */

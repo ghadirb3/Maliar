@@ -15,11 +15,11 @@ import java.io.File
 import kotlin.math.min
 
 /**
- * سیستم ضبط صدای ترکیبی (Offline + Online)
+ * سیستم ضبط صدای ترکیبی (Online)
  * 
  * اولویت:
  * 1. Ivira STT (Awasho → Avangardi)
- * 2. آفلاین STT (Haaniye)
+ * 2. Online STT (API keys)
  * 3. Fallback
  */
 class HybridVoiceRecorder(

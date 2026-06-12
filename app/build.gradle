@@ -24,25 +24,7 @@ if (enableNativeBuild) {
 }
 
 // Copy offline Haaniye model into app assets if developer provided it under project root or via env var
-def haaniyeHost = System.getenv('HAANIYE_HOST_PATH') ?: file(rootDir.toString() + '/haaniye').toString()
-task copyHaaniye(type: Copy) {
-    def src = file(haaniyeHost)
-    def altSrc = file("$projectDir/src/main/assets/haaniye") // if user already placed model here
-
-    if (src.exists()) {
-        from src
-    } else if (altSrc.exists()) {
-        from altSrc
-    } else {
-        doFirst { println "Haaniye host path not found at ${haaniyeHost} or ${altSrc} — skipping copyHaaniye" }
-    }
-    into "$projectDir/src/main/assets/tts/haaniye"
-}
-
-
-// Online-only: Skip libc++ and Whisper dependencies
-
-preBuild.dependsOn copyHaaniye
+// Haaniye offline model support removed to reduce APK size. CI should not copy large ONNX assets.
 
 // If PREBUILT_LIBS_URL is provided in CI environment, run fetch script to populate prebuilt_libs
 def prebuiltUrl = System.getenv('PREBUILT_LIBS_URL')
