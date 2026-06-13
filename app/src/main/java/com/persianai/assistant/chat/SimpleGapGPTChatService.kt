@@ -2,7 +2,7 @@ package com.persianai.assistant.chat
 
 import android.content.Context
 import android.util.Log
-import com.persianai.assistant.config.APIKeyConfig
+import com.persianai.assistant.utils.PreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,8 +33,10 @@ class SimpleGapGPTChatService(private val context: Context) {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
     
+    private val prefsManager = PreferencesManager(context)
+    
     suspend fun sendMessage(userMessage: String): ChatResponse = withContext(Dispatchers.IO) {
-        val apiKeys = APIKeyConfig.getAPIKeys(context)
+        val apiKeys = prefsManager.getAPIKeys()
         val gapgptKey = apiKeys.firstOrNull { key -> key.provider.name == "GAPGPT" && key.isActive }
         
         if (gapgptKey == null) {
@@ -92,7 +94,7 @@ class SimpleGapGPTChatService(private val context: Context) {
             return ChatResponse(success = true, content = content, model = model)
         }
         
-        ChatResponse(success = false, error = "No content in response")
+        return ChatResponse(success = false, error = "No content in response")
     }
 }
 
