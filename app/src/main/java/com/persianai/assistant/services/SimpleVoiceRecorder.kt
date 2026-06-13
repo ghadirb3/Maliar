@@ -24,15 +24,15 @@ class SimpleVoiceRecorder(private val context: Context) {
             val outputDir = File(context.cacheDir, "audio_recordings")
             if (!outputDir.exists()) outputDir.mkdirs()
             
-            currentFile = File(outputDir, "recording_${System.currentTimeMillis()}.3gp")
+            currentFile = File(outputDir, "recording_${System.currentTimeMillis()}.mp3")
             
-            // تنظیم MediaRecorder با فرمت 3GP (سازگار با GAPGPT STT)
+            // تنظیم MediaRecorder با فرمت MP3 (مطابق مستندات GapGPT STT)
             mediaRecorder = MediaRecorder().apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)   // ← فرمت 3GP (سازگار با STT)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)      // ← encoder AMR (ساده و سازگار)
-                setAudioEncodingBitRate(12800)                          // ← 12.8kbps (برای STT بهینه)
-                setAudioSamplingRate(8000)                              // ← 8kHz (استاندارد AMR)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)      // ← فرمت MP4 (شامل MP3)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)         // ← encoder AAC (کیفیت بالا)
+                setAudioEncodingBitRate(64000)                          // ← 64kbps (برای STT بهینه)
+                setAudioSamplingRate(16000)                             // ← 16kHz (استاندارد STT)
                 setOutputFile(currentFile?.absolutePath)
                 
                 prepare()
