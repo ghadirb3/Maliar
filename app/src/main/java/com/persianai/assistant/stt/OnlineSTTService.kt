@@ -224,11 +224,11 @@ class OnlineSTTService(private val context: Context) {
                 .build()
         }
         
-        // تلاش اول: gapgpt/whisper-1 (بهترین مدل از مستندات)
-        // تلاش دوم: whisper-1 (اگر خطا بود)
+        // تلاش اول: whisper-1 (مدل استاندارد OpenAI از مستندات)
+        // تلاش دوم: gapgpt/whisper-1 (اگر خطا بود)
         // تلاش سوم: retry با تاخیر کم (اگر 429 بود)
         return try {
-            var request = buildRequest("gapgpt/whisper-1")
+            var request = buildRequest("whisper-1")
             var response = gapgptHttpClient.newCall(request).execute()
             var responseBody = response.body?.string() ?: ""
             
@@ -238,14 +238,14 @@ class OnlineSTTService(private val context: Context) {
                 return if (text.isNotBlank()) {
                     STTResult.success(text)
                 } else {
-                    STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
+                    STTResult.error("Empty response from GapGPT (whisper-1)")
                 }
             }
             
-            // اگر خطای 504 یا 400 بود، با whisper-1 دوباره امتحان کن
+            // اگر خطای 504 یا 400 بود، با gapgpt/whisper-1 دوباره امتحان کن
             if (response.code == 504 || response.code == 400) {
-                Log.w(TAG, "GapGPT returned ${response.code}, retrying with whisper-1")
-                request = buildRequest("whisper-1")
+                Log.w(TAG, "GapGPT returned ${response.code}, retrying with gapgpt/whisper-1")
+                request = buildRequest("gapgpt/whisper-1")
                 response = gapgptHttpClient.newCall(request).execute()
                 responseBody = response.body?.string() ?: ""
                 
@@ -255,7 +255,7 @@ class OnlineSTTService(private val context: Context) {
                     return if (text.isNotBlank()) {
                         STTResult.success(text)
                     } else {
-                        STTResult.error("Empty response from GapGPT (whisper-1)")
+                        STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
                     }
                 }
                 
@@ -268,7 +268,7 @@ class OnlineSTTService(private val context: Context) {
                 for ((i, delay) in delays.withIndex()) {
                     Log.w(TAG, "429 retry ${i+1}/${delays.size}, wait ${delay/1000}s")
                     kotlinx.coroutines.delay(delay)
-                    request = buildRequest("gapgpt/whisper-1")
+                    request = buildRequest("whisper-1")
                     response = gapgptHttpClient.newCall(request).execute()
                     if (response.isSuccessful) {
                         val json = JSONObject(response.body?.string() ?: "")
