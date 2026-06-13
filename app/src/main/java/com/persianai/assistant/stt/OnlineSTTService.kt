@@ -202,6 +202,7 @@ class OnlineSTTService(private val context: Context) {
             audioFile.name.endsWith(".mp3") -> "audio/mpeg"
             audioFile.name.endsWith(".wav") -> "audio/wav"
             audioFile.name.endsWith(".m4a") -> "audio/mp4"
+            audioFile.name.endsWith(".3gp") -> "audio/3gpp"
             else -> "audio/wav"  // fallback
         }
         val audioRequestBody = audioBytes
