@@ -708,12 +708,9 @@ abstract class BaseChatActivity : AppCompatActivity() {
                 try {
                     currentModel = model
                     android.util.Log.d("BaseChatActivity", "📡 tryOnline attempt ${attempts + 1} model=${model.name}")
-                    val response = aiClient!!.sendMessage(
-                        model,
-                        messages,
-                        buildSystemPromptForOnlineRequest()
-                    )
-                    return response.content
+                    val chatService = com.persianai.assistant.chat.SimpleGapGPTChatService(this@BaseChatActivity)
+                    val response = chatService.sendMessage(text)
+                    if (response.success) return response.content
                 } catch (e: Exception) {
                     android.util.Log.w("BaseChatActivity", "⚠️ tryOnline failed with ${model.name}: ${e.message}")
                     

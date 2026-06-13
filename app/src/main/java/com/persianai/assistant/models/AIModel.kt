@@ -171,7 +171,7 @@ enum class AIModel(
         "gpt-5-nano",
         "GPT-5 Nano (GAPGPT)",
         AIProvider.GAPGPT,
-        "مدل GPT-5 Nano از GAPGPT (400 error)",
+        "مدل GPT-5 Nano از GAPGPT",
         32000
     ),
     GAPGPT_GPT_4O_MINI(
