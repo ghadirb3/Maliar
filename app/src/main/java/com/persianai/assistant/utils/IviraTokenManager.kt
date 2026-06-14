@@ -7,6 +7,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import android.util.Base64
+import android.os.Environment
+import java.io.File
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -189,6 +191,84 @@ class IviraTokenManager(private val context: Context) {
             if (key.startsWith("token_") && value is String) {
                 val model = key.removePrefix("token_")
                 tokens[model] = value
+            }
+        }
+
+        // اگر توکن‌ها در Preferences پیدا نشدند، تلاش برای بارگذاری از assets یا مسیر دانلود محلی
+        if (tokens.isEmpty()) {
+            try {
+                // تلاش برای خواندن از فایل assets/ivira_tokens.txt
+                val assetStream = try {
+                    context.assets.open("ivira_tokens.txt")
+                } catch (e: Exception) {
+                    null
+                }
+
+                if (assetStream != null) {
+                    val content = assetStream.bufferedReader().use { it.readText() }
+                    val parsed = parseTokensFromPlainText(content)
+                    if (parsed.isNotEmpty()) {
+                        saveTokens(parsed)
+                        return parsed
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "No ivira tokens in assets: ${e.message}")
+            }
+
+            // مسیرهای متداول دانلود را بررسی کن
+            val downloadCandidates = listOf(
+                "/sdcard/Download/key_2.txt",
+                "/sdcard/Download/ivira_keys.txt",
+                (context.getExternalFilesDir(null)?.absolutePath ?: "") + "/Download/key_2.txt"
+            )
+
+            for (path in downloadCandidates) {
+                try {
+                    if (path.isBlank()) continue
+                    val f = File(path)
+                    if (f.exists()) {
+                        val content = f.readText()
+                        val parsed = parseTokensFromPlainText(content)
+                        if (parsed.isNotEmpty()) {
+                            saveTokens(parsed)
+                            return parsed
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.d(TAG, "Could not read ivira tokens from $path: ${e.message}")
+                }
+            }
+        }
+
+        return tokens
+    }
+
+    /**
+     * Parse plain-text token files. Lines can be either `MODEL:token` or plain token per line.
+     */
+    private fun parseTokensFromPlainText(text: String): Map<String, String> {
+        val tokens = mutableMapOf<String, String>()
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+
+        // If two plain tokens are provided (common for Avasho/Awasho), map them to STT/TTS
+        if (lines.size == 2 && lines.none { it.contains(":") }) {
+            tokens[MODEL_AWASHO] = lines[0]
+            tokens[MODEL_AVANGARDI] = lines[1]
+            return tokens
+        }
+
+        var index = 0
+        for (line in lines) {
+            if (line.contains(":")) {
+                val parts = line.split(":", limit = 2)
+                val model = parts[0].trim()
+                val token = parts[1].trim()
+                tokens[model] = token
+            } else {
+                val model = getModelNameForToken(index)
+                tokens[model] = line
+                index++
             }
         }
         return tokens

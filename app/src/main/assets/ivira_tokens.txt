@@ -1,0 +1,15 @@
+# Ivira tokens helper file
+# You can put your Ivira/Vira tokens here for testing.
+# Supported formats (one per line):
+# 1) MODEL_NAME:token   (e.g. compound-vira:sk_...)
+# 2) token               (plain token per line — tokens will be assigned to default model order)
+# Example (model:token):
+# compound-vira:YOUR_TOKEN_FOR_VIRA
+# compound-vira-mini:ANOTHER_TOKEN
+# Or just paste tokens (one per line):
+# sk-abc123def456ghi
+# sk-xyz789...
+
+# Remove the leading '#' lines and add your tokens before building the APK. If you prefer,
+# copy your file C:\\Users\\Admin\\Downloads\\key\\key_2.txt to /sdcard/Download/key_2.txt on the device,
+# or to the app's external files download folder, and the app will try to load it at runtime.
