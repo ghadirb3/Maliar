@@ -407,7 +407,7 @@ class OnlineSTTService(private val context: Context) {
                     val data = json.optJSONObject("data")
                     val aiResponse = data?.optJSONObject("aiResponse")
                     val result = aiResponse?.optJSONObject("result")
-                    val text = result?.optString("text", "")
+                    val text = result?.optString("text") ?: ""
                     
                     return if (text.isNotBlank()) {
                         STTResult.success(text)
