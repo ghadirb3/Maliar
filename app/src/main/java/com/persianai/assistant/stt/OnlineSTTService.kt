@@ -114,7 +114,7 @@ class OnlineSTTService(private val context: Context) {
             
             // افزودن کلیدهای Ivira از IviraIntegrationManager
             val iviraTokens = iviraManager.getIviraTokens()
-            val iviraKeys = iviraTokens.map { token ->
+            val iviraKeys = iviraTokens.values.map { token ->
                 APIKey(provider = AIProvider.IVIRA, key = token, isActive = true)
             }
             
