@@ -96,7 +96,7 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * دریافت API Keys برای STT از PreferencesManager (همان سیستم چت آنلاین)
+     * دریافت API Keys برای STT از PreferencesManager و IviraIntegrationManager
      */
     private fun getSTTApiKeys(): List<APIKey> {
         return try {
@@ -112,8 +112,15 @@ class OnlineSTTService(private val context: Context) {
                 AIProvider.IVIRA
             ) }
             
-            Log.d(TAG, "✅ Found ${sttKeys.size} STT API keys: ${sttKeys.map { it.provider }}")
-            return sttKeys
+            // افزودن کلیدهای Ivira از IviraIntegrationManager
+            val iviraTokens = iviraManager.getIviraTokens()
+            val iviraKeys = iviraTokens.map { token ->
+                APIKey(provider = AIProvider.IVIRA, key = token, isActive = true)
+            }
+            
+            val allKeys = sttKeys + iviraKeys
+            Log.d(TAG, "✅ Found ${allKeys.size} STT API keys: ${allKeys.map { it.provider }}")
+            return allKeys
             
         } catch (e: Exception) {
             Log.e(TAG, "Error getting STT API keys", e)
