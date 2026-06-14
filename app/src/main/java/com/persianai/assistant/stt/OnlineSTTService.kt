@@ -398,11 +398,30 @@ class OnlineSTTService(private val context: Context) {
                 .addFormDataPart("audio", audioFile.name, audioRequestBody)
                 .build()
             
-            val request = Request.Builder()
+            // Sanitize API key to avoid illegal header characters (e.g. em-dash, non-printable)
+            val sanitizedToken = apiKey.trim().replace(Regex("[^\\x20-\\x7E]"), "")
+            if (sanitizedToken.isBlank()) {
+                Log.w(TAG, "Ivira token is blank after sanitization, skipping this token")
+                return STTResult.error("Ivira STT failed: invalid token")
+            }
+
+            val masked = if (sanitizedToken.length > 12) {
+                sanitizedToken.take(6) + "..." + sanitizedToken.takeLast(4)
+            } else sanitizedToken
+
+            val requestBuilder = Request.Builder()
                 .url("https://partai.gw.isahab.ir/avanegar/v2/avanegar/request")
-                .addHeader("gateway-token", apiKey)
-                .post(multipartBody)
-                .build()
+
+            try {
+                requestBuilder.addHeader("gateway-token", sanitizedToken)
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "Invalid gateway-token header value for token=$masked, skipping", e)
+                return STTResult.error("Ivira STT failed: invalid gateway-token value")
+            }
+
+            Log.d(TAG, "🔄 Ivira STT using gateway-token: $masked")
+
+            val request = requestBuilder.post(multipartBody).build()
             
             httpClient.newCall(request).execute().use { response ->
                 val responseBody = response.body?.string() ?: ""

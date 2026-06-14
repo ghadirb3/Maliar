@@ -248,29 +248,61 @@ class IviraTokenManager(private val context: Context) {
      * Parse plain-text token files. Lines can be either `MODEL:token` or plain token per line.
      */
     private fun parseTokensFromPlainText(text: String): Map<String, String> {
-        val tokens = mutableMapOf<String, String>()
-        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val extracted = mutableListOf<String>()
 
-        // If two plain tokens are provided (common for Avasho/Awasho), map them to STT/TTS
-        if (lines.size == 2 && lines.none { it.contains(":") }) {
-            tokens[MODEL_AWASHO] = lines[0]
-            tokens[MODEL_AVANGARDI] = lines[1]
+        val jwtRegex = Regex("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+")
+        val wordRegex = Regex("[A-Za-z0-9-_]{10,}")
+
+        for (raw in text.lines()) {
+            var line = raw.trim()
+            if (line.isEmpty()) continue
+
+            // skip comment-only lines
+            if (line.startsWith("#") || line.startsWith("//")) continue
+
+            // Try to extract a JWT-like token first
+            val jwtMatch = jwtRegex.find(line)
+            if (jwtMatch != null) {
+                val token = jwtMatch.value.replace(Regex("[^\\x20-\\x7E]"), "").trim().trim('"', '\'')
+                if (token.length >= 10) extracted.add(token)
+                continue
+            }
+
+            // If line contains `model:token` style, try to parse right-hand side
+            if (line.contains(":")) {
+                val parts = line.split(":", limit = 2)
+                val right = parts.getOrNull(1)?.trim() ?: ""
+                val m = jwtRegex.find(right) ?: wordRegex.find(right)
+                val token = m?.value?.replace(Regex("[^\\x20-\\x7E]"), "")?.trim()?.trim('"', '\'')
+                if (!token.isNullOrBlank() && token.length >= 10) {
+                    extracted.add(token)
+                    continue
+                }
+            }
+
+            // Fallback: find first long alphanumeric chunk
+            val m = wordRegex.find(line)
+            val token = m?.value?.replace(Regex("[^\\x20-\\x7E]"), "")?.trim()?.trim('"', '\'')
+            if (!token.isNullOrBlank() && token.length >= 10) {
+                extracted.add(token)
+            }
+        }
+
+        val tokens = mutableMapOf<String, String>()
+        // If exactly two tokens provided, map to STT/TTS common order
+        if (extracted.size == 2) {
+            tokens[MODEL_AWASHO] = extracted[0]
+            tokens[MODEL_AVANGARDI] = extracted[1]
             return tokens
         }
 
         var index = 0
-        for (line in lines) {
-            if (line.contains(":")) {
-                val parts = line.split(":", limit = 2)
-                val model = parts[0].trim()
-                val token = parts[1].trim()
-                tokens[model] = token
-            } else {
-                val model = getModelNameForToken(index)
-                tokens[model] = line
-                index++
-            }
+        for (t in extracted) {
+            val model = getModelNameForToken(index)
+            tokens[model] = t
+            index++
         }
+
         return tokens
     }
     
