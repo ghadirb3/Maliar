@@ -108,7 +108,8 @@ class OnlineSTTService(private val context: Context) {
                 AIProvider.HUGGINGFACE,
                 AIProvider.LIARA,
                 AIProvider.GAPGPT,
-                AIProvider.OPENAI
+                AIProvider.OPENAI,
+                AIProvider.IVIRA
             ) }
             
             Log.d(TAG, "✅ Found ${sttKeys.size} STT API keys: ${sttKeys.map { it.provider }}")
@@ -121,7 +122,8 @@ class OnlineSTTService(private val context: Context) {
     }
     
     /**
-     * اولویت‌بندی STT - اول HuggingFace سپس OpenAI سپس GapGPT سپس Liara
+     * اولویت‌بندی STT - اول Ivira سپس HuggingFace سپس OpenAI سپس GapGPT سپس Liara
+     * Ivira STT از آوانگار استفاده می‌کند (پایدارترین و فارسی)
      * HuggingFace STT از wav2vec2 استفاده می‌کند (پایدارترین و رایگان)
      * OpenAI STT از whisper-1 استفاده می‌کند (پایدارترین)
      * GapGPT STT از whisper-1 استفاده می‌کند (سریع‌تر اما 429 می‌دهد)
@@ -130,13 +132,14 @@ class OnlineSTTService(private val context: Context) {
     private fun prioritizeProviders(apiKeys: List<APIKey>): List<APIKey> {
         val activeKeys = apiKeys.filter { it.isActive }
         
-        // اولویت: HUGGINGFACE → OPENAI → GAPGPT → LIARA
+        // اولویت: IVIRA → HUGGINGFACE → OPENAI → GAPGPT → LIARA
+        val iviraKeys = activeKeys.filter { it.provider == AIProvider.IVIRA }
         val hfKeys = activeKeys.filter { it.provider == AIProvider.HUGGINGFACE }
         val openaiKeys = activeKeys.filter { it.provider == AIProvider.OPENAI }
         val gapgptKeys = activeKeys.filter { it.provider == AIProvider.GAPGPT }
         val liaraKeys = activeKeys.filter { it.provider == AIProvider.LIARA }
         
-        return hfKeys + openaiKeys + gapgptKeys + liaraKeys
+        return iviraKeys + hfKeys + openaiKeys + gapgptKeys + liaraKeys
     }
     
     /**
@@ -148,6 +151,7 @@ class OnlineSTTService(private val context: Context) {
             AIProvider.GAPGPT -> transcribeWithGapGPT(audioFile, apiKey.key)
             AIProvider.OPENAI -> transcribeWithOpenAI(audioFile, apiKey.key)
             AIProvider.HUGGINGFACE -> transcribeWithHuggingFace(audioFile, apiKey.key)
+            AIProvider.IVIRA -> transcribeWithIvira(audioFile, apiKey.key)
             else -> STTResult.error("Provider ${apiKey.provider} not supported for STT")
         }
     }
@@ -229,25 +233,8 @@ class OnlineSTTService(private val context: Context) {
         // تلاش سوم: retry با تاخیر کم (اگر 429 بود)
         return try {
             var request = buildRequest("whisper-1")
-            var response = gapgptHttpClient.newCall(request).execute()
-            var responseBody = response.body?.string() ?: ""
-            
-            if (response.isSuccessful) {
-                val json = JSONObject(responseBody)
-                val text = json.optString("text", "")
-                return if (text.isNotBlank()) {
-                    STTResult.success(text)
-                } else {
-                    STTResult.error("Empty response from GapGPT (whisper-1)")
-                }
-            }
-            
-            // اگر خطای 504 یا 400 بود، با gapgpt/whisper-1 دوباره امتحان کن
-            if (response.code == 504 || response.code == 400) {
-                Log.w(TAG, "GapGPT returned ${response.code}, retrying with gapgpt/whisper-1")
-                request = buildRequest("gapgpt/whisper-1")
-                response = gapgptHttpClient.newCall(request).execute()
-                responseBody = response.body?.string() ?: ""
+            gapgptHttpClient.newCall(request).execute().use { response ->
+                var responseBody = response.body?.string() ?: ""
                 
                 if (response.isSuccessful) {
                     val json = JSONObject(responseBody)
@@ -255,33 +242,58 @@ class OnlineSTTService(private val context: Context) {
                     return if (text.isNotBlank()) {
                         STTResult.success(text)
                     } else {
-                        STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
+                        STTResult.error("Empty response from GapGPT (whisper-1)")
                     }
                 }
                 
-                return STTResult.error("GapGPT API error after retry: ${response.code}")
-            }
-            
-            // Minimal backoff for 429: 2s, 5s, 10s (برای سرعت بیشتر)
-            if (response.code == 429) {
-                val delays = listOf(2000L, 5000L, 10000L)
-                for ((i, delay) in delays.withIndex()) {
-                    Log.w(TAG, "429 retry ${i+1}/${delays.size}, wait ${delay/1000}s")
-                    kotlinx.coroutines.delay(delay)
-                    request = buildRequest("whisper-1")
-                    response = gapgptHttpClient.newCall(request).execute()
-                    if (response.isSuccessful) {
-                        val json = JSONObject(response.body?.string() ?: "")
-                        val text = json.optString("text", "")
-                        return if (text.isNotBlank()) STTResult.success(text)
-                        else STTResult.error("Empty response after retry")
+                // لاگ بدنه خطا برای تشخیص مشکل
+                Log.e(TAG, "GapGPT error ${response.code}")
+                Log.e(TAG, "GapGPT response body: $responseBody")
+                
+                // اگر خطای 504 یا 400 بود، با gapgpt/whisper-1 دوباره امتحان کن
+                if (response.code == 504 || response.code == 400) {
+                    Log.w(TAG, "GapGPT returned ${response.code}, retrying with gapgpt/whisper-1")
+                    request = buildRequest("gapgpt/whisper-1")
+                    gapgptHttpClient.newCall(request).execute().use { retryResponse ->
+                        val retryBody = retryResponse.body?.string() ?: ""
+                        if (retryResponse.isSuccessful) {
+                            val json = JSONObject(retryBody)
+                            val text = json.optString("text", "")
+                            return if (text.isNotBlank()) {
+                                STTResult.success(text)
+                            } else {
+                                STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
+                            }
+                        }
+                        return STTResult.error("GapGPT API error after retry: ${retryResponse.code}")
                     }
                 }
-                return STTResult.error("GapGPT 429 after all retries")
+                
+                // Minimal backoff for 429: 2s, 5s, 10s (برای سرعت بیشتر)
+                if (response.code == 429) {
+                    val delays = listOf(2000L, 5000L, 10000L)
+                    for ((i, delay) in delays.withIndex()) {
+                        Log.w(TAG, "429 retry ${i+1}/${delays.size}, wait ${delay/1000}s")
+                        kotlinx.coroutines.delay(delay)
+                        request = buildRequest("whisper-1")
+                        gapgptHttpClient.newCall(request).execute().use { retryResponse ->
+                            val retryBody = retryResponse.body?.string() ?: ""
+                            Log.e(TAG, "429 retry ${i+1} response: ${retryResponse.code}")
+                            Log.e(TAG, "429 retry ${i+1} body: $retryBody")
+                            if (retryResponse.isSuccessful) {
+                                val json = JSONObject(retryBody)
+                                val text = json.optString("text", "")
+                                return if (text.isNotBlank()) STTResult.success(text)
+                                else STTResult.error("Empty response after retry")
+                            }
+                        }
+                    }
+                    return STTResult.error("GapGPT 429 after all retries")
+                }
+                
+                // سایر خطاها
+                STTResult.error("GapGPT API error: ${response.code}")
             }
-            
-            // سایر خطاها
-            STTResult.error("GapGPT API error: ${response.code}")
         } catch (e: Exception) {
             Log.e(TAG, "GapGPT STT error", e)
             STTResult.error("GapGPT STT failed: ${e.message}")
@@ -348,6 +360,67 @@ class OnlineSTTService(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Liara STT error", e)
             STTResult.error("Liara STT failed: ${e.message}")
+        }
+    }
+    
+    /**
+     * STT با Ivira (آوانگار)
+     */
+    private suspend fun transcribeWithIvira(audioFile: File, apiKey: String): STTResult {
+        return try {
+            val audioBytes = audioFile.readBytes()
+            val contentType = when {
+                audioFile.name.endsWith(".mp3") -> "audio/mpeg"
+                audioFile.name.endsWith(".wav") -> "audio/wav"
+                audioFile.name.endsWith(".m4a") -> "audio/mp4"
+                else -> "audio/wav"
+            }
+            val audioRequestBody = audioBytes
+                .toRequestBody(contentType.toMediaType(), 0, audioBytes.size)
+            
+            val multipartBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("model", "default")
+                .addFormDataPart("srt", "false")
+                .addFormDataPart("inverseNormalizer", "false")
+                .addFormDataPart("timestamp", "false")
+                .addFormDataPart("spokenPunctuation", "false")
+                .addFormDataPart("punctuation", "false")
+                .addFormDataPart("numSpeakers", "0")
+                .addFormDataPart("diarize", "false")
+                .addFormDataPart("audio", audioFile.name, audioRequestBody)
+                .build()
+            
+            val request = Request.Builder()
+                .url("https://partai.gw.isahab.ir/avanegar/v2/avanegar/request")
+                .addHeader("gateway-token", apiKey)
+                .post(multipartBody)
+                .build()
+            
+            httpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string() ?: ""
+                Log.d(TAG, "Ivira response code: ${response.code}")
+                Log.d(TAG, "Ivira response body: $responseBody")
+                
+                if (response.isSuccessful) {
+                    val json = JSONObject(responseBody)
+                    val data = json.optJSONObject("data")
+                    val aiResponse = data?.optJSONObject("aiResponse")
+                    val result = aiResponse?.optJSONObject("result")
+                    val text = result?.optString("text", "")
+                    
+                    return if (text.isNotBlank()) {
+                        STTResult.success(text)
+                    } else {
+                        STTResult.error("Empty response from Ivira")
+                    }
+                } else {
+                    STTResult.error("Ivira API error: ${response.code} - $responseBody")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Ivira STT error", e)
+            STTResult.error("Ivira STT failed: ${e.message}")
         }
     }
     
