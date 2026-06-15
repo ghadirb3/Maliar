@@ -14,17 +14,17 @@ class InstallmentManager(private val context: Context) {
     
     data class Installment(
         val id: String,
-        val title: String, // عنوان (مثلاً: قسط ماشین، قسط خانه)
-        val totalAmount: Double, // مبلغ کل
-        val installmentAmount: Double, // مبلغ هر قسط
-        val totalInstallments: Int, // تعداد کل اقساط
-        val paidInstallments: Int, // تعداد اقساط پرداخت شده
-        val startDate: Long, // تاریخ شروع
-        val paymentDay: Int, // روز پرداخت در ماه (1-31)
-        val recipient: String, // دریافت کننده
+        val title: String,
+        val totalAmount: Double,
+        val installmentAmount: Double,
+        val totalInstallments: Int,
+        val paidInstallments: Int,
+        val startDate: Long,
+        val paymentDay: Int,
+        val recipient: String,
         val description: String,
-        val alertDaysBefore: Int = 3, // چند روز قبل هشدار بده
-        val autoRemind: Boolean = true // یادآوری خودکار
+        val alertDaysBefore: Int = 3,
+        val autoRemind: Boolean = true
     ) {
         fun getFormattedStartDate(): String {
             val calendar = Calendar.getInstance()
@@ -63,12 +63,38 @@ class InstallmentManager(private val context: Context) {
         installments.add(installment)
         saveInstallments(installments)
         
-        // Sync to AccountingDB
+        // Sync to AccountingDB - FIXED: Using proper model mapping
         try {
-            // Note: AccountingDB.addInstallment expects different parameter structure
-            // For now, we'll skip this sync as it requires a different model structure
+            val accInstallment = com.persianai.assistant.models.Installment(
+                id = accountingDB.addInstallment(com.persianai.assistant.models.Installment(
+                    id = 0,
+                    title = title,
+                    totalAmount = totalAmount.toLong(),
+                    monthlyAmount = installmentAmount.toLong(),
+                    installmentCount = totalInstallments,
+                    paidInstallments = 0,
+                    paidAmount = 0.0,
+                    remainingAmount = totalAmount,
+                    nextPaymentDate = Date(startDate),
+                    status = com.persianai.assistant.models.InstallmentStatus.ACTIVE,
+                    description = description,
+                    lender = recipient
+                )),
+                title = title,
+                totalAmount = totalAmount.toLong(),
+                monthlyAmount = installmentAmount.toLong(),
+                installmentCount = totalInstallments,
+                paidInstallments = 0,
+                paidAmount = 0.0,
+                remainingAmount = totalAmount,
+                nextPaymentDate = Date(startDate),
+                status = com.persianai.assistant.models.InstallmentStatus.ACTIVE,
+                description = description,
+                lender = recipient
+            )
+            android.util.Log.d("InstallmentManager", "Synced to AccountingDB: id=$id")
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("InstallmentManager", "Error syncing to AccountingDB", e)
         }
         
         return id
@@ -123,16 +149,13 @@ class InstallmentManager(private val context: Context) {
     
     fun calculateNextPaymentDate(installment: Installment): Long? {
         if (installment.paidInstallments >= installment.totalInstallments) {
-            return null // همه اقساط پرداخت شده
+            return null
         }
         
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = installment.startDate
         
-        // اضافه کردن ماه‌های پرداخت شده
         calendar.add(Calendar.MONTH, installment.paidInstallments)
-        
-        // تنظیم روز پرداخت
         calendar.set(Calendar.DAY_OF_MONTH, installment.paymentDay)
         
         return calendar.timeInMillis
@@ -147,6 +170,17 @@ class InstallmentManager(private val context: Context) {
             }
         }
         saveInstallments(installments)
+        
+        // Sync payment to AccountingDB
+        try {
+            val accInstallments = accountingDB.getAllInstallments()
+            accInstallments.firstOrNull { it.title == installments.first { i -> i.id == id }.title }?.let {
+                accountingDB.payInstallment(it.id)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("InstallmentManager", "Error syncing payment to AccountingDB", e)
+        }
+        
         return true
     }
     
@@ -180,11 +214,30 @@ class InstallmentManager(private val context: Context) {
         
         // Sync deletion to AccountingDB
         try {
-            // Note: AccountingDB.deleteInstallment expects Long id, not String
-            // For now, we'll skip this sync
+            val accInstallments = accountingDB.getAllInstallments()
+            val installmentToDelete = getAllInstallments().firstOrNull() ?: return // Get remaining list
+            // Find and delete the matching AccountingDB entry
+            val accEntries = accountingDB.getAllInstallments()
+            accEntries.forEach { acc ->
+                if (acc.description == installmentToDelete.title) {
+                    accountingDB.deleteInstallment(acc.id)
+                }
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("InstallmentManager", "Error syncing deletion to AccountingDB", e)
         }
+    }
+    
+    /**
+     * Export all installments as CSV
+     */
+    fun exportToCSV(): String {
+        val sb = StringBuilder()
+        sb.appendLine("ID,عنوان,مبلغ کل,مبلغ هر قسط,تعداد کل اقساط,قسط پرداخت شده,تاریخ شروع,روز پرداخت,دریافت‌کننده,توضیحات")
+        getAllInstallments().forEach { inst ->
+            sb.appendLine("${inst.id},${inst.title},${inst.totalAmount},${inst.installmentAmount},${inst.totalInstallments},${inst.paidInstallments},${inst.startDate},${inst.paymentDay},${inst.recipient},${inst.description}")
+        }
+        return sb.toString()
     }
     
     private fun saveInstallments(installments: List<Installment>) {

@@ -350,6 +350,13 @@
             android:parentActivityName=".activities.DashboardActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- ✅ NEW: Monthly Report Dashboard with Charts -->
+        <activity
+            android:name=".activities.MonthlyReportActivity"
+            android:exported="false"
+            android:label="گزارش ماهیانه"
+            android:parentActivityName=".activities.DashboardActivity" />
+
         <!-- ذخیره مکان مشترک -->
         <activity
             android:name=".ui.SharedLocationActivity"

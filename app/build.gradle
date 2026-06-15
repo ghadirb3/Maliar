@@ -6,8 +6,7 @@ plugins {
 }
 
 // Online-only build: disable native/offline inference packaging for smaller APK
-def enableNativeBuild = false // Back to false since we have libc++_shared.so files
-// مسیر resolve شده llama.cpp
+def enableNativeBuild = false
 def resolvedLlamaDir = null
 
 if (enableNativeBuild) {
@@ -19,14 +18,10 @@ if (enableNativeBuild) {
         resolvedLlamaDir = candidate
     } else {
         enableNativeBuild = false
-        logger.lifecycle("llama.cpp not found at ${candidate} -> skipping native build (use -PskipNativeBuild=true or set LLAMA_CPP_DIR)")
+        logger.lifecycle("llama.cpp not found at ${candidate} -> skipping native build")
     }
 }
 
-// Copy offline Haaniye model into app assets if developer provided it under project root or via env var
-// Haaniye offline model support removed to reduce APK size. CI should not copy large ONNX assets.
-
-// If PREBUILT_LIBS_URL is provided in CI environment, run fetch script to populate prebuilt_libs
 def prebuiltUrl = System.getenv('PREBUILT_LIBS_URL')
 if (prebuiltUrl != null && !prebuiltUrl.trim().isEmpty()) {
     tasks.register('downloadPrebuiltLibs', Exec) {
@@ -48,19 +43,13 @@ android {
         applicationId "com.persianai.assistant"
         minSdk 26
         targetSdk 34
-        versionCode 35
-        versionName "5.11"
+        versionCode 36
+        versionName "5.12"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Enable multidex if needed
         multiDexEnabled true
-
-        // Online-only: Native build disabled
-        // libc++_shared.so files are now directly in jniLibs folders
     }
 
-    // Ensure libc++_shared.so is packaged
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         doNotStrip '**/libc++_shared.so'
@@ -74,16 +63,12 @@ android {
             buildConfigField "String", "BUILD_TYPE", '"release"'
             buildConfigField "boolean", "DEBUG_LOG", 'false'
             debuggable false
-            
-            // Resource optimization
             shrinkResources false
         }
         debug {
             debuggable true
             buildConfigField "String", "BUILD_TYPE", '"debug"'
             buildConfigField "boolean", "DEBUG_LOG", 'true'
-            
-            // Faster builds
             shrinkResources false
         }
     }
@@ -102,29 +87,16 @@ android {
         viewBinding true
         buildConfig true
     }
-    
-    // Proper lint configuration
+
     lint {
         checkReleaseBuilds true
         abortOnError false
-        
-        // Disable non-critical warnings
-        disable 'MissingTranslation'
-        disable 'ExtraTranslation'
-        disable 'MissingDimensionality'
-        disable 'UnusedResources'
-        disable 'TypographyFractions'
-        disable 'TypographyQuotes'
-        
-        // Enable important checks
-        enable 'GradleCompatible'
-        enable 'SdkVersionWarning'
-        enable 'InvalidPackage'
+        disable 'MissingTranslation', 'ExtraTranslation', 'MissingDimensionality', 'UnusedResources'
+        disable 'TypographyFractions', 'TypographyQuotes'
+        enable 'GradleCompatible', 'SdkVersionWarning', 'InvalidPackage'
     }
-    
-    // Proper packaging configuration
+
     packagingOptions {
-        // Exclude problematic files
         exclude 'META-INF/proguard/androidx-*.pro'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/LICENSE.txt'
@@ -132,22 +104,18 @@ android {
         exclude 'META-INF/ASL2.0'
         exclude 'META-INF/LGPL2.1'
         exclude 'META-INF/*.kotlin_module'
-        
+
         resources {
             excludes += [
-                'META-INF/AL2.0',
-                'META-INF/LGPL2.1',
-                'META-INF/MANIFEST.MF',
+                'META-INF/AL2.0', 'META-INF/LGPL2.1', 'META-INF/MANIFEST.MF',
                 'META-INF/proguard/androidx-*.pro'
             ]
         }
     }
-    
-    // Source set configuration
+
     sourceSets {
         main {
             manifest.srcFile 'src/main/AndroidManifest.xml'
-            // Allow optional prebuilt native libs to be provided at project root
             def prebuilt = file(rootDir.absolutePath + '/prebuilt_libs')
             if (prebuilt.exists()) {
                 jniLibs.srcDirs += prebuilt
@@ -158,34 +126,33 @@ android {
 }
 
 dependencies {
-    // Core desugaring
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
-    
+
     // AndroidX Core
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    
+
     // Lifecycle & ViewModel
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.7.0'
-    
+
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
-    
+
     // Networking
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.google.maps:google-maps-services:0.18.0'
-    
+
     // JSON
     implementation 'com.google.code.gson:gson:2.10.1'
-    
+
     // Kotlin Serialization
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0'
 
@@ -194,46 +161,53 @@ dependencies {
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.android.gms:play-services-places:17.0.0'
-    
+
     // Google Places
     implementation 'com.google.android.libraries.places:places:3.3.0'
     implementation 'com.google.maps.android:android-maps-utils:2.3.0'
     
+    // Google Drive API
+    implementation 'com.google.android.gms:play-services-drive:17.0.0'
+    implementation 'com.google.http-client:google-http-client-gson:1.43.3'
+
     // Crypto
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
-    
-    // Work Manager for background tasks
+
+    // Work Manager
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
-    
+
     // RecyclerView
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
-    
+
     // CardView
     implementation 'androidx.cardview:cardview:1.0.0'
-    
-    // Glide for image loading
+
+    // Glide
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
-    
-    // Lottie for animations
+
+    // Lottie
     implementation 'com.airbnb.android:lottie:6.2.0'
 
-    // ExoPlayer for internal music playback
+    // ExoPlayer
     implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-dash:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.19.1'
     implementation 'com.google.android.exoplayer:extension-mediasession:2.19.1'
-    
-    // Media support
+
+    // Media
     implementation 'androidx.media:media:1.7.0'
-    
-    // SLF4J for logging
+
+    // SLF4J
     implementation 'org.slf4j:slf4j-simple:1.7.25'
-    
-    // ONNX Runtime for Haaniye TTS (lightweight)
+
+    // ONNX Runtime
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.16.0'
-    
+
+    // MPAndroidChart - for monthly dashboards
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+
     // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

@@ -1,163 +1,227 @@
 package com.persianai.assistant.utils
 
 import android.content.Context
-import android.content.Intent
-import androidx.core.content.FileProvider
+import android.net.Uri
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
+import com.persianai.assistant.config.FeatureFlags
+import com.persianai.assistant.data.AccountingDB
+import com.persianai.assistant.data.Transaction
+import com.persianai.assistant.data.TransactionType
+import com.persianai.assistant.data.CheckStatus
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 
-object BackupManager {
-    
-    fun createBackup(context: Context): File {
-        val backup = JSONObject()
-        
-        // Settings
-        val prefs = context.getSharedPreferences("ai_assistant_prefs", Context.MODE_PRIVATE)
-        val settings = JSONObject()
-        prefs.all.forEach { (key, value) ->
-            settings.put(key, value)
-        }
-        backup.put("settings", settings)
-        
-        // Conversations
-        val convPrefs = context.getSharedPreferences("conversations", Context.MODE_PRIVATE)
-        val conversations = JSONObject()
-        convPrefs.all.forEach { (key, value) ->
-            conversations.put(key, value)
-        }
-        backup.put("conversations", conversations)
-        
-        // Expenses
-        val expensePrefs = context.getSharedPreferences("expenses", Context.MODE_PRIVATE)
-        val expenses = JSONObject()
-        expensePrefs.all.forEach { (key, value) ->
-            expenses.put(key, value)
-        }
-        backup.put("expenses", expenses)
-        
-        // Incomes
-        val incomePrefs = context.getSharedPreferences("incomes", Context.MODE_PRIVATE)
-        val incomes = JSONObject()
-        incomePrefs.all.forEach { (key, value) ->
-            incomes.put(key, value)
-        }
-        backup.put("incomes", incomes)
-        
-        // Reminders
-        val reminderPrefs = context.getSharedPreferences("reminders", Context.MODE_PRIVATE)
-        val reminders = JSONObject()
-        reminderPrefs.all.forEach { (key, value) ->
-            reminders.put(key, value)
-        }
-        backup.put("reminders", reminders)
-        
-        // Weather preferences
-        val weatherPrefs = context.getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
-        val weather = JSONObject()
-        weatherPrefs.all.forEach { (key, value) ->
-            weather.put(key, value)
-        }
-        backup.put("weather", weather)
-        
-        // API Keys
-        val apiKeysPrefs = context.getSharedPreferences("api_keys", Context.MODE_PRIVATE)
-        val apiKeys = JSONObject()
-        apiKeysPrefs.all.forEach { (key, value) ->
-            apiKeys.put(key, value)
-        }
-        backup.put("api_keys", apiKeys)
-        
-        // Save to file
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
-        val fileName = "backup_${dateFormat.format(Date())}.json"
-        val file = File(context.getExternalFilesDir(null), fileName)
-        file.writeText(backup.toString(2))
-        
-        return file
+/**
+ * مدیریت پشتیبان‌گیری و بازیابی اطلاعات
+ * پشتیبانی از: Google Drive و فایل محلی
+ */
+class BackupManager(private val context: Context) {
+
+    private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
+    private val db = AccountingDB(context)
+    private val featureFlags = FeatureFlags(context)
+
+    companion object {
+        private const val BACKUP_VERSION = 2
+        private const val BACKUP_MIME_TYPE = "application/json"
+        private const val BACKUP_FILENAME = "maliar_backup.json"
+
+        // Preference keys
+        private const val PREF_BACKUP = "backup_prefs"
+        private const val KEY_LAST_BACKUP_TIME = "last_backup_time"
+        private const val KEY_LAST_BACKUP_SIZE = "last_backup_size"
+        private const val KEY_AUTO_BACKUP_ENABLED = "auto_backup_enabled"
+        private const val KEY_BACKUP_TO_CLOUD = "backup_to_cloud"
     }
-    
-    fun restoreBackup(context: Context, fileContent: String): Boolean {
+
+    private val prefs = context.getSharedPreferences(PREF_BACKUP, Context.MODE_PRIVATE)
+
+    // ==================== Data Model ====================
+
+    data class BackupData(
+        val version: Int = BACKUP_VERSION,
+        val timestamp: Long = System.currentTimeMillis(),
+        val appVersion: String = "5.12",
+        val transactions: List<Transaction> = emptyList(),
+        val featureFlags: Map<String, Boolean> = emptyMap()
+    )
+
+    data class BackupResult(
+        val success: Boolean,
+        val message: String,
+        val fileSize: Long = 0
+    )
+
+    data class RestoreResult(
+        val success: Boolean,
+        val message: String,
+        val transactionsRestored: Int = 0
+    )
+
+    // ==================== Local Backup/Restore ====================
+
+    /**
+     * ایجاد پشتیبان محلی و ذخیره در فایل
+     */
+    fun createLocalBackup(uri: Uri): BackupResult {
         return try {
-            val backup = JSONObject(fileContent)
-            
-            // Restore settings
-            if (backup.has("settings")) {
-                val prefs = context.getSharedPreferences("ai_assistant_prefs", Context.MODE_PRIVATE).edit()
-                val settings = backup.getJSONObject("settings")
-                settings.keys().forEach { key ->
-                    val value = settings.get(key)
-                    when (value) {
-                        is String -> prefs.putString(key, value)
-                        is Boolean -> prefs.putBoolean(key, value)
-                        is Int -> prefs.putInt(key, value)
-                        is Long -> prefs.putLong(key, value)
-                        is Float -> prefs.putFloat(key, value)
-                    }
+            val backupData = collectBackupData()
+            val json = gson.toJson(backupData)
+
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                OutputStreamWriter(outputStream).use { writer ->
+                    writer.write(json)
                 }
-                prefs.apply()
             }
-            
-            // Restore conversations
-            if (backup.has("conversations")) {
-                val prefs = context.getSharedPreferences("conversations", Context.MODE_PRIVATE).edit()
-                val conversations = backup.getJSONObject("conversations")
-                conversations.keys().forEach { key ->
-                    prefs.putString(key, conversations.getString(key))
-                }
-                prefs.apply()
-            }
-            
-            // Restore expenses
-            if (backup.has("expenses")) {
-                val prefs = context.getSharedPreferences("expenses", Context.MODE_PRIVATE).edit()
-                val expenses = backup.getJSONObject("expenses")
-                expenses.keys().forEach { key ->
-                    prefs.putString(key, expenses.getString(key))
-                }
-                prefs.apply()
-            }
-            
-            // Restore weather
-            if (backup.has("weather")) {
-                val prefs = context.getSharedPreferences("weather_prefs", Context.MODE_PRIVATE).edit()
-                val weather = backup.getJSONObject("weather")
-                weather.keys().forEach { key ->
-                    val value = weather.get(key)
-                    when (value) {
-                        is String -> prefs.putString(key, value)
-                        is Float -> prefs.putFloat(key, value as Float)
-                        is Long -> prefs.putLong(key, value)
-                    }
-                }
-                prefs.apply()
-            }
-            
-            // Restore API keys
-            if (backup.has("api_keys")) {
-                val prefs = context.getSharedPreferences("api_keys", Context.MODE_PRIVATE).edit()
-                val apiKeys = backup.getJSONObject("api_keys")
-                apiKeys.keys().forEach { key ->
-                    prefs.putString(key, apiKeys.getString(key))
-                }
-                prefs.apply()
-            }
-            
-            true
+
+            val fileSize = json.toByteArray().size.toLong()
+            saveLastBackupInfo(fileSize)
+
+            BackupResult(true, "✅ پشتیبان با موفقیت ایجاد شد", fileSize)
         } catch (e: Exception) {
-            false
+            android.util.Log.e("BackupManager", "خطا در ایجاد پشتیبان", e)
+            BackupResult(false, "❌ خطا در ایجاد پشتیبان: ${e.message}")
         }
     }
-    
-    fun shareBackup(context: Context, file: File) {
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/json"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+    /**
+     * بازیابی از فایل محلی
+     */
+    fun restoreFromLocalBackup(uri: Uri): RestoreResult {
+        return try {
+            val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                    reader.readText()
+                }
+            } ?: return RestoreResult(false, "❌ فایل پشتیبان خالی است")
+
+            val backupData = gson.fromJson(jsonString, BackupData::class.java)
+                ?: return RestoreResult(false, "❌ فرمت فایل پشتیبان نامعتبر است")
+
+            var restoredCount = 0
+
+            // Restore transactions
+            backupData.transactions.forEach { transaction ->
+                try {
+                    db.addTransaction(transaction)
+                    restoredCount++
+                } catch (e: Exception) {
+                    android.util.Log.w("BackupManager", "خطا در بازیابی تراکنش", e)
+                }
+            }
+
+            // Restore feature flags
+            backupData.featureFlags.forEach { (key, value) ->
+                when (key) {
+                    "call" -> featureFlags.setCallEnabled(value)
+                    "stt" -> featureFlags.setSTTEnabled(value)
+                    "tts" -> featureFlags.setTTSEnabled(value)
+                    "navigation" -> featureFlags.setNavigationEnabled(value)
+                    "music" -> featureFlags.setMusicEnabled(value)
+                    "weather" -> featureFlags.setWeatherEnabled(value)
+                    "ai_chat" -> featureFlags.setAIChatEnabled(value)
+                    "finance" -> featureFlags.setFinanceEnabled(value)
+                    "reminders" -> featureFlags.setRemindersEnabled(value)
+                }
+            }
+
+            RestoreResult(true, "✅ بازیابی با موفقیت انجام شد. $restoredCount تراکنش بازیابی شد.", restoredCount)
+        } catch (e: Exception) {
+            android.util.Log.e("BackupManager", "خطا در بازیابی", e)
+            RestoreResult(false, "❌ خطا در بازیابی: ${e.message}")
         }
-        context.startActivity(Intent.createChooser(intent, "اشتراک‌گذاری بک‌آپ"))
+    }
+
+    // ==================== Google Drive Backup/Restore ====================
+
+    /**
+     * ایجاد JSON برای آپلود به Google Drive
+     */
+    fun createBackupJson(): String {
+        val backupData = collectBackupData()
+        return gson.toJson(backupData)
+    }
+
+    /**
+     * بازیابی از JSON دریافتی از Google Drive
+     */
+    fun restoreFromJson(jsonString: String): RestoreResult {
+        return try {
+            val backupData = gson.fromJson(jsonString, BackupData::class.java)
+                ?: return RestoreResult(false, "❌ فرمت JSON نامعتبر است")
+
+            var restoredCount = 0
+
+            backupData.transactions.forEach { transaction ->
+                try {
+                    db.addTransaction(transaction)
+                    restoredCount++
+                } catch (e: Exception) {
+                    android.util.Log.w("BackupManager", "Error restoring transaction", e)
+                }
+            }
+
+            RestoreResult(true, "✅ بازیابی موفق: $restoredCount تراکنش", restoredCount)
+        } catch (e: Exception) {
+            android.util.Log.e("BackupManager", "Restore error", e)
+            RestoreResult(false, "❌ خطا: ${e.message}")
+        }
+    }
+
+    // ==================== Internal Methods ====================
+
+    private fun collectBackupData(): BackupData {
+        return BackupData(
+            version = BACKUP_VERSION,
+            timestamp = System.currentTimeMillis(),
+            transactions = db.getAllTransactions(),
+            featureFlags = featureFlags.getAllFlags()
+        )
+    }
+
+    private fun saveLastBackupInfo(fileSize: Long) {
+        prefs.edit()
+            .putLong(KEY_LAST_BACKUP_TIME, System.currentTimeMillis())
+            .putLong(KEY_LAST_BACKUP_SIZE, fileSize)
+            .apply()
+    }
+
+    fun getLastBackupTime(): Long = prefs.getLong(KEY_LAST_BACKUP_TIME, 0L)
+
+    fun getLastBackupSize(): Long = prefs.getLong(KEY_LAST_BACKUP_SIZE, 0L)
+
+    fun isAutoBackupEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_BACKUP_ENABLED, false)
+
+    fun setAutoBackupEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_BACKUP_ENABLED, enabled).apply()
+    }
+
+    fun isBackupToCloudEnabled(): Boolean = prefs.getBoolean(KEY_BACKUP_TO_CLOUD, false)
+
+    fun setBackupToCloudEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BACKUP_TO_CLOUD, enabled).apply()
+    }
+
+    /**
+     * Get formatted backup info string
+     */
+    fun getBackupInfo(): String {
+        val lastTime = getLastBackupTime()
+        if (lastTime == 0L) return "هنوز پشتیبان گرفته نشده است"
+
+        val date = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(lastTime))
+        val size = getLastBackupSize()
+        val sizeStr = when {
+            size < 1024 -> "$size B"
+            size < 1024 * 1024 -> String.format("%.1f KB", size / 1024.0)
+            else -> String.format("%.1f MB", size / (1024.0 * 1024.0))
+        }
+        return "آخرین پشتیبان: $date ($sizeStr)"
     }
 }

@@ -1,5 +1,7 @@
 package com.persianai.assistant.utils
 
+import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -26,9 +28,7 @@ object DriveHelper {
      * دانلود فایل رمزگذاری شده کلیدها از Google Drive
      */
     suspend fun downloadEncryptedKeys(): String = withContext(Dispatchers.IO) {
-        // تلاش اول: لینک گیت‌هاب (gist)
         runCatching { downloadFromUrl(GIST_KEYS_URL) }.getOrElse {
-            // fallback: Google Drive
             val url = DRIVE_DOWNLOAD_URL + ENCRYPTED_KEYS_FILE_ID
             val request = Request.Builder()
                 .url(url)
@@ -60,11 +60,19 @@ object DriveHelper {
     }
 
     /**
-     * آپلود فایل به Google Drive (نیاز به احراز هویت دارد)
-     * این متد در نسخه‌های بعدی با Google Drive API کامل می‌شود
+     * آپلود بکاپ به Google Drive (نیاز به Context دارد)
+     * از CloudBackupHelper استفاده می‌کند
      */
-    suspend fun uploadBackupToDrive(content: String, fileName: String): Boolean {
-        // TODO: پیاده‌سازی آپلود با Google Drive API
-        return false
+    suspend fun uploadBackupToDrive(context: Context, content: String): BackupManager.BackupResult {
+        val cloudHelper = CloudBackupHelper(context)
+        return cloudHelper.uploadBackup(content)
+    }
+
+    /**
+     * دانلود آخرین بکاپ از Google Drive
+     */
+    suspend fun downloadLatestBackup(context: Context): String? {
+        val cloudHelper = CloudBackupHelper(context)
+        return cloudHelper.downloadLatestBackup()
     }
 }

@@ -17,15 +17,15 @@ class CheckManager(private val context: Context) {
         val id: String,
         val checkNumber: String,
         val amount: Double,
-        val issuer: String, // صادر کننده
-        val recipient: String, // دریافت کننده
-        val issueDate: Long, // تاریخ صدور
-        val dueDate: Long, // تاریخ سررسید
+        val issuer: String,
+        val recipient: String,
+        val issueDate: Long,
+        val dueDate: Long,
         val status: CheckStatus,
         val bankName: String,
         val accountNumber: String,
         val description: String,
-        val alertDays: Int = 7 // چند روز قبل هشدار بده
+        val alertDays: Int = 7
     ) {
         fun getFormattedDueDate(): String {
             val calendar = Calendar.getInstance()
@@ -40,10 +40,10 @@ class CheckManager(private val context: Context) {
     }
     
     enum class CheckStatus {
-        PENDING, // در انتظار
-        PAID, // پرداخت شده
-        BOUNCED, // برگشتی
-        CANCELLED // لغو شده
+        PENDING,
+        PAID,
+        BOUNCED,
+        CANCELLED
     }
     
     private val prefs = context.getSharedPreferences("checks", Context.MODE_PRIVATE)
@@ -72,12 +72,20 @@ class CheckManager(private val context: Context) {
         checks.add(check)
         saveChecks(checks)
         
-        // Sync to AccountingDB
+        // Sync to AccountingDB - FIXED: Using proper model mapping
         try {
-            // Note: AccountingDB.addCheck expects a Check model object, not individual parameters
-            // For now, we'll skip this sync as it requires a different model structure
+            accountingDB.addCheck(com.persianai.assistant.models.Check(
+                checkNumber = checkNumber,
+                amount = amount,
+                recipient = recipient,
+                issueDate = Date(issueDate),
+                dueDate = Date(dueDate),
+                status = com.persianai.assistant.models.CheckStatus.PENDING,
+                description = description,
+                bankName = bankName
+            ))
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("CheckManager", "Error syncing to AccountingDB", e)
         }
         
         return id
@@ -132,6 +140,25 @@ class CheckManager(private val context: Context) {
             if (it.id == id) it.copy(status = status) else it
         }
         saveChecks(checks)
+        
+        // Sync status update to AccountingDB
+        try {
+            val accChecks = accountingDB.getAllChecks()
+            val check = checks.first { it.id == id }
+            accChecks.firstOrNull { it.checkNumber == check.checkNumber }?.let {
+                accountingDB.updateCheckStatus(
+                    it.id,
+                    when (status) {
+                        CheckStatus.PAID -> com.persianai.assistant.models.CheckStatus.DEPOSITED
+                        CheckStatus.BOUNCED -> com.persianai.assistant.models.CheckStatus.BOUNCED
+                        CheckStatus.CANCELLED -> com.persianai.assistant.models.CheckStatus.CANCELLED
+                        else -> com.persianai.assistant.models.CheckStatus.PENDING
+                    }
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CheckManager", "Error syncing status to AccountingDB", e)
+        }
     }
     
     fun deleteCheck(id: String) {
@@ -140,11 +167,26 @@ class CheckManager(private val context: Context) {
         
         // Sync deletion to AccountingDB
         try {
-            // Note: AccountingDB.deleteCheck expects Long id, not String
-            // For now, we'll skip this sync
+            val deletedCheck = getAllChecks().firstOrNull() ?: return
+            val accChecks = accountingDB.getAllChecks()
+            accChecks.firstOrNull { it.checkNumber == deletedCheck.checkNumber }?.let {
+                accountingDB.deleteCheck(it.id)
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("CheckManager", "Error syncing deletion to AccountingDB", e)
         }
+    }
+    
+    /**
+     * Export all checks as CSV
+     */
+    fun exportToCSV(): String {
+        val sb = StringBuilder()
+        sb.appendLine("ID,شماره چک,مبلغ,صادرکننده,دریافت‌کننده,تاریخ صدور,تاریخ سررسید,وضعیت,بانک,شماره حساب,توضیحات")
+        getAllChecks().forEach { c ->
+            sb.appendLine("${c.id},\"${c.checkNumber}\",${c.amount},\"${c.issuer}\",\"${c.recipient}\",${c.issueDate},${c.dueDate},${c.status.name},\"${c.bankName}\",\"${c.accountNumber}\",\"${c.description}\"")
+        }
+        return sb.toString()
     }
     
     private fun saveChecks(checks: List<Check>) {

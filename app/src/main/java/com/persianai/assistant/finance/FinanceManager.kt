@@ -103,6 +103,18 @@ class FinanceManager(private val context: Context) {
         prefs.edit().putString("transactions", array.toString()).apply()
     }
     
+    /**
+     * Export all transactions to CSV format
+     */
+    fun exportToCSV(): String {
+        val sb = StringBuilder()
+        sb.appendLine("ID,مبلغ,نوع,دسته‌بندی,توضیحات,تاریخ")
+        getAllTransactions().forEach { t ->
+            sb.appendLine("${t.id},${t.amount},${t.type},\"${t.category}\",\"${t.description}\",${t.date}")
+        }
+        return sb.toString()
+    }
+    
     fun getBalance(): Double {
         val transactions = getAllTransactions()
         var balance = 0.0

@@ -115,9 +115,11 @@ class OnlineSTTService(private val context: Context) {
             
             // افزودن کلیدهای Ivira از IviraIntegrationManager
             val iviraTokens = iviraManager.getIviraTokens()
+            Log.d(TAG, "Ivira tokens from manager: ${iviraTokens.keys}")
             val iviraKeys = iviraTokens.values.map { token ->
                 APIKey(provider = AIProvider.IVIRA, key = token, isActive = true)
             }
+            Log.d(TAG, "Ivira API keys created: ${iviraKeys.size}")
             
             val allKeys = sttKeys + iviraKeys
             Log.d(TAG, "✅ Found ${allKeys.size} STT API keys: ${allKeys.map { it.provider }}")
