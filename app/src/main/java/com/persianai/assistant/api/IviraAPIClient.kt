@@ -268,38 +268,76 @@ class IviraAPIClient(private val context: Context) {
                         .addFormDataPart("diarize", "false")
                         .build()
                     
-                    val request = Request.Builder()
-                        .url(IviraTokenManager.IVIRA_STT_URL)
-                        .addHeader("gateway-token", token)
-                        .addHeader("accept", "application/json")
-                        .post(requestBody)
-                        .build()
-                    
-                    httpClient.newCall(request).execute().use { response ->
-                        val responseBody = response.body?.string()
-                        Log.d(TAG, "Response: $responseBody")
-                        if (response.isSuccessful && !responseBody.isNullOrEmpty()) {
-                            val json = JSONObject(responseBody)
-                            // Parse Avanegar response format
-                            if (json.has("data") && json.getJSONObject("data").has("data")) {
-                                val data = json.getJSONObject("data").getJSONObject("data")
-                                if (data.has("aiResponse") && data.getJSONObject("aiResponse").has("result")) {
-                                    val result = data.getJSONObject("aiResponse").getJSONObject("result")
-                                    val text = result.getString("text")
-                                    
-                                    Log.d(TAG, "✅ STT success with $currentModel")
-                                    withContext(Dispatchers.Main) {
-                                        onSuccess(text)
-                                    }
-                                    return@withContext
+                    // Try multiple endpoint/header combos for compatibility
+                    val endpoints = listOf(
+                        IviraTokenManager.IVIRA_STT_URL,
+                        "https://partai.gw.isahab.ir/avanegar/v2/avanegar/request",
+                        "https://partai.gw.isahab.ir/avanegar/avanegar/request"
+                    ).distinct()
+
+                    val sanitized = token.trim().replace(Regex("[^\\x20-\\x7E]"), "")
+                    val headerOptions = listOf(
+                        Pair("gateway-token", sanitized),
+                        Pair("Authorization", "Bearer $sanitized")
+                    )
+
+                    var attempted = false
+                    for (endpoint in endpoints) {
+                        for ((headerName, headerValue) in headerOptions) {
+                            try {
+                                attempted = true
+                                val masked = if (sanitized.length > 12) sanitized.take(6) + "..." + sanitized.takeLast(4) else sanitized
+                                Log.d(TAG, "Trying Ivira STT endpoint=$endpoint header=$headerName token=$masked")
+
+                                val builder = Request.Builder()
+                                    .url(endpoint)
+                                    .addHeader("accept", "application/json")
+
+                                try {
+                                    builder.addHeader(headerName, headerValue)
+                                } catch (e: IllegalArgumentException) {
+                                    Log.w(TAG, "Invalid header value for $headerName, skipping", e)
+                                    continue
                                 }
+
+                                val request = builder.post(requestBody).build()
+                                httpClient.newCall(request).execute().use { response ->
+                                    val responseBody = response.body?.string()
+                                    Log.d(TAG, "Response: $responseBody")
+                                    if (response.isSuccessful && !responseBody.isNullOrEmpty()) {
+                                        try {
+                                            val json = JSONObject(responseBody)
+                                            val dataObj = if (json.has("data") && json.getJSONObject("data").has("data")) json.getJSONObject("data").getJSONObject("data") else json.optJSONObject("data")
+                                            if (dataObj != null) {
+                                                val aiResponse = dataObj.optJSONObject("aiResponse") ?: dataObj.optJSONObject("ai_response")
+                                                val result = aiResponse?.optJSONObject("result")
+                                                val text = result?.optString("text")
+                                                if (!text.isNullOrBlank()) {
+                                                    Log.d(TAG, "✅ STT success with $currentModel via $endpoint")
+                                                    withContext(Dispatchers.Main) { onSuccess(text) }
+                                                    return@withContext
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "Failed to parse Ivira STT response", e)
+                                        }
+                                        lastError = "خطا: فرمت پاسخ نامعتبر از $currentModel"
+                                        Log.w(TAG, "Invalid response format from $currentModel")
+                                    } else {
+                                        lastError = "خطا: کد ${response.code} از $currentModel"
+                                        Log.w(TAG, "HTTP error ${response.code} from $currentModel")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "STT attempt failed for endpoint=$endpoint header=$headerName: ${e.message}")
+                                lastError = e.message
+                                continue
                             }
-                            lastError = "خطا: فرمت پاسخ نامعتبر از $currentModel"
-                            Log.w(TAG, "Invalid response format from $currentModel")
-                        } else {
-                            lastError = "خطا: کد ${response.code} از $currentModel"
-                            Log.w(TAG, "HTTP error ${response.code} from $currentModel")
                         }
+                    }
+
+                    if (!attempted) {
+                        lastError = "No valid token/header to attempt"
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "STT Error with $currentModel: ${e.message}")

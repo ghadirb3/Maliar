@@ -194,6 +194,12 @@ class IviraTokenManager(private val context: Context) {
             }
         }
 
+        // If tokens were found in SharedPreferences, log masked view for diagnostics
+        if (tokens.isNotEmpty()) {
+            logMaskedTokens(tokens)
+            return tokens
+        }
+
         // اگر توکن‌ها در Preferences پیدا نشدند، تلاش برای بارگذاری از assets یا مسیر دانلود محلی
         if (tokens.isEmpty()) {
             // Try assets first

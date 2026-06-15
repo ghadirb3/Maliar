@@ -411,41 +411,82 @@ class OnlineSTTService(private val context: Context) {
                 sanitizedToken.take(6) + "..." + sanitizedToken.takeLast(4)
             } else sanitizedToken
 
-            val requestBuilder = Request.Builder()
-                .url("https://partai.gw.isahab.ir/avanegar/v2/avanegar/request")
+            // Try multiple endpoint / header combinations to maximize compatibility with provider
+            val endpoints = listOf(
+                "https://partai.gw.isahab.ir/avanegar/v2/avanegar/request",
+                "https://partai.gw.isahab.ir/avanegar/avanegar/request",
+                IviraTokenManager.IVIRA_STT_URL
+            ).distinct()
 
-            try {
-                requestBuilder.addHeader("gateway-token", sanitizedToken)
-            } catch (e: IllegalArgumentException) {
-                Log.w(TAG, "Invalid gateway-token header value for token=$masked, skipping", e)
-                return STTResult.error("Ivira STT failed: invalid gateway-token value")
-            }
+            val headerOptions = listOf(
+                Pair("gateway-token", sanitizedToken),
+                Pair("Authorization", "Bearer $sanitizedToken")
+            )
 
-            Log.d(TAG, "🔄 Ivira STT using gateway-token: $masked")
+            for (endpoint in endpoints) {
+                for ((headerName, headerValue) in headerOptions) {
+                    try {
+                        val maskedHeader = if (sanitizedToken.length > 12) sanitizedToken.take(6) + "..." + sanitizedToken.takeLast(4) else sanitizedToken
+                        Log.d(TAG, "🔁 Trying Ivira endpoint=$endpoint header=$headerName token=$maskedHeader")
 
-            val request = requestBuilder.post(multipartBody).build()
-            
-            httpClient.newCall(request).execute().use { response ->
-                val responseBody = response.body?.string() ?: ""
-                Log.d(TAG, "Ivira response code: ${response.code}")
-                Log.d(TAG, "Ivira response body: $responseBody")
-                
-                if (response.isSuccessful) {
-                    val json = JSONObject(responseBody)
-                    val data = json.optJSONObject("data")
-                    val aiResponse = data?.optJSONObject("aiResponse")
-                    val result = aiResponse?.optJSONObject("result")
-                    val text = result?.optString("text") ?: ""
-                    
-                    return if (text.isNotBlank()) {
-                        STTResult.success(text)
-                    } else {
-                        STTResult.error("Empty response from Ivira")
+                        val builder = Request.Builder()
+                            .url(endpoint)
+                            .addHeader("accept", "application/json")
+
+                        try {
+                            builder.addHeader(headerName, headerValue)
+                        } catch (e: IllegalArgumentException) {
+                            Log.w(TAG, "Invalid header value for $headerName, skipping this header", e)
+                            continue
+                        }
+
+                        val request = builder.post(multipartBody).build()
+
+                        httpClient.newCall(request).execute().use { response ->
+                            val responseBody = response.body?.string() ?: ""
+                            Log.d(TAG, "Ivira response code: ${response.code} endpoint=$endpoint header=$headerName")
+                            Log.d(TAG, "Ivira response body: $responseBody")
+
+                            if (response.isSuccessful) {
+                                try {
+                                    val json = JSONObject(responseBody)
+                                    var text: String? = null
+
+                                    if (json.has("data")) {
+                                        val dataObj = json.getJSONObject("data")
+                                        val inner = if (dataObj.has("data")) dataObj.getJSONObject("data") else dataObj
+                                        val aiResponse = inner.optJSONObject("aiResponse") ?: inner.optJSONObject("ai_response")
+                                        val result = aiResponse?.optJSONObject("result")
+                                        text = result?.optString("text")
+                                    }
+
+                                    if (text.isNullOrBlank() && json.has("text")) text = json.optString("text")
+
+                                    if (!text.isNullOrBlank()) {
+                                        Log.d(TAG, "✅ Ivira STT success via $endpoint header=$headerName")
+                                        return STTResult.success(text)
+                                    } else {
+                                        Log.w(TAG, "Ivira returned successful response but no text (endpoint=$endpoint header=$headerName)")
+                                        return STTResult.error("Empty response from Ivira")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Failed to parse Ivira JSON", e)
+                                    return STTResult.error("Ivira parse error: ${e.message}")
+                                }
+                            } else {
+                                // For 401/404/other codes, try next header/endpoint
+                                Log.w(TAG, "Ivira HTTP ${response.code} from $endpoint with header $headerName")
+                                // continue to next try
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Ivira attempt failed for endpoint=$endpoint header=$headerName: ${e.message}")
+                        // try next combination
                     }
-                } else {
-                    STTResult.error("Ivira API error: ${response.code} - $responseBody")
                 }
             }
+
+            STTResult.error("Ivira API error after all endpoint/header attempts")
         } catch (e: Exception) {
             Log.e(TAG, "Ivira STT error", e)
             STTResult.error("Ivira STT failed: ${e.message}")
