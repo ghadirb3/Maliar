@@ -6,6 +6,7 @@ import com.persianai.assistant.integration.IviraIntegrationManager
 import com.persianai.assistant.models.APIKey
 import com.persianai.assistant.models.AIProvider
 import com.persianai.assistant.utils.PreferencesManager
+import com.persianai.assistant.utils.IviraTokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
