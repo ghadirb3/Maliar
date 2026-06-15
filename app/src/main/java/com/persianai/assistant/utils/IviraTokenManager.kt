@@ -196,8 +196,8 @@ class IviraTokenManager(private val context: Context) {
 
         // اگر توکن‌ها در Preferences پیدا نشدند، تلاش برای بارگذاری از assets یا مسیر دانلود محلی
         if (tokens.isEmpty()) {
+            // Try assets first
             try {
-                // تلاش برای خواندن از فایل assets/ivira_tokens.txt
                 val assetStream = try {
                     context.assets.open("ivira_tokens.txt")
                 } catch (e: Exception) {
@@ -209,6 +209,7 @@ class IviraTokenManager(private val context: Context) {
                     val parsed = parseTokensFromPlainText(content)
                     if (parsed.isNotEmpty()) {
                         saveTokens(parsed)
+                        logMaskedTokens(parsed)
                         return parsed
                     }
                 }
@@ -216,11 +217,15 @@ class IviraTokenManager(private val context: Context) {
                 Log.d(TAG, "No ivira tokens in assets: ${e.message}")
             }
 
-            // مسیرهای متداول دانلود را بررسی کن
+            // Common external / download locations to check (covers many devices)
             val downloadCandidates = listOf(
                 "/sdcard/Download/key_2.txt",
                 "/sdcard/Download/ivira_keys.txt",
-                (context.getExternalFilesDir(null)?.absolutePath ?: "") + "/Download/key_2.txt"
+                "/sdcard/Download/ivira_tokens.txt",
+                "/storage/emulated/0/Download/key_2.txt",
+                "/storage/emulated/0/Download/ivira_tokens.txt",
+                (context.filesDir?.absolutePath ?: "") + "/ivira_tokens.txt",
+                (context.getExternalFilesDir(null)?.absolutePath ?: "") + "/ivira_tokens.txt"
             )
 
             for (path in downloadCandidates) {
@@ -232,6 +237,7 @@ class IviraTokenManager(private val context: Context) {
                         val parsed = parseTokensFromPlainText(content)
                         if (parsed.isNotEmpty()) {
                             saveTokens(parsed)
+                            logMaskedTokens(parsed)
                             return parsed
                         }
                     }
@@ -242,6 +248,19 @@ class IviraTokenManager(private val context: Context) {
         }
 
         return tokens
+    }
+
+    private fun logMaskedTokens(tokens: Map<String, String>) {
+        try {
+            val masked = tokens.map { (k, v) ->
+                val t = v
+                val m = if (t.length > 12) t.take(6) + "..." + t.takeLast(4) else t.take(4) + "..."
+                "$k=$m"
+            }
+            Log.d(TAG, "💡 Loaded Ivira tokens: ${masked.joinToString(", ")}")
+        } catch (e: Exception) {
+            Log.d(TAG, "Could not mask tokens for logging: ${e.message}")
+        }
     }
 
     /**
