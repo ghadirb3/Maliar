@@ -235,32 +235,33 @@ class OnlineSTTService(private val context: Context) {
                 .build()
         }
         
-        // تلاش اول: whisper-1 (مدل استاندارد OpenAI از مستندات)
-        // تلاش دوم: gapgpt/whisper-1 (اگر خطا بود)
+        // تلاش اول: gapgpt/whisper-1 (اگر سرور انتظار مدل provider-specific دارد)
+        // تلاش دوم: whisper-1 (fallback to standard OpenAI model)
         // تلاش سوم: retry با تاخیر کم (اگر 429 بود)
         return try {
-            var request = buildRequest("whisper-1")
+            var request = buildRequest("gapgpt/whisper-1")
+            Log.d(TAG, "GapGPT STT attempting model: gapgpt/whisper-1")
             gapgptHttpClient.newCall(request).execute().use { response ->
                 var responseBody = response.body?.string() ?: ""
-                
+
                 if (response.isSuccessful) {
                     val json = JSONObject(responseBody)
                     val text = json.optString("text", "")
                     return if (text.isNotBlank()) {
                         STTResult.success(text)
                     } else {
-                        STTResult.error("Empty response from GapGPT (whisper-1)")
+                        STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
                     }
                 }
-                
+
                 // لاگ بدنه خطا برای تشخیص مشکل
                 Log.e(TAG, "GapGPT error ${response.code}")
                 Log.e(TAG, "GapGPT response body: $responseBody")
-                
-                // اگر خطای 504 یا 400 بود، با gapgpt/whisper-1 دوباره امتحان کن
+
+                // اگر خطای 504 یا 400 بود، با whisper-1 دوباره امتحان کن
                 if (response.code == 504 || response.code == 400) {
-                    Log.w(TAG, "GapGPT returned ${response.code}, retrying with gapgpt/whisper-1")
-                    request = buildRequest("gapgpt/whisper-1")
+                    Log.w(TAG, "GapGPT returned ${response.code}, retrying with whisper-1")
+                    request = buildRequest("whisper-1")
                     gapgptHttpClient.newCall(request).execute().use { retryResponse ->
                         val retryBody = retryResponse.body?.string() ?: ""
                         if (retryResponse.isSuccessful) {
@@ -269,20 +270,21 @@ class OnlineSTTService(private val context: Context) {
                             return if (text.isNotBlank()) {
                                 STTResult.success(text)
                             } else {
-                                STTResult.error("Empty response from GapGPT (gapgpt/whisper-1)")
+                                STTResult.error("Empty response from GapGPT (whisper-1)")
                             }
                         }
                         return STTResult.error("GapGPT API error after retry: ${retryResponse.code}")
                     }
                 }
-                
+
                 // Minimal backoff for 429: 2s, 5s, 10s (برای سرعت بیشتر)
                 if (response.code == 429) {
                     val delays = listOf(2000L, 5000L, 10000L)
                     for ((i, delay) in delays.withIndex()) {
                         Log.w(TAG, "429 retry ${i+1}/${delays.size}, wait ${delay/1000}s")
                         kotlinx.coroutines.delay(delay)
-                        request = buildRequest("whisper-1")
+                        // try with preferred model again
+                        request = buildRequest("gapgpt/whisper-1")
                         gapgptHttpClient.newCall(request).execute().use { retryResponse ->
                             val retryBody = retryResponse.body?.string() ?: ""
                             Log.e(TAG, "429 retry ${i+1} response: ${retryResponse.code}")
@@ -297,7 +299,7 @@ class OnlineSTTService(private val context: Context) {
                     }
                     return STTResult.error("GapGPT 429 after all retries")
                 }
-                
+
                 // سایر خطاها
                 STTResult.error("GapGPT API error: ${response.code}")
             }
