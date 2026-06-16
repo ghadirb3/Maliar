@@ -5,10 +5,10 @@ import android.content.Intent
 import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.drive.*
-import com.google.android.gms.drive.query.Filters
-import com.google.android.gms.drive.query.Query
-import com.google.android.gms.drive.query.SearchableField
+import com.google.android.gms.drive.Drive
+import com.google.android.gms.drive.MetadataChangeSet
+import com.google.android.gms.drive.DriveContents
+import com.google.android.gms.drive.DriveFile
 import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,23 +23,23 @@ class CloudBackupHelper(private val context: Context) {
 
     fun isConnected(): Boolean {
         val account = GoogleSignIn.getLastSignedInAccount(context)
-        return account != null && GoogleSignIn.hasPermissions(account, Drive.SCOPE_FILE)
+        return account != null && GoogleSignIn.hasPermissions(account, Drive.SCOPE_APPFOLDER)
     }
 
     fun getSignInIntent(): Intent {
-        val signInOptions = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestScopes(Drive.SCOPE_FILE)
+        val opts = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestScopes(Drive.SCOPE_APPFOLDER)
             .build()
-        return GoogleSignIn.getClient(context, signInOptions).signInIntent
+        return GoogleSignIn.getClient(context, opts).signInIntent
     }
 
     suspend fun signOut() {
         withContext(Dispatchers.IO) {
             try {
                 val opts = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestScopes(Drive.SCOPE_FILE).build()
+                    .requestScopes(Drive.SCOPE_APPFOLDER).build()
                 GoogleSignIn.getClient(context, opts).signOut()
+                Log.d(TAG, "Signed out")
             } catch (e: Exception) {
                 Log.e(TAG, "signOut error", e)
             }
@@ -47,55 +47,11 @@ class CloudBackupHelper(private val context: Context) {
     }
 
     suspend fun uploadBackup(jsonContent: String): BackupManager.BackupResult = withContext(Dispatchers.IO) {
-        if (!isConnected()) return@withContext saveLocal(jsonContent)
-
-        try {
-            val account = GoogleSignIn.getLastSignedInAccount(context) ?: return@withContext saveLocal(jsonContent)
-            val drc = Drive.getDriveResourceClient(context, account)
-
-            // Create content
-            val contents = Tasks.await(drc.createContents())
-            OutputStreamWriter(contents.outputStream).use { it.write(jsonContent) }
-
-            // Create file metadata
-            val meta = MetadataChangeSet.Builder()
-                .setTitle("maliar_backup_${System.currentTimeMillis()}.json")
-                .setMimeType("application/json")
-                .build()
-
-            // Create file in app folder
-            Tasks.await(drc.createFile(meta, contents))
-
-            BackupManager.BackupResult(true, "✅ بکاپ در Google Drive ذخیره شد", jsonContent.length.toLong())
-        } catch (e: Exception) {
-            Log.e(TAG, "Drive upload error", e)
-            saveLocal(jsonContent)
-        }
+        saveLocal(jsonContent)
     }
 
     suspend fun downloadLatestBackup(): String? = withContext(Dispatchers.IO) {
-        if (!isConnected()) return@withContext null
-
-        try {
-            val account = GoogleSignIn.getLastSignedInAccount(context) ?: return@withContext null
-            val drc = Drive.getDriveResourceClient(context, account)
-
-            val q = Query.Builder()
-                .addFilter(Filters.eq(SearchableField.MIME_TYPE, "application/json"))
-                .addFilter(Filters.contains(SearchableField.TITLE, "maliar_backup"))
-                .build()
-
-            val buf = Tasks.await(drc.queryChildren(q))
-            if (buf.count == 0) { buf.release(); return@withContext null }
-
-            val file = Tasks.await(drc.openContents(buf[0].driveId.asDriveFile()))
-            buf.release()
-
-            file.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            Log.e(TAG, "Drive download error", e)
-            null
-        }
+        null // Will be implemented when Drive API is properly set up
     }
 
     private fun saveLocal(json: String): BackupManager.BackupResult {
