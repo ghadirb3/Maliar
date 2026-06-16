@@ -128,12 +128,15 @@ class FinanceManager(private val context: Context) {
         return balance
     }
     
-    fun getMonthlyReport(year: Int, month: Int): Pair<Double, Double> {
+    fun getMonthlyReport(year: Int, month: Int): Triple<Double, Double, Int> {
         val calendar = Calendar.getInstance()
         calendar.set(year, month - 1, 1, 0, 0, 0)
         val startTime = calendar.timeInMillis
         
         calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
         val endTime = calendar.timeInMillis
         
         val transactions = getAllTransactions().filter { it.date in startTime..endTime }
@@ -146,7 +149,65 @@ class FinanceManager(private val context: Context) {
             else expense += it.amount
         }
         
-        return Pair(income, expense)
+        return Triple(income, expense, transactions.size)
+    }
+
+    fun getYearlyReport(year: Int): Triple<Double, Double, Int> {
+        val calendar = Calendar.getInstance()
+        calendar.set(year, 0, 1, 0, 0, 0)
+        val startTime = calendar.timeInMillis
+        
+        calendar.set(Calendar.MONTH, 11)
+        calendar.set(Calendar.DAY_OF_MONTH, 31)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        val endTime = calendar.timeInMillis
+        
+        val transactions = getAllTransactions().filter { it.date in startTime..endTime }
+        
+        var income = 0.0
+        var expense = 0.0
+        
+        transactions.forEach {
+            if (it.type == "income") income += it.amount
+            else expense += it.amount
+        }
+        
+        return Triple(income, expense, transactions.size)
+    }
+
+    fun getMonthlyBalanceReport(year: Int, month: Int): String {
+        val (income, expense, count) = getMonthlyReport(year, month)
+        val balance = income - expense
+        val persianMonth = try {
+            PersianDateConverter.gregorianToPersian(year, month, 1).toReadableString().split(" ").getOrNull(1) ?: "$month"
+        } catch (_: Exception) { "$month" }
+        
+        return buildString {
+            appendLine("📊 تراز ماه $persianMonth $year")
+            appendLine("=".repeat(30))
+            appendLine("📈 درآمد: ${String.format("%,.0f", income)} تومان")
+            appendLine("📉 هزینه: ${String.format("%,.0f", expense)} تومان")
+            appendLine("💵 تراز: ${String.format("%,.0f", balance)} تومان")
+            appendLine("📝 تعداد تراکنش‌ها: $count")
+            if (balance > 0) appendLine("✅ مثبت") else if (balance < 0) appendLine("⚠️ منفی") else appendLine("⚖️ صفر")
+        }
+    }
+
+    fun getYearlyBalanceReport(year: Int): String {
+        val (income, expense, count) = getYearlyReport(year)
+        val balance = income - expense
+        
+        return buildString {
+            appendLine("📊 تراز سال $year")
+            appendLine("=".repeat(30))
+            appendLine("📈 درآمد: ${String.format("%,.0f", income)} تومان")
+            appendLine("📉 هزینه: ${String.format("%,.0f", expense)} تومان")
+            appendLine("💵 خالص: ${String.format("%,.0f", balance)} تومان")
+            appendLine("📝 تعداد تراکنش‌ها: $count")
+            if (balance > 0) appendLine("✅ سودده") else if (balance < 0) appendLine("⚠️ زیانده") else appendLine("⚖️ سر به سر")
+        }
     }
 
     fun getSummary(): Map<String, String> {
@@ -158,9 +219,9 @@ class FinanceManager(private val context: Context) {
         }
         val balance = income - expense
         return mapOf(
-            "income" to income.toLong().toString(),
-            "expense" to expense.toLong().toString(),
-            "total" to balance.toLong().toString()
+            "income" to String.format("%.0f", income),
+            "expense" to String.format("%.0f", expense),
+            "total" to String.format("%.0f", balance)
         )
     }
 
@@ -194,23 +255,18 @@ class FinanceManager(private val context: Context) {
         val top = topExpenseCategories.entries
             .sortedByDescending { it.value }
             .take(5)
-            .joinToString("\n") { "• ${it.key}: ${it.value.toLong()}" }
+            .joinToString("\n") { "• ${it.key}: ${String.format("%,.0f", it.value)} تومان" }
 
         val balance = income - expense
         return buildString {
-            append("بازه: ")
-            append(timeRange)
-            append("\n")
-            append("درآمد: ")
-            append(income.toLong())
-            append("\n")
-            append("هزینه: ")
-            append(expense.toLong())
-            append("\n")
-            append("خالص: ")
-            append(balance.toLong())
+            appendLine("📊 گزارش مالی ($timeRange)")
+            appendLine("=".repeat(25))
+            appendLine("📈 درآمد: ${String.format("%,.0f", income)} تومان")
+            appendLine("📉 هزینه: ${String.format("%,.0f", expense)} تومان")
+            appendLine("💵 خالص: ${String.format("%,.0f", balance)} تومان")
             if (top.isNotBlank()) {
-                append("\n\nبیشترین هزینه‌ها:\n")
+                appendLine()
+                appendLine("بیشترین هزینه‌ها:")
                 append(top)
             }
         }

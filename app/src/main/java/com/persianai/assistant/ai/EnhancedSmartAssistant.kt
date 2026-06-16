@@ -283,40 +283,52 @@ class EnhancedSmartAssistant(private val context: Context) {
         return when {
             text.contains("امروز") || text.contains("روز") -> financeManager.generateReport("day")
             text.contains("هفته") -> financeManager.generateReport("week")
-            text.contains("ماه") || text.contains("ماهیانه") -> {
+            text.contains("ماه") || text.contains("ماهیانه") || text.contains("تراز") -> {
                 val calendar = Calendar.getInstance()
-                val (income, expense) = financeManager.getMonthlyReport(
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH) + 1
-                )
+                val year = calendar.get(Calendar.YEAR)
+                val month = calendar.get(Calendar.MONTH) + 1
                 
-                val balance = income - expense
-                val checksTotal = checkManager.getTotalPendingAmount()
-                val installmentsTotal = installmentManager.getTotalRemainingAmount()
-                
-                buildString {
-                    appendLine("💰 گزارش مالی این ماه:\n")
-                    appendLine("📈 درآمد: ${formatAmount(income)} تومان")
-                    appendLine("📉 هزینه: ${formatAmount(expense)} تومان")
-                    appendLine("💵 خالص: ${formatAmount(balance)} تومان")
+                if (text.contains("تراز")) {
+                    financeManager.getMonthlyBalanceReport(year, month)
+                } else {
+                    val (income, expense, count) = financeManager.getMonthlyReport(year, month)
                     
-                    if (checksTotal > 0 || installmentsTotal > 0) {
-                        appendLine("\n📋 تعهدات:")
-                        if (checksTotal > 0) appendLine("• چک‌ها: ${formatAmount(checksTotal)} تومان")
-                        if (installmentsTotal > 0) appendLine("• اقساط: ${formatAmount(installmentsTotal)} تومان")
-                    }
+                    val balance = income - expense
+                    val checksTotal = checkManager.getTotalPendingAmount()
+                    val installmentsTotal = installmentManager.getTotalRemainingAmount()
                     
-                    val netWorth = balance - checksTotal - installmentsTotal
-                    appendLine("\n💎 دارایی خالص: ${formatAmount(netWorth)} تومان")
-                    
-                    if (netWorth < 0) {
-                        appendLine("\n⚠️ شما ${formatAmount(-netWorth)} تومان بدهی دارید.")
-                    } else {
-                        appendLine("\n✅ وضعیت مالی شما مناسب است.")
+                    buildString {
+                        appendLine("💰 گزارش مالی این ماه:\n")
+                        appendLine("📈 درآمد: ${formatAmount(income)} تومان")
+                        appendLine("📉 هزینه: ${formatAmount(expense)} تومان")
+                        appendLine("💵 خالص: ${formatAmount(balance)} تومان")
+                        appendLine("📝 تراکنش‌ها: $count مورد")
+                        
+                        if (checksTotal > 0 || installmentsTotal > 0) {
+                            appendLine("\n📋 تعهدات:")
+                            if (checksTotal > 0) appendLine("• چک‌ها: ${formatAmount(checksTotal)} تومان")
+                            if (installmentsTotal > 0) appendLine("• اقساط: ${formatAmount(installmentsTotal)} تومان")
+                        }
+                        
+                        val netWorth = balance - checksTotal - installmentsTotal
+                        appendLine("\n💎 دارایی خالص: ${formatAmount(netWorth)} تومان")
+                        
+                        if (netWorth < 0) {
+                            appendLine("\n⚠️ شما ${formatAmount(-netWorth)} تومان بدهی دارید.")
+                        } else {
+                            appendLine("\n✅ وضعیت مالی شما مناسب است.")
+                        }
                     }
                 }
             }
-            text.contains("سال") -> financeManager.generateReport("year")
+            text.contains("سال") -> {
+                if (text.contains("تراز")) {
+                    val calendar = Calendar.getInstance()
+                    financeManager.getYearlyBalanceReport(calendar.get(Calendar.YEAR))
+                } else {
+                    financeManager.generateReport("year")
+                }
+            }
             else -> financeManager.generateReport("month")
         }
     }
@@ -454,10 +466,12 @@ class EnhancedSmartAssistant(private val context: Context) {
         }
         
         if (featureFlags.isFinanceEnabled()) {
-            val (income, expense) = financeManager.getMonthlyReport(
+            val monthlyReport = financeManager.getMonthlyReport(
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH) + 1
             )
+            val income = monthlyReport.first
+            val expense = monthlyReport.second
             sb.appendLine("💰 وضعیت مالی این ماه:")
             sb.appendLine("  درآمد: ${formatAmount(income)} تومان")
             sb.appendLine("  هزینه: ${formatAmount(expense)} تومان")

@@ -57,29 +57,21 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun loadSettings() {
-        // وضعیت API Keys
         val keys = prefsManager.getAPIKeys()
         val activeKeys = keys.filter { it.isActive }
         binding.apiKeysStatus.text = "کلیدهای فعال: ${activeKeys.size} از ${keys.size}"
         
-        android.util.Log.d("SettingsActivity", "Keys: total=${keys.size}, active=${activeKeys.size}")
-        
-        // مدل فعلی
         val currentModel = prefsManager.getSelectedModel()
         binding.currentModel.text = "مدل فعلی: ${currentModel.displayName}"
         
-        // وضعیت سرویس پس‌زمینه
         val serviceEnabled = prefsManager.isServiceEnabled()
         binding.backgroundServiceSwitch.isChecked = serviceEnabled
-        android.util.Log.d("SettingsActivity", "Service enabled: $serviceEnabled")
 
         binding.persistentNotificationSwitch.isChecked = prefsManager.isPersistentStatusNotificationEnabled()
         binding.persistentNotificationActionsSwitch.isChecked = prefsManager.isPersistentNotificationActionsEnabled()
         
-        // وضعیت TTS
         binding.ttsSwitch.isChecked = prefsManager.isTTSEnabled()
 
-        // مقصد شروع
         binding.currentModeText.text = "صفحه شروع: ${if (prefsManager.getStartDestination() == PreferencesManager.StartDestination.DASHBOARD) "داشبورد" else "دستیار"}"
         refreshRecordingModeUI()
     }
@@ -95,51 +87,41 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // دکمه نمایش راهنما
         binding.showWelcomeButton.setOnClickListener {
             val intent = Intent(this, WelcomeActivity::class.java)
-            intent.putExtra("SHOW_HELP", true)  // علامت نمایش راهنما
+            intent.putExtra("SHOW_HELP", true)
             startActivity(intent)
         }
         
-        // انتخاب صفحه شروع (داشبورد/دستیار)
         binding.changeModeButton.setOnClickListener {
             showStartDestinationDialog()
         }
 
-        // دکمه مدیریت برنامه‌های متصل
         binding.manageAppsButton.setOnClickListener {
             try {
-                android.util.Log.d("SettingsActivity", "Opening ConnectedAppsActivity...")
                 val intent = Intent(this, ConnectedAppsActivity::class.java)
                 startActivity(intent)
             } catch (e: Exception) {
-                android.util.Log.e("SettingsActivity", "Error opening ConnectedAppsActivity", e)
                 android.widget.Toast.makeText(this, "خطا: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
             }
         }
         
-        // دکمه تنظیمات تماس
         binding.callSettingsButton.setOnClickListener {
             CallSettingsDialog.show(this)
         }
         
-        // دکمه راهنمای ارسال خودکار
         binding.accessibilityGuideButton.setOnClickListener {
             val intent = Intent(this, AccessibilityGuideActivity::class.java)
             startActivity(intent)
         }
         
-        // دکمه به‌روزرسانی کلیدها - بدون درخواست رمز، فقط Liara فعال
         binding.refreshKeysButton.setOnClickListener {
             refreshKeysFromGist()
         }
-        // دکمه پاک کردن کلیدها
         binding.clearKeysButton.setOnClickListener {
             showClearKeysDialog()
         }
 
-        // Switch سرویس پس‌زمینه
         binding.backgroundServiceSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 if (!prefsManager.isPersistentStatusNotificationEnabled()) {
@@ -179,12 +161,10 @@ class SettingsActivity : AppCompatActivity() {
             performBackup()
         }
 
-        // بازیابی بک‌آپ
         binding.restoreButton.setOnClickListener {
             performRestore()
         }
 
-        // درباره برنامه
         binding.aboutButton.setOnClickListener {
             showAboutDialog()
         }
@@ -239,10 +219,6 @@ class SettingsActivity : AppCompatActivity() {
                 val result = AutoProvisioningManager.autoProvision(this@SettingsActivity)
                 withContext(Dispatchers.Main) {
                     result.onSuccess { keys ->
-                        android.util.Log.d("SettingsActivity", "✅ کلیدها دانلود و فعال شدند:")
-                        keys.forEach { k ->
-                            android.util.Log.d("SettingsActivity", "  - ${k.provider.name}: ${if (k.isActive) "✔ ACTIVE" else "✕ INACTIVE"} base=${k.baseUrl}")
-                        }
                         loadSettings()
                         Toast.makeText(
                             this@SettingsActivity,
@@ -255,15 +231,10 @@ class SettingsActivity : AppCompatActivity() {
                             "❌ خطا در دانلود/فعال‌سازی: ${e.message}",
                             Toast.LENGTH_LONG
                         ).show()
-                        android.util.Log.e("SettingsActivity", "AutoProvisioning from SettingsActivity failed", e)
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(
-                    this@SettingsActivity,
-                    "❌ خطا: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this@SettingsActivity, "❌ خطا: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -300,13 +271,9 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
     
-    private fun showPasswordDialogForRefresh() {
-        // غیرفعال - رمز دیگر درخواست نمی‌شود
-    }
+    private fun showPasswordDialogForRefresh() { /* غیرفعال */ }
     
-    private fun downloadAPIKeys(password: String) {
-        // غیرفعال - از refreshKeysFromGist استفاده کنید
-    }
+    private fun downloadAPIKeys(password: String) { /* غیرفعال */ }
 
     private fun showStartDestinationDialog() {
         val options = arrayOf("داشبورد", "دستیار")
@@ -322,50 +289,43 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
     
-    private fun parseAPIKeys(data: String): List<com.persianai.assistant.models.APIKey> {
-        val keys = mutableListOf<com.persianai.assistant.models.APIKey>()
-        
+    private fun parseAPIKeys(data: String): List<APIKey> {
+        val keys = mutableListOf<APIKey>()
         data.lines().forEach { line ->
             val trimmed = line.trim()
             if (trimmed.isBlank() || trimmed.startsWith("#")) return@forEach
-            
             val parts = trimmed.split(":", limit = 2)
-            
             if (parts.size == 2) {
                 val provider = when (parts[0].lowercase()) {
-                    "openai" -> com.persianai.assistant.models.AIProvider.OPENAI
-                    "anthropic", "claude" -> com.persianai.assistant.models.AIProvider.ANTHROPIC
-                    "openrouter" -> com.persianai.assistant.models.AIProvider.OPENROUTER
-                    "liara" -> com.persianai.assistant.models.AIProvider.LIARA
+                    "openai" -> AIProvider.OPENAI
+                    "anthropic", "claude" -> AIProvider.ANTHROPIC
+                    "openrouter" -> AIProvider.OPENROUTER
+                    "liara" -> AIProvider.LIARA
                     else -> null
                 }
-                
                 if (provider != null) {
                     val token = parts[1].trim()
-                    if (provider == com.persianai.assistant.models.AIProvider.LIARA) {
-                        keys.add(
-                            com.persianai.assistant.models.APIKey(
-                                provider = com.persianai.assistant.models.AIProvider.LIARA,
-                                key = token,
-                                baseUrl = "https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1",
-                                isActive = false
-                            )
-                        )
+                    if (provider == AIProvider.LIARA) {
+                        keys.add(APIKey(
+                            provider = AIProvider.LIARA,
+                            key = token,
+                            baseUrl = "https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1",
+                            isActive = false
+                        ))
                     } else {
-                        keys.add(com.persianai.assistant.models.APIKey(provider, token, isActive = false))
+                        keys.add(APIKey(provider, token, isActive = false))
                     }
                 }
             } else if (parts.size == 1 && trimmed.startsWith("sk-")) {
                 val provider = when {
-                    trimmed.startsWith("sk-proj-") -> com.persianai.assistant.models.AIProvider.OPENAI
-                    trimmed.startsWith("sk-or-") -> com.persianai.assistant.models.AIProvider.OPENROUTER
-                    trimmed.length == 51 && trimmed.startsWith("sk-") -> com.persianai.assistant.models.AIProvider.ANTHROPIC
-                    else -> com.persianai.assistant.models.AIProvider.OPENAI
+                    trimmed.startsWith("sk-proj-") -> AIProvider.OPENAI
+                    trimmed.startsWith("sk-or-") -> AIProvider.OPENROUTER
+                    trimmed.length == 51 && trimmed.startsWith("sk-") -> AIProvider.ANTHROPIC
+                    else -> AIProvider.OPENAI
                 }
-                keys.add(com.persianai.assistant.models.APIKey(provider, trimmed, isActive = false))
+                keys.add(APIKey(provider, trimmed, isActive = false))
             }
         }
-        
         return keys
     }
 
@@ -395,20 +355,28 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun performBackup() {
+        val options = arrayOf("📤 اشتراک‌گذاری (Gmail)", "💾 ذخیره در گوشی", "☁️ Google Drive")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("انتخاب روش پشتیبان‌گیری")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> performShareBackup()
+                    1 -> performLocalBackup()
+                    2 -> performGoogleDriveBackup()
+                }
+            }
+            .show()
+    }
+    
+    private fun performShareBackup() {
         lifecycleScope.launch {
             try {
                 Toast.makeText(this@SettingsActivity, "در حال بک‌آپ...", Toast.LENGTH_SHORT).show()
-                
                 withContext(Dispatchers.IO) {
                     val backupFile = com.persianai.assistant.utils.BackupManager.createBackup(this@SettingsActivity)
-                    
                     withContext(Dispatchers.Main) {
                         com.persianai.assistant.utils.BackupManager.shareBackup(this@SettingsActivity, backupFile)
-                        Toast.makeText(
-                            this@SettingsActivity, 
-                            "✅ بک‌آپ آماده است! Gmail را انتخاب کنید",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Toast.makeText(this@SettingsActivity, "✅ بک‌آپ آماده است! Gmail را انتخاب کنید", Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
@@ -416,8 +384,62 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
     }
+    
+    private fun performLocalBackup() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, "maliar_backup_${System.currentTimeMillis()}.json")
+        }
+        startActivityForResult(intent, REQUEST_CODE_BACKUP_LOCAL)
+    }
+    
+    private fun performGoogleDriveBackup() {
+        lifecycleScope.launch {
+            try {
+                val cloudHelper = com.persianai.assistant.utils.CloudBackupHelper(this@SettingsActivity)
+                if (!cloudHelper.isConnected()) {
+                    val signInIntent = cloudHelper.getSignInIntent()
+                    startActivityForResult(signInIntent, REQUEST_CODE_DRIVE_SIGN_IN)
+                } else {
+                    performDriveBackup()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@SettingsActivity, "خطا در اتصال به Google Drive: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun performDriveBackup() {
+        lifecycleScope.launch {
+            try {
+                Toast.makeText(this@SettingsActivity, "☁️ در حال آپلود به Google Drive...", Toast.LENGTH_SHORT).show()
+                val backupJson = withContext(Dispatchers.IO) {
+                    com.persianai.assistant.utils.BackupManager(this@SettingsActivity).createBackupJson()
+                }
+                val cloudHelper = com.persianai.assistant.utils.CloudBackupHelper(this@SettingsActivity)
+                val result = cloudHelper.uploadBackup(backupJson)
+                Toast.makeText(this@SettingsActivity, result.message, Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@SettingsActivity, "❌ خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     private fun performRestore() {
+        val options = arrayOf("📂 از فایل ذخیره شده", "☁️ از Google Drive")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("انتخاب روش بازیابی")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> performLocalRestore()
+                    1 -> performDriveRestore()
+                }
+            }
+            .show()
+    }
+    
+    private fun performLocalRestore() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
             type = "application/json"
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -425,27 +447,87 @@ class SettingsActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "انتخاب فایل بک‌آپ"), REQUEST_CODE_RESTORE)
     }
     
+    private fun performDriveRestore() {
+        lifecycleScope.launch {
+            try {
+                val cloudHelper = com.persianai.assistant.utils.CloudBackupHelper(this@SettingsActivity)
+                if (!cloudHelper.isConnected()) {
+                    val signInIntent = cloudHelper.getSignInIntent()
+                    startActivityForResult(signInIntent, REQUEST_CODE_DRIVE_RESTORE)
+                } else {
+                    Toast.makeText(this@SettingsActivity, "☁️ در حال دانلود از Google Drive...", Toast.LENGTH_SHORT).show()
+                    val jsonContent = withContext(Dispatchers.IO) { cloudHelper.downloadLatestBackup() }
+                    if (jsonContent != null) {
+                        val success = withContext(Dispatchers.IO) {
+                            com.persianai.assistant.utils.BackupManager.restoreBackup(this@SettingsActivity, jsonContent)
+                        }
+                        if (success) {
+                            Toast.makeText(this@SettingsActivity, "✅ بازیابی از Google Drive موفق!", Toast.LENGTH_SHORT).show()
+                            loadSettings()
+                        } else {
+                            Toast.makeText(this@SettingsActivity, "❌ خطا در بازیابی", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(this@SettingsActivity, "❌ هیچ فایل بک‌آپی در Drive یافت نشد", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@SettingsActivity, "❌ خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_RESTORE && resultCode == RESULT_OK) {
-            data?.data?.let { uri ->
-                lifecycleScope.launch {
-                    try {
-                        val content = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                        if (content != null) {
-                            val success = withContext(Dispatchers.IO) {
-                                com.persianai.assistant.utils.BackupManager.restoreBackup(this@SettingsActivity, content)
-                            }
-                            if (success) {
-                                Toast.makeText(this@SettingsActivity, "✅ بازیابی موفق!", Toast.LENGTH_SHORT).show()
-                                loadSettings()
-                            } else {
-                                Toast.makeText(this@SettingsActivity, "❌ خطا در بازیابی", Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            REQUEST_CODE_RESTORE -> {
+                if (resultCode == RESULT_OK) {
+                    data?.data?.let { uri ->
+                        lifecycleScope.launch {
+                            try {
+                                val content = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                                if (content != null) {
+                                    val success = withContext(Dispatchers.IO) {
+                                        com.persianai.assistant.utils.BackupManager.restoreBackup(this@SettingsActivity, content)
+                                    }
+                                    if (success) {
+                                        Toast.makeText(this@SettingsActivity, "✅ بازیابی موفق!", Toast.LENGTH_SHORT).show()
+                                        loadSettings()
+                                    } else {
+                                        Toast.makeText(this@SettingsActivity, "❌ خطا در بازیابی", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(this@SettingsActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
                         }
-                    } catch (e: Exception) {
-                        Toast.makeText(this@SettingsActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
+                }
+            }
+            REQUEST_CODE_BACKUP_LOCAL -> {
+                if (resultCode == RESULT_OK) {
+                    data?.data?.let { uri ->
+                        lifecycleScope.launch {
+                            try {
+                                val result = withContext(Dispatchers.IO) {
+                                    com.persianai.assistant.utils.BackupManager(this@SettingsActivity).createLocalBackup(uri)
+                                }
+                                Toast.makeText(this@SettingsActivity, result.message, Toast.LENGTH_LONG).show()
+                            } catch (e: Exception) {
+                                Toast.makeText(this@SettingsActivity, "خطا: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            }
+            REQUEST_CODE_DRIVE_SIGN_IN -> {
+                if (resultCode == RESULT_OK) {
+                    performDriveBackup()
+                }
+            }
+            REQUEST_CODE_DRIVE_RESTORE -> {
+                if (resultCode == RESULT_OK) {
+                    performDriveRestore()
                 }
             }
         }
@@ -453,8 +535,10 @@ class SettingsActivity : AppCompatActivity() {
     
     companion object {
         private const val REQUEST_CODE_RESTORE = 1001
+        private const val REQUEST_CODE_BACKUP_LOCAL = 1002
+        private const val REQUEST_CODE_DRIVE_SIGN_IN = 1003
+        private const val REQUEST_CODE_DRIVE_RESTORE = 1004
     }
-
 
     private fun showAboutDialog() {
         MaterialAlertDialogBuilder(this)
