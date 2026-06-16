@@ -169,6 +169,7 @@ dependencies {
     // Google Drive API
     implementation 'com.google.android.gms:play-services-drive:17.0.0'
     implementation 'com.google.http-client:google-http-client-gson:1.43.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3'
 
     // Crypto
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'

@@ -69,8 +69,8 @@ class InstallmentManager(private val context: Context) {
                 id = accountingDB.addInstallment(com.persianai.assistant.models.Installment(
                     id = 0,
                     title = title,
-                    totalAmount = totalAmount.toLong(),
-                    monthlyAmount = installmentAmount.toLong(),
+                    totalAmount = totalAmount,
+                    monthlyAmount = installmentAmount,
                     installmentCount = totalInstallments,
                     paidInstallments = 0,
                     paidAmount = 0.0,
@@ -81,8 +81,8 @@ class InstallmentManager(private val context: Context) {
                     lender = recipient
                 )),
                 title = title,
-                totalAmount = totalAmount.toLong(),
-                monthlyAmount = installmentAmount.toLong(),
+                totalAmount = totalAmount,
+                monthlyAmount = installmentAmount,
                 installmentCount = totalInstallments,
                 paidInstallments = 0,
                 paidAmount = 0.0,

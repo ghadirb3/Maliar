@@ -145,16 +145,14 @@ class CheckManager(private val context: Context) {
         try {
             val accChecks = accountingDB.getAllChecks()
             val check = checks.first { it.id == id }
-            accChecks.firstOrNull { it.checkNumber == check.checkNumber }?.let {
-                accountingDB.updateCheckStatus(
-                    it.id,
-                    when (status) {
-                        CheckStatus.PAID -> com.persianai.assistant.models.CheckStatus.DEPOSITED
-                        CheckStatus.BOUNCED -> com.persianai.assistant.models.CheckStatus.BOUNCED
-                        CheckStatus.CANCELLED -> com.persianai.assistant.models.CheckStatus.CANCELLED
-                        else -> com.persianai.assistant.models.CheckStatus.PENDING
-                    }
-                )
+            accChecks.firstOrNull { it.checkNumber == check.checkNumber }?.let { accCheck ->
+                val accStatus = when (status) {
+                    CheckStatus.PAID -> com.persianai.assistant.data.CheckStatus.CASHED
+                    CheckStatus.BOUNCED -> com.persianai.assistant.data.CheckStatus.BOUNCED
+                    CheckStatus.CANCELLED -> com.persianai.assistant.data.CheckStatus.PENDING
+                    else -> com.persianai.assistant.data.CheckStatus.PENDING
+                }
+                accountingDB.updateCheckStatus(accCheck.id, accStatus)
             }
         } catch (e: Exception) {
             android.util.Log.e("CheckManager", "Error syncing status to AccountingDB", e)

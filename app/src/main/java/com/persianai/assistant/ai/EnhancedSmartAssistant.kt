@@ -19,13 +19,6 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * دستیار هوشمند پیشرفته با دسترسی به:
- * - یادآوری‌ها
- * - حسابداری
- * - چک‌ها و اقساط
- * - تولید یادآوری با زبان طبیعی توسط AI
- */
 class EnhancedSmartAssistant(private val context: Context) {
 
     private val TAG = "EnhancedSmartAssistant"
@@ -37,88 +30,79 @@ class EnhancedSmartAssistant(private val context: Context) {
     private val financeManager = FinanceManager(context)
     private val accountingDB = AccountingDB(context)
 
-    /**
-     * پردازش درخواست کاربر با دسترسی به داده‌های حسابداری و یادآوری
-     */
     suspend fun processRequest(
         userMessage: String,
         contextHint: String? = null
     ): String = withContext(Dispatchers.IO) {
         
         val normalized = normalizeText(userMessage)
-        val response = StringBuilder()
-
-        // Detect intent using AI or rule-based
-        when {
-            // ==================== یادآوری‌ها ====================
+        
+        val result = when {
             normalized.contains("یادآوری") || normalized.contains("یادم بنداز") || 
             normalized.contains("یاد بده") || normalized.contains("یادآور") -> {
-                
                 if (!featureFlags.isRemindersEnabled()) {
-                    response.append("⏰ بخش یادآوری‌ها در حال حاضر غیرفعال است.")
+                    "⏰ بخش یادآوری‌ها در حال حاضر غیرفعال است."
                 } else {
                     val intent = detectReminderIntent(normalized, userMessage)
-                    response.append(processReminderIntent(intent))
+                    processReminderIntent(intent)
                 }
             }
 
-            // ==================== حسابداری ====================
             normalized.contains("گزارش") || normalized.contains("وضعیت مالی") ||
             normalized.contains("حساب") || normalized.contains("تراکنش") -> {
-                
                 if (!featureFlags.isFinanceEnabled()) {
-                    response.append("💰 بخش مالی در حال حاضر غیرفعال است.")
+                    "💰 بخش مالی در حال حاضر غیرفعال است."
                 } else {
-                    response.append(processFinanceIntent(normalized))
+                    processFinanceIntent(normalized)
                 }
             }
 
-            // ==================== هزینه/درآمد ====================
             (normalized.contains("هزینه") || normalized.contains("درآمد") || 
              normalized.contains("خرج") || normalized.contains("واریز")) && 
              Regex("\\d+").containsMatchIn(normalized) -> {
-                
                 if (!featureFlags.isFinanceEnabled()) {
-                    response.append("💰 بخش مالی در حال حاضر غیرفعال است.")
+                    "💰 بخش مالی در حال حاضر غیرفعال است."
                 } else {
-                    response.append(processTransactionAdd(normalized, userMessage))
+                    processTransactionAdd(normalized, userMessage)
                 }
             }
 
-            // ==================== چک‌ها ====================
             normalized.contains("چک") -> {
                 if (!featureFlags.isFinanceEnabled()) {
-                    response.append("💰 بخش مالی در حال حاضر غیرفعال است.")
+                    "💰 بخش مالی در حال حاضر غیرفعال است."
                 } else {
-                    response.append(processCheckIntent(normalized))
+                    processCheckIntent(normalized)
                 }
             }
 
-            // ==================== اقساط ====================
             normalized.contains("قسط") -> {
                 if (!featureFlags.isFinanceEnabled()) {
-                    response.append("💰 بخش مالی در حال حاضر غیرفعال است.")
+                    "💰 بخش مالی در حال حاضر غیرفعال است."
                 } else {
-                    response.append(processInstallmentIntent(normalized))
+                    processInstallmentIntent(normalized)
                 }
             }
 
-            // ==================== سوال عمومی یا نیاز به AI ====================
             else -> {
-                response.append(processGeneralWithAI(userMessage, contextHint))
+                processGeneralWithAI(userMessage, contextHint)
             }
         }
 
-        response.toString()
+        result
     }
 
-    /**
-     * تشخیص نیت مرتبط با یادآوری
-     */
+    data class ReminderIntent(
+        var hour: Int? = null,
+        var minute: Int? = null,
+        var dayOffset: Int? = null,
+        var relativeMillis: Long? = null,
+        var message: String? = null,
+        var repeatPattern: SmartReminderManager.RepeatPattern? = null
+    )
+
     private fun detectReminderIntent(text: String, original: String): ReminderIntent {
         val intent = ReminderIntent()
         
-        // استخراج زمان
         val timeRegex = """(\d{1,2}):(\d{2})""".toRegex()
         timeRegex.find(text)?.let {
             intent.hour = it.groupValues[1].toInt()
@@ -139,7 +123,6 @@ class EnhancedSmartAssistant(private val context: Context) {
             }
         }
 
-        // زمان نسبی
         val relative = """(\d+|نیم)\s*(دقیقه|ساعت)\s*(دیگه|بعد)""".toRegex()
         relative.find(text)?.let {
             val value = it.groupValues[1]
@@ -152,21 +135,18 @@ class EnhancedSmartAssistant(private val context: Context) {
             }
         }
 
-        // روز
         when {
             text.contains("پس‌فردا") || text.contains("پس فردا") -> intent.dayOffset = 2
             text.contains("فردا") -> intent.dayOffset = 1
             text.contains("امروز") -> intent.dayOffset = 0
         }
 
-        // تکرار
         when {
             text.contains("هر روز") || text.contains("روزانه") -> intent.repeatPattern = SmartReminderManager.RepeatPattern.DAILY
             text.contains("هر هفته") || text.contains("هفتگی") -> intent.repeatPattern = SmartReminderManager.RepeatPattern.WEEKLY
             text.contains("هر ماه") || text.contains("ماهانه") -> intent.repeatPattern = SmartReminderManager.RepeatPattern.MONTHLY
         }
 
-        // استخراج متن یادآوری
         val messageRegex = """(یادم بنداز|یاد بده|یادآوری کن|یادآوری)\s+(.+)""".toRegex()
         messageRegex.find(original)?.let {
             intent.message = it.groupValues[2].trim()
@@ -186,20 +166,20 @@ class EnhancedSmartAssistant(private val context: Context) {
         return intent
     }
 
-    /**
-     * پردازش نیت یادآوری
-     */
+    @Suppress("UNUSED")
     private fun processReminderIntent(intent: ReminderIntent): String {
         val triggerTime: Long
         
-        if (intent.relativeMillis != null) {
-            triggerTime = System.currentTimeMillis() + intent.relativeMillis
+        val relativeMs = intent.relativeMillis
+        if (relativeMs != null) {
+            triggerTime = System.currentTimeMillis() + relativeMs
         } else {
             val hour = intent.hour ?: return "⚠️ لطفاً ساعت یادآوری را مشخص کنید.\nمثال: «فردا ساعت ۹ یادم بنداز جلسه دارم»"
             val minute = intent.minute ?: 0
             
             val calendar = Calendar.getInstance().apply {
-                if (intent.dayOffset != null) add(Calendar.DAY_OF_MONTH, intent.dayOffset)
+                val offset = intent.dayOffset
+                if (offset != null) add(Calendar.DAY_OF_MONTH, offset)
                 set(Calendar.HOUR_OF_DAY, hour)
                 set(Calendar.MINUTE, minute)
                 set(Calendar.SECOND, 0)
@@ -214,14 +194,13 @@ class EnhancedSmartAssistant(private val context: Context) {
 
         val message = intent.message ?: "یادآوری"
 
-        // If AI natural language feature is enabled, use AI to create a natural reminder text
         val reminderTitle = if (FeatureFlags.FEATURE_REMINDER_AI_NATURAL_LANGUAGE) {
             generateNaturalReminderText(message)
         } else {
             message
         }
 
-        val reminder = when (intent.repeatPattern) {
+        when (intent.repeatPattern) {
             SmartReminderManager.RepeatPattern.DAILY,
             SmartReminderManager.RepeatPattern.WEEKLY,
             SmartReminderManager.RepeatPattern.MONTHLY -> {
@@ -256,52 +235,50 @@ class EnhancedSmartAssistant(private val context: Context) {
         }
 
         return "✅ یادآوری هوشمند تنظیم شد:\n" +
-               "⏰ $dayStrساعت $timeStr\n" +
+               "⏰ ${dayStr}ساعت $timeStr\n" +
                "📝 $reminderTitle\n" +
                (if (repeatStr.isNotBlank()) "$repeatStr\n" else "") +
-               "💡 $message"
+               (if (message != reminderTitle) "💡 $message" else "")
     }
 
-    /**
-     * تولید متن طبیعی برای یادآوری با AI
-     */
     private fun generateNaturalReminderText(message: String): String {
         return try {
             val apiKeys = prefsManager.getAPIKeys().filter { it.isActive }
             if (apiKeys.isNotEmpty()) {
                 val aiClient = AIClient(context, apiKeys)
-                val prompt = """
-                    کاربر یک یادآوری ثبت کرده: "$message"
+                runBlockingOnIO {
+                    val prompt = """
+                        کاربر یک یادآوری ثبت کرده: "$message"
+                        
+                        لطفاً همین جمله را به صورت طبیعی‌تر و دوستانه‌تر بازنویسی کن، طوری که انگار یک دوست به کاربر یادآوری می‌کند.
+                        فقط یک جمله کوتاه و مستقیم بگو.
+                        مثال:
+                        - «قراره یه جلسه مهم داشته باشی، یادت نره!»
+                        - «زمان خرید سوپرمارکته، لیستت رو آماده کن.»
+                        - «فراموش نکن که باید قرص‌هات رو بخوری.»
+                    """.trimIndent()
                     
-                    لطفاً همین جمله را به صورت طبیعی‌تر و دوستانه‌تر بازنویسی کن، طوری که انگار یک دوست به کاربر یادآوری می‌کند.
-                    فقط یک جمله کوتاه و مستقیم بگو.
-                    مثال:
-                    - «قراره یه جلسه مهم داشته باشی، یادت نره!»
-                    - «زمان خرید سوپرمارکته، لیستت رو آماده کن.»
-                    - «فراموش نکن که باید قرص‌هات رو بخوری.»
-                """.trimIndent()
-                
-                val response = aiClient.sendMessage(
-                    model = AIModel.GPT_4O_MINI,
-                    messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt)),
-                    systemPrompt = "تو یک دستیار صمیمی و مهربان هستی که یادآوری‌ها را به صورت طبیعی و دوستانه بیان می‌کنی."
-                )
-                
-                val content = response.content.trim()
-                if (content.length in 10..150) {
-                    return content
+                    val response = aiClient.sendMessage(
+                        model = AIModel.GPT_4O_MINI,
+                        messages = listOf(ChatMessage(role = MessageRole.USER, content = prompt)),
+                        systemPrompt = "تو یک دستیار صمیمی و مهربان هستی که یادآوری‌ها را به صورت طبیعی و دوستانه بیان می‌کنی."
+                    )
+                    
+                    val content = response.content.trim()
+                    if (content.length in 10..150) {
+                        return@runBlockingOnIO content
+                    }
+                    message
                 }
+            } else {
+                message
             }
-            message
         } catch (e: Exception) {
             Log.w(TAG, "AI natural reminder failed, using original", e)
             message
         }
     }
 
-    /**
-     * پردازش درخواست‌های مالی
-     */
     private fun processFinanceIntent(text: String): String {
         return when {
             text.contains("امروز") || text.contains("روز") -> financeManager.generateReport("day")
@@ -344,9 +321,6 @@ class EnhancedSmartAssistant(private val context: Context) {
         }
     }
 
-    /**
-     * ثبت تراکنش جدید
-     */
     private fun processTransactionAdd(text: String, original: String): String {
         val numbers = Regex("\\d+(?:\\.\\d+)?").findAll(text).map { it.value.toDoubleOrNull() ?: 0.0 }.toList()
         if (numbers.isEmpty()) return "⚠️ مبلغ مشخص نشده است."
@@ -371,15 +345,12 @@ class EnhancedSmartAssistant(private val context: Context) {
             .replace("واریز", "").replace("دریافت", "")
             .trim()
 
-        val id = financeManager.addTransaction(amount, type, category, description)
+        financeManager.addTransaction(amount, type, category, description)
         val typeText = if (isIncome) "درآمد" else "هزینه"
         
         return "✅ $typeText ${formatAmount(amount)} تومان ثبت شد\n📝 ${description.ifBlank { "بدون توضیحات" }}"
     }
 
-    /**
-     * پردازش درخواست چک
-     */
     private fun processCheckIntent(text: String): String {
         val checks = checkManager.getAllChecks()
         if (checks.isEmpty()) return "📋 شما هیچ چکی ثبت نکرده‌اید."
@@ -402,9 +373,6 @@ class EnhancedSmartAssistant(private val context: Context) {
         }
     }
 
-    /**
-     * پردازش درخواست قسط
-     */
     private fun processInstallmentIntent(text: String): String {
         val installments = installmentManager.getActiveInstallments()
         if (installments.isEmpty()) return "💳 شما هیچ قسط فعالی ندارید."
@@ -427,9 +395,6 @@ class EnhancedSmartAssistant(private val context: Context) {
         }
     }
 
-    /**
-     * پردازش سوالات عمومی با AI
-     */
     private fun processGeneralWithAI(userMessage: String, contextHint: String?): String {
         if (!featureFlags.isAIChatEnabled()) {
             return "💬 بخش چت هوشمند در حال حاضر غیرفعال است."
@@ -453,22 +418,20 @@ class EnhancedSmartAssistant(private val context: Context) {
                 appendLine("اگر کاربر درباره وضعیت مالی یا یادآوری‌ها سوال کرد، به او بگو از عباراتی مثل «گزارش مالی» یا «یادآوری‌های من» استفاده کند.")
             }
 
-            val response = aiClient.sendMessage(
-                model = AIModel.GPT_4O_MINI,
-                messages = listOf(ChatMessage(role = MessageRole.USER, content = userMessage)),
-                systemPrompt = systemPrompt
-            )
-
-            response.content
+            runBlockingOnIO {
+                val response = aiClient.sendMessage(
+                    model = AIModel.GPT_4O_MINI,
+                    messages = listOf(ChatMessage(role = MessageRole.USER, content = userMessage)),
+                    systemPrompt = systemPrompt
+                )
+                response.content
+            }
         } catch (e: Exception) {
             Log.e(TAG, "AI request failed", e)
             "❌ خطا در ارتباط با سرور: ${e.localizedMessage ?: "خطای ناشناخته"}"
         }
     }
 
-    /**
-     * دریافت خلاصه روزانه هوشمند
-     */
     suspend fun getDailySmartSummary(): String = withContext(Dispatchers.IO) {
         val sb = StringBuilder()
         val now = System.currentTimeMillis()
@@ -478,7 +441,6 @@ class EnhancedSmartAssistant(private val context: Context) {
         sb.appendLine("${calendar.get(Calendar.YEAR)}/${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)}")
         sb.appendLine()
         
-        // یادآوری‌های امروز
         if (featureFlags.isRemindersEnabled()) {
             val todayReminders = reminderManager.getTodayReminders()
             if (todayReminders.isNotEmpty()) {
@@ -491,7 +453,6 @@ class EnhancedSmartAssistant(private val context: Context) {
             }
         }
         
-        // وضعیت مالی
         if (featureFlags.isFinanceEnabled()) {
             val (income, expense) = financeManager.getMonthlyReport(
                 calendar.get(Calendar.YEAR),
@@ -501,7 +462,6 @@ class EnhancedSmartAssistant(private val context: Context) {
             sb.appendLine("  درآمد: ${formatAmount(income)} تومان")
             sb.appendLine("  هزینه: ${formatAmount(expense)} تومان")
             
-            // تعهدات نزدیک
             val upcomingChecks = checkManager.getUpcomingChecks(7)
             val upcomingInstallments = installmentManager.getUpcomingPayments(7)
             
@@ -533,14 +493,11 @@ class EnhancedSmartAssistant(private val context: Context) {
     private fun formatAmount(amount: Double): String = String.format("%,.0f", amount)
 
     /**
-     * مدل داخلی برای نیت یادآوری
+     * Helper to run suspend function from non-suspend context inside IO dispatcher
      */
-    data class ReminderIntent(
-        var hour: Int? = null,
-        var minute: Int? = null,
-        var dayOffset: Int? = null,
-        var relativeMillis: Long? = null,
-        var message: String? = null,
-        var repeatPattern: SmartReminderManager.RepeatPattern? = null
-    )
+    private fun <T> runBlockingOnIO(block: suspend () -> T): T {
+        return kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+            block()
+        }
+    }
 }

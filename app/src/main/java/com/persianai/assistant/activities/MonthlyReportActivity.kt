@@ -29,7 +29,6 @@ import kotlin.math.roundToInt
 
 /**
  * داشبورد گزارش ماهیانه با نمودارهای MPAndroidChart
- * نمایش درآمد/هزینه به صورت نمودار میله‌ای و دایره‌ای
  */
 class MonthlyReportActivity : AppCompatActivity() {
 
@@ -52,14 +51,14 @@ class MonthlyReportActivity : AppCompatActivity() {
             "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
         )
         private val COLORS = intArrayOf(
-            Color.rgb(76, 175, 80),   // Green - Income
-            Color.rgb(244, 67, 54),   // Red - Expense
-            Color.rgb(33, 150, 243),  // Blue
-            Color.rgb(255, 152, 0),   // Orange
-            Color.rgb(156, 39, 176),  // Purple
-            Color.rgb(0, 188, 212),   // Cyan
-            Color.rgb(233, 30, 99),   // Pink
-            Color.rgb(121, 85, 72)    // Brown
+            Color.rgb(76, 175, 80),
+            Color.rgb(244, 67, 54),
+            Color.rgb(33, 150, 243),
+            Color.rgb(255, 152, 0),
+            Color.rgb(156, 39, 176),
+            Color.rgb(0, 188, 212),
+            Color.rgb(233, 30, 99),
+            Color.rgb(121, 85, 72)
         )
     }
 
@@ -69,13 +68,11 @@ class MonthlyReportActivity : AppCompatActivity() {
 
         db = AccountingDB(this)
 
-        // Setup toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "گزارش ماهیانه"
 
-        // Initialize views
         txtTotalIncome = findViewById(R.id.txtTotalIncome)
         txtTotalExpense = findViewById(R.id.txtTotalExpense)
         txtNetBalance = findViewById(R.id.txtNetBalance)
@@ -85,8 +82,6 @@ class MonthlyReportActivity : AppCompatActivity() {
         btnPrevMonth = findViewById(R.id.btnPrevMonth)
         btnNextMonth = findViewById(R.id.btnNextMonth)
 
-        // Initialize to current Persian month
-        val now = Calendar.getInstance()
         val persianCal = java.util.Calendar.getInstance()
         currentYear = persianCal.get(Calendar.YEAR)
         currentMonth = persianCal.get(Calendar.MONTH)
@@ -113,11 +108,8 @@ class MonthlyReportActivity : AppCompatActivity() {
             loadMonthlyData()
         }
 
-        // Setup charts
         setupBarChart()
         setupPieChart()
-
-        // Load initial data
         loadMonthlyData()
     }
 
@@ -200,14 +192,11 @@ class MonthlyReportActivity : AppCompatActivity() {
         var totalExpense = 0.0
         val incomeByCategory = mutableMapOf<String, Double>()
         val expenseByCategory = mutableMapOf<String, Double>()
-
-        // Daily breakdown for bar chart (30 days)
         val dailyIncome = DoubleArray(31)
         val dailyExpense = DoubleArray(31)
 
         monthTransactions.forEach { t ->
             val day = Calendar.getInstance().apply { timeInMillis = t.date }.get(Calendar.DAY_OF_MONTH)
-
             when (t.type) {
                 TransactionType.INCOME -> {
                     totalIncome += t.amount
@@ -252,7 +241,7 @@ class MonthlyReportActivity : AppCompatActivity() {
 
     private fun updateBarChart(report: MonthlyReport) {
         val entries = mutableListOf<BarEntry>()
-        val labels = mutableListOf<String>()
+        val weekLabels = listOf("هفته 1", "هفته 2", "هفته 3", "هفته 4", "هفته 5")
 
         val daysInMonth = when (report.month) {
             1, 3, 5, 7, 8, 10, 12 -> 31
@@ -261,10 +250,8 @@ class MonthlyReportActivity : AppCompatActivity() {
             else -> 30
         }
 
-        // Group by weeks for cleaner display
         val weekIncome = DoubleArray(5)
         val weekExpense = DoubleArray(5)
-        val weekLabels = listOf("هفته 1", "هفته 2", "هفته 3", "هفته 4", "هفته 5")
 
         for (day in 0 until daysInMonth) {
             val weekIndex = day / 7
@@ -276,18 +263,17 @@ class MonthlyReportActivity : AppCompatActivity() {
 
         for (i in 0 until 5) {
             entries.add(BarEntry(i.toFloat(), floatArrayOf(weekIncome[i].toFloat(), weekExpense[i].toFloat())))
-            labels.add(weekLabels.getOrElse(i) { "" })
         }
 
         val set = BarDataSet(entries, "").apply {
-            stackLabels = listOf("درآمد", "هزینه")
+            stackLabels = arrayOf("درآمد", "هزینه")
             colors = listOf(Color.rgb(76, 175, 80), Color.rgb(244, 67, 54))
             valueTextSize = 10f
             setDrawValues(false)
         }
 
         barChart.data = BarData(set)
-        barChart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+        barChart.xAxis.valueFormatter = IndexAxisValueFormatter(weekLabels.toTypedArray())
         barChart.xAxis.setLabelCount(5, false)
         barChart.invalidate()
     }
@@ -295,7 +281,6 @@ class MonthlyReportActivity : AppCompatActivity() {
     private fun updatePieChart(report: MonthlyReport) {
         val entries = mutableListOf<PieEntry>()
 
-        // Top 5 expense categories
         val sortedExpenses = report.expenseByCategory.entries
             .sortedByDescending { it.value }
             .take(5)
