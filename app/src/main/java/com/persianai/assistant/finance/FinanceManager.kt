@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * سیستم حسابداری ساده
+ * سیستم حسابداری ساده - یکپارچه با AccountingDB
  */
 class FinanceManager(private val context: Context) {
     
@@ -69,23 +69,46 @@ class FinanceManager(private val context: Context) {
     }
     
     fun getAllTransactions(): List<Transaction> {
+        // First try from SharedPreferences (legacy)
         val json = prefs.getString("transactions", "[]") ?: "[]"
         val array = JSONArray(json)
-        val list = mutableListOf<Transaction>()
+        val prefsList = mutableListOf<Transaction>()
         
         for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            list.add(Transaction(
-                obj.getString("id"),
-                obj.getDouble("amount"),
-                obj.getString("type"),
-                obj.getString("category"),
-                obj.getString("description"),
-                obj.getLong("date")
-            ))
+            try {
+                val obj = array.getJSONObject(i)
+                prefsList.add(Transaction(
+                    obj.getString("id"),
+                    obj.getDouble("amount"),
+                    obj.getString("type"),
+                    obj.getString("category"),
+                    obj.getString("description"),
+                    obj.getLong("date")
+                ))
+            } catch (_: Exception) {}
         }
         
-        return list.sortedByDescending { it.date }
+        // Also read from AccountingDB (newer source)
+        val dbList = try {
+            accountingDB.getAllTransactions().map { dbTx ->
+                Transaction(
+                    id = dbTx.id.toString(),
+                    amount = dbTx.amount,
+                    type = if (dbTx.type == TransactionType.INCOME) "income" else "expense",
+                    category = dbTx.category,
+                    description = dbTx.description,
+                    date = dbTx.date
+                )
+            }
+        } catch (_: Exception) { emptyList() }
+        
+        // Merge both sources, deduplicate by ID
+        val seenIds = mutableSetOf<String>()
+        val allTransactions = (prefsList + dbList)
+            .filter { seenIds.add(it.id) }
+            .sortedByDescending { it.date }
+        
+        return allTransactions
     }
     
     private fun saveTransactions(transactions: List<Transaction>) {
@@ -103,9 +126,6 @@ class FinanceManager(private val context: Context) {
         prefs.edit().putString("transactions", array.toString()).apply()
     }
     
-    /**
-     * Export all transactions to CSV format
-     */
     fun exportToCSV(): String {
         val sb = StringBuilder()
         sb.appendLine("ID,مبلغ,نوع,دسته‌بندی,توضیحات,تاریخ")
@@ -275,5 +295,12 @@ class FinanceManager(private val context: Context) {
     fun deleteTransaction(id: String) {
         val transactions = getAllTransactions().filter { it.id != id }
         saveTransactions(transactions)
+        // Also delete from AccountingDB
+        try {
+            val dbId = id.toLongOrNull()
+            if (dbId != null) {
+                accountingDB.deleteTransaction(dbId)
+            }
+        } catch (_: Exception) {}
     }
 }

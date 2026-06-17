@@ -1090,16 +1090,10 @@ class DashboardActivity : AppCompatActivity() {
     }
     
     /**
-     * فرمت کردن مبلغ پول
+     * فرمت کردن مبلغ پول - دقیق و بدون گرد کردن
      */
     private fun formatCurrency(amount: Long): String {
-        return if (amount >= 1_000_000) {
-            "${amount / 1_000_000} میلیون تومان"
-        } else if (amount >= 1_000) {
-            "${amount / 1_000} هزار تومان"
-        } else {
-            "$amount تومان"
-        }
+        return String.format("%,d تومان", amount)
     }
 
     companion object {
