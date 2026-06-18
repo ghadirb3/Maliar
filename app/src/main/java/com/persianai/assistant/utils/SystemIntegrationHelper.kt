@@ -64,10 +64,16 @@ object SystemIntegrationHelper {
             }
             
             // ساخت Intent برای ReminderReceiver
+            val reminderId = "legacy_${System.currentTimeMillis()}"
             val intent = Intent(context, com.persianai.assistant.services.ReminderReceiver::class.java).apply {
+                action = "com.persianai.assistant.REMINDER_ALARM"
                 putExtra("message", message)
-                putExtra("reminder_id", System.currentTimeMillis().toInt())
+                putExtra("reminder_title", message)
+                putExtra("reminder_description", "")
+                putExtra("smart_reminder_id", reminderId)
+                putExtra("reminder_id", reminderId.hashCode())
                 putExtra("use_alarm", useAlarm)
+                putExtra("alert_type", if (useAlarm) "FULL_SCREEN" else "NOTIFICATION")
             }
             
             val pendingIntent = PendingIntent.getBroadcast(

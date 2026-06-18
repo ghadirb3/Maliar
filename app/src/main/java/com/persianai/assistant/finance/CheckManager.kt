@@ -136,10 +136,21 @@ class CheckManager(private val context: Context) {
     }
     
     fun updateCheckStatus(id: String, status: CheckStatus) {
-        val checks = getAllChecks().map {
+        val allChecks = getAllChecks()
+        val previous = allChecks.firstOrNull { it.id == id }
+        val checks = allChecks.map {
             if (it.id == id) it.copy(status = status) else it
         }
         saveChecks(checks)
+
+        if (previous?.status == CheckStatus.PENDING && status == CheckStatus.PAID) {
+            FinanceManager(context).addTransaction(
+                previous.amount,
+                "expense",
+                "چک",
+                "پرداخت چک ${previous.checkNumber}"
+            )
+        }
         
         // Sync status update to AccountingDB
         try {
@@ -160,15 +171,18 @@ class CheckManager(private val context: Context) {
     }
     
     fun deleteCheck(id: String) {
-        val checks = getAllChecks().filter { it.id != id }
+        val allChecks = getAllChecks()
+        val deletedCheck = allChecks.firstOrNull { it.id == id }
+        val checks = allChecks.filter { it.id != id }
         saveChecks(checks)
         
         // Sync deletion to AccountingDB
         try {
-            val deletedCheck = getAllChecks().firstOrNull() ?: return
-            val accChecks = accountingDB.getAllChecks()
-            accChecks.firstOrNull { it.checkNumber == deletedCheck.checkNumber }?.let {
-                accountingDB.deleteCheck(it.id)
+            deletedCheck?.let { check ->
+                val accChecks = accountingDB.getAllChecks()
+                accChecks.firstOrNull { it.checkNumber == check.checkNumber }?.let {
+                    accountingDB.deleteCheck(it.id)
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("CheckManager", "Error syncing deletion to AccountingDB", e)
@@ -216,5 +230,9 @@ class CheckManager(private val context: Context) {
     
     fun getChecksByStatus(status: CheckStatus): List<Check> {
         return getAllChecks().filter { it.status == status }
+    }
+
+    fun importChecks(checks: List<Check>) {
+        saveChecks(checks)
     }
 }

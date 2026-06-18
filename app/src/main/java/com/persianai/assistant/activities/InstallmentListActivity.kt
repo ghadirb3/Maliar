@@ -1,18 +1,18 @@
 package com.persianai.assistant.activities
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.persianai.assistant.adapters.InstallmentAdapter
-import com.persianai.assistant.data.AccountingDB
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.persianai.assistant.adapters.InstallmentsAdapter
 import com.persianai.assistant.databinding.ActivityInstallmentListBinding
-import kotlinx.coroutines.launch
+import com.persianai.assistant.finance.InstallmentManager
 
 class InstallmentListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityInstallmentListBinding
-    private lateinit var db: AccountingDB
+    private lateinit var installmentManager: InstallmentManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,81 +23,44 @@ class InstallmentListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "اقساط"
 
-        db = AccountingDB(this)
+        installmentManager = InstallmentManager(this)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
 
         loadInstallments()
     }
 
     private fun loadInstallments() {
-        lifecycleScope.launch {
-            val installments = db.getAllInstallments()
-            binding.recyclerView.adapter = InstallmentAdapter(
-                onInstallmentClick = { installment ->
-                    // Handle installment click
-                },
-                onDeleteClick = { installment ->
-                    // Handle delete click
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@InstallmentListActivity)
-                        .setTitle("❌ حذف قسط")
-                        .setMessage("آیا از حذف این قسط مطمئن هستید؟")
-                        .setPositiveButton("حذف") { _, _ ->
-                            lifecycleScope.launch {
-                                db.deleteInstallment(installment.id)
-                                loadInstallments()
-                                android.widget.Toast.makeText(this@InstallmentListActivity, "✅ قسط حذف شد", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                        .setNegativeButton("لغو", null)
-                        .show()
-                },
-                onEditClick = { installment ->
-                    // Handle edit click
-                    showEditDialog(installment)
-                }
-            ).apply {
-                submitList(installments)
-            }
+        val installments = installmentManager.getAllInstallments()
+        binding.recyclerView.adapter = InstallmentsAdapter(installments) { installment ->
+            showInstallmentDetails(installment)
         }
     }
-    
-    private fun showEditDialog(installment: com.persianai.assistant.models.Installment) {
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(48, 32, 48, 16)
-        }
-        
-        val titleInput = android.widget.EditText(this).apply {
-            hint = "عنوان"
-            setText(installment.title)
-        }
-        val amountInput = android.widget.EditText(this).apply {
-            hint = "مبلغ کل"
-            setText(installment.totalAmount.toString())
-            inputType = android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
-        
-        container.addView(titleInput)
-        container.addView(amountInput)
-        
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("✏️ ویرایش قسط")
-            .setView(container)
-            .setPositiveButton("ذخیره") { _, _ ->
-                val newTitle = titleInput.text.toString()
-                val newAmount = amountInput.text.toString().toDoubleOrNull() ?: installment.totalAmount
-                
-                lifecycleScope.launch {
-                    val updated = installment.copy(
-                        title = newTitle,
-                        totalAmount = newAmount
-                    )
-                    db.updateInstallment(updated)
-                    loadInstallments()
-                    android.widget.Toast.makeText(this@InstallmentListActivity, "✅ قسط ویرایش شد", android.widget.Toast.LENGTH_SHORT).show()
+
+    private fun showInstallmentDetails(installment: InstallmentManager.Installment) {
+        val remaining = installment.totalInstallments - installment.paidInstallments
+        MaterialAlertDialogBuilder(this)
+            .setTitle(installment.title)
+            .setMessage(
+                "مبلغ کل: ${String.format("%,.0f", installment.totalAmount)} تومان\n" +
+                    "هر قسط: ${String.format("%,.0f", installment.installmentAmount)} تومان\n" +
+                    "پرداخت شده: ${installment.paidInstallments} از ${installment.totalInstallments}\n" +
+                    "باقیمانده: $remaining قسط"
+            )
+            .setPositiveButton("بستن", null)
+            .apply {
+                if (installment.paidInstallments < installment.totalInstallments) {
+                    setNeutralButton("✅ ثبت پرداخت") { _, _ ->
+                        installmentManager.payInstallment(installment.id)
+                        Toast.makeText(this@InstallmentListActivity, "✅ پرداخت قسط ثبت شد", Toast.LENGTH_SHORT).show()
+                        loadInstallments()
+                    }
                 }
             }
-            .setNegativeButton("لغو", null)
+            .setNegativeButton("حذف") { _, _ ->
+                installmentManager.deleteInstallment(installment.id)
+                Toast.makeText(this, "✅ قسط حذف شد", Toast.LENGTH_SHORT).show()
+                loadInstallments()
+            }
             .show()
     }
 

@@ -29,7 +29,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.GestureDetectorCompat
 import com.persianai.assistant.R
 import com.persianai.assistant.utils.SmartReminderManager
+import com.persianai.assistant.utils.SmartReminderSpeechHelper
 import com.persianai.assistant.utils.TTSHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
@@ -70,6 +75,7 @@ class FullScreenAlarmActivity : Activity() {
     private var swipeProgress = 0f
     private var downX = 0f
     private var downY = 0f
+    private val speechScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     private val MIN_SWIPE_DISTANCE = 100
     private val MIN_SWIPE_VELOCITY = 100
@@ -512,16 +518,7 @@ class FullScreenAlarmActivity : Activity() {
             Log.d(TAG, "🔊 Starting smart reminder TTS")
             val title = intent.getStringExtra("title") ?: "⏰ یادآوری"
             val description = intent.getStringExtra("description") ?: ""
-            
-            // متن کامل برای پخش
-            val ttsText = buildString {
-                append(title)
-                if (description.isNotBlank()) {
-                    append(". ")
-                    append(description)
-                }
-            }
-            
+
             // تنظیم volume به حداکثر
             try {
                 val audioManager = getSystemService(AUDIO_SERVICE) as? AudioManager
@@ -531,16 +528,22 @@ class FullScreenAlarmActivity : Activity() {
                     AudioManager.FLAG_SHOW_UI
                 )
             } catch (_: Exception) {}
-            
-            // TTS با صدای بلند - ابتدا GapGPT آنلاین، سپس Android TTS
-            ttsHelper = TTSHelper(this)
-            ttsHelper?.initialize {
-                // TTS آماده شد - پخش صدا
-                Log.d(TAG, "✅ TTS initialized, speaking: $ttsText")
-                ttsHelper?.speak(ttsText)
+
+            speechScope.launch {
+                val ttsText = SmartReminderSpeechHelper.generateSpeechText(this@FullScreenAlarmActivity, title, description)
+                Log.d(TAG, "✅ Smart speech text ready: $ttsText")
+
+                val helper = TTSHelper(this@FullScreenAlarmActivity)
+                ttsHelper = helper
+                helper.initialize {
+                    speechScope.launch {
+                        Log.d(TAG, "🔊 Speaking smart reminder (online-first): $ttsText")
+                        helper.speakOnlineFirst(ttsText)
+                    }
+                }
             }
-            
-            // اگر TTS آماده نشد (مثلاً timeout)، بعد از 3 ثانیه آلارم معمولی پخش شود
+
+            // اگر TTS آماده نشد، بعد از 8 ثانیه آلارم معمولی پخش شود
             Handler(Looper.getMainLooper()).postDelayed({
                 if (!isActionTaken) {
                     Log.d(TAG, "⏰ TTS timeout or done, starting alarm effects")
@@ -548,9 +551,9 @@ class FullScreenAlarmActivity : Activity() {
                     startVibration()
                 }
             }, 8000)
-            
-            Log.d(TAG, "✅ Smart reminder TTS initiated: $ttsText")
-            
+
+            Log.d(TAG, "✅ Smart reminder TTS initiated")
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error starting smart reminder TTS", e)
             startAlarmEffects()

@@ -5,6 +5,7 @@
     <item type="id" name="addInstallmentButton" />
     <item type="id" name="chipAlertNotification" />
     <item type="id" name="chipAlertFullScreen" />
+    <item type="id" name="chipAlertSmart" />
     <item type="id" name="addIncomeButton" />
     <item type="id" name="addExpenseButton" />
     <item type="id" name="aiChatButton" />

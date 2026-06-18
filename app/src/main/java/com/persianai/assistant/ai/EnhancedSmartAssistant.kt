@@ -419,6 +419,7 @@ class EnhancedSmartAssistant(private val context: Context) {
             }
 
             val aiClient = AIClient(context, apiKeys)
+            val userContext = buildUserContextSnapshot()
             val systemPrompt = buildString {
                 appendLine("تو یک دستیار هوشمند فارسی به نام «مالیار» هستی.")
                 appendLine("تو می‌توانی به کاربر در مدیریت امور مالی، یادآوری‌ها، برنامه‌ریزی و سوالات عمومی کمک کنی.")
@@ -426,8 +427,11 @@ class EnhancedSmartAssistant(private val context: Context) {
                 if (!contextHint.isNullOrBlank()) {
                     appendLine("زمینه: $contextHint")
                 }
-                appendLine()
-                appendLine("اگر کاربر درباره وضعیت مالی یا یادآوری‌ها سوال کرد، به او بگو از عباراتی مثل «گزارش مالی» یا «یادآوری‌های من» استفاده کند.")
+                if (userContext.isNotBlank()) {
+                    appendLine()
+                    appendLine("وضعیت فعلی کاربر:")
+                    appendLine(userContext)
+                }
             }
 
             runBlockingOnIO {
@@ -494,6 +498,43 @@ class EnhancedSmartAssistant(private val context: Context) {
         }
         
         sb.toString()
+    }
+
+    private fun buildUserContextSnapshot(): String {
+        val sb = StringBuilder()
+        val calendar = Calendar.getInstance()
+
+        if (featureFlags.isRemindersEnabled()) {
+            val activeReminders = reminderManager.getActiveReminders()
+            if (activeReminders.isNotEmpty()) {
+                sb.appendLine("یادآوری‌های فعال: ${activeReminders.size} مورد")
+                activeReminders.take(3).forEach { reminder ->
+                    val time = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+                        .format(Date(reminder.triggerTime))
+                    sb.appendLine("- $time: ${reminder.title}")
+                }
+            }
+        }
+
+        if (featureFlags.isFinanceEnabled()) {
+            val (income, expense, count) = financeManager.getMonthlyReport(
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH) + 1
+            )
+            sb.appendLine("این ماه: درآمد ${formatAmount(income)}، هزینه ${formatAmount(expense)}، ${count} تراکنش")
+
+            val pendingChecks = checkManager.getTotalPendingAmount()
+            if (pendingChecks > 0) {
+                sb.appendLine("چک‌های در انتظار: ${formatAmount(pendingChecks)} تومان")
+            }
+
+            val remainingInstallments = installmentManager.getTotalRemainingAmount()
+            if (remainingInstallments > 0) {
+                sb.appendLine("اقساط باقیمانده: ${formatAmount(remainingInstallments)} تومان")
+            }
+        }
+
+        return sb.toString().trim()
     }
 
     private fun normalizeText(text: String): String {

@@ -14,6 +14,8 @@ import com.persianai.assistant.data.TransactionType
 import com.persianai.assistant.data.CheckStatus
 import com.persianai.assistant.data.ReminderBackupData
 import com.persianai.assistant.data.SmartRemindersBackup
+import com.persianai.assistant.finance.CheckManager
+import com.persianai.assistant.finance.InstallmentManager
 import com.persianai.assistant.models.Check
 import com.persianai.assistant.models.Installment
 import com.persianai.assistant.models.InstallmentStatus
@@ -175,8 +177,9 @@ class BackupManager(private val context: Context) {
                 catch (_: Exception) {}
             }
 
-            // Restore checks via AccountingDB
-            val accountingDB = AccountingDB(context)
+            // Restore checks via AccountingDB and CheckManager
+            val checkManager = CheckManager(context)
+            val restoredChecks = mutableListOf<CheckManager.Check>()
             backupData.checks.forEach { checkData ->
                 try {
                     val check = Check(
@@ -191,12 +194,33 @@ class BackupManager(private val context: Context) {
                         issueDate = java.util.Date(checkData.issueDate),
                         bankName = ""
                     )
-                    accountingDB.addCheck(check)
+                    db.addCheck(check)
+                    restoredChecks.add(
+                        CheckManager.Check(
+                            id = checkData.id.toString().ifBlank { java.util.UUID.randomUUID().toString() },
+                            checkNumber = checkData.checkNumber,
+                            amount = checkData.amount,
+                            issuer = "",
+                            recipient = checkData.recipient,
+                            issueDate = checkData.issueDate,
+                            dueDate = checkData.dueDate,
+                            status = try { CheckManager.CheckStatus.valueOf(checkData.status) }
+                                catch (_: Exception) { CheckManager.CheckStatus.PENDING },
+                            bankName = "",
+                            accountNumber = "",
+                            description = checkData.description
+                        )
+                    )
                     checksRestored++
                 } catch (_: Exception) {}
             }
+            if (restoredChecks.isNotEmpty()) {
+                checkManager.importChecks(restoredChecks)
+            }
 
-            // Restore installments via AccountingDB
+            // Restore installments via AccountingDB and InstallmentManager
+            val installmentManager = InstallmentManager(context)
+            val restoredInstallments = mutableListOf<InstallmentManager.Installment>()
             backupData.installments.forEach { instData ->
                 try {
                     val installment = Installment(
@@ -214,9 +238,26 @@ class BackupManager(private val context: Context) {
                         description = instData.description,
                         lender = instData.lender
                     )
-                    accountingDB.addInstallment(installment)
+                    db.addInstallment(installment)
+                    restoredInstallments.add(
+                        InstallmentManager.Installment(
+                            id = instData.id.toString().ifBlank { java.util.UUID.randomUUID().toString() },
+                            title = instData.title,
+                            totalAmount = instData.totalAmount,
+                            installmentAmount = instData.monthlyAmount,
+                            totalInstallments = instData.installmentCount,
+                            paidInstallments = instData.paidInstallments,
+                            startDate = instData.nextPaymentDate,
+                            paymentDay = 1,
+                            recipient = instData.lender,
+                            description = instData.description
+                        )
+                    )
                     installmentsRestored++
                 } catch (_: Exception) {}
+            }
+            if (restoredInstallments.isNotEmpty()) {
+                installmentManager.importInstallments(restoredInstallments)
             }
 
             // Restore smart reminders
@@ -289,40 +330,78 @@ class BackupManager(private val context: Context) {
     private fun collectBackupData(): BackupData {
         val accountingDB = AccountingDB(context)
         val reminderManager = SmartReminderManager(context)
+        val checkManager = CheckManager(context)
+        val installmentManager = InstallmentManager(context)
 
-        // Collect checks
+        // Collect checks (CheckManager is primary source; fallback to AccountingDB)
         val checks = try {
-            accountingDB.getAllChecks().map { check ->
-                CheckExportData(
-                    id = check.id,
-                    amount = check.amount,
-                    checkNumber = check.checkNumber,
-                    recipient = check.recipient,
-                    dueDate = check.dueDate.time,
-                    status = check.status.name,
-                    description = check.description,
-                    issueDate = check.issueDate.time
-                )
+            val managerChecks = checkManager.getAllChecks()
+            if (managerChecks.isNotEmpty()) {
+                managerChecks.map { check ->
+                    CheckExportData(
+                        id = check.id.hashCode().toLong(),
+                        amount = check.amount,
+                        checkNumber = check.checkNumber,
+                        recipient = check.recipient,
+                        dueDate = check.dueDate,
+                        status = check.status.name,
+                        description = check.description,
+                        issueDate = check.issueDate
+                    )
+                }
+            } else {
+                accountingDB.getAllChecks().map { check ->
+                    CheckExportData(
+                        id = check.id,
+                        amount = check.amount,
+                        checkNumber = check.checkNumber,
+                        recipient = check.recipient,
+                        dueDate = check.dueDate.time,
+                        status = check.status.name,
+                        description = check.description,
+                        issueDate = check.issueDate.time
+                    )
+                }
             }
         } catch (_: Exception) { emptyList() }
 
-        // Collect installments
+        // Collect installments (InstallmentManager is primary source; fallback to AccountingDB)
         val installments = try {
-            accountingDB.getAllInstallments().map { inst ->
-                InstallmentExportData(
-                    id = inst.id,
-                    title = inst.title,
-                    totalAmount = inst.totalAmount,
-                    monthlyAmount = inst.monthlyAmount,
-                    installmentCount = inst.installmentCount,
-                    paidInstallments = inst.paidInstallments,
-                    paidAmount = inst.paidAmount,
-                    remainingAmount = inst.remainingAmount,
-                    nextPaymentDate = inst.nextPaymentDate.time,
-                    status = inst.status.name,
-                    description = inst.description,
-                    lender = inst.lender
-                )
+            val managerInstallments = installmentManager.getAllInstallments()
+            if (managerInstallments.isNotEmpty()) {
+                managerInstallments.map { inst ->
+                    InstallmentExportData(
+                        id = inst.id.hashCode().toLong(),
+                        title = inst.title,
+                        totalAmount = inst.totalAmount,
+                        monthlyAmount = inst.installmentAmount,
+                        installmentCount = inst.totalInstallments,
+                        paidInstallments = inst.paidInstallments,
+                        paidAmount = inst.paidInstallments * inst.installmentAmount,
+                        remainingAmount = (inst.totalInstallments - inst.paidInstallments) * inst.installmentAmount,
+                        nextPaymentDate = inst.startDate,
+                        status = if (inst.paidInstallments >= inst.totalInstallments) "COMPLETED" else "ACTIVE",
+                        description = inst.description,
+                        lender = inst.recipient
+                    )
+                }
+            } else {
+                accountingDB.getAllInstallments().map { inst ->
+                    InstallmentExportData(
+                        id = inst.id,
+                        title = inst.title,
+                        totalAmount = inst.totalAmount,
+                        monthlyAmount = inst.monthlyAmount,
+                        installmentCount = inst.installmentCount,
+                        paidInstallments = inst.paidInstallments,
+                        paidAmount = inst.paidAmount,
+                        remainingAmount = inst.remainingAmount,
+                        nextPaymentDate = inst.nextPaymentDate.time,
+                        status = inst.status.name,
+                        description = inst.description,
+                        lender = inst.lender
+                    )
+                }
             }
         } catch (_: Exception) { emptyList() }
 

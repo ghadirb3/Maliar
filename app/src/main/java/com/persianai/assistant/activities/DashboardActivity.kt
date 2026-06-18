@@ -994,13 +994,14 @@ class DashboardActivity : AppCompatActivity() {
      */
     private fun getTodayInstallmentsCount(): Int {
         return try {
-            val accountingDB = com.persianai.assistant.data.AccountingDB(this)
-            val allInstallments = accountingDB.getAllInstallments()
-            // اقساطی که هنوز کامل نشده‌اند را بعنوان "در جریان امروز" در نظر می‌گیریم
+            val installmentManager = com.persianai.assistant.finance.InstallmentManager(this)
             val today = java.time.LocalDate.now()
             val start = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
             val end = today.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-            allInstallments.count { it.status != com.persianai.assistant.models.InstallmentStatus.COMPLETED && it.nextPaymentDate.time in start until end }
+            installmentManager.getAllInstallments().count { installment ->
+                installment.paidInstallments < installment.totalInstallments &&
+                    (installmentManager.calculateNextPaymentDate(installment) ?: 0L) in start until end
+            }
         } catch (e: Exception) {
             android.util.Log.e("DashboardActivity", "Error getting today installments", e)
             0
@@ -1012,15 +1013,14 @@ class DashboardActivity : AppCompatActivity() {
      */
     private fun getTodayChecksCount(): Int {
         return try {
-            val accountingDB = com.persianai.assistant.data.AccountingDB(this)
+            val checkManager = com.persianai.assistant.finance.CheckManager(this)
             val today = java.time.LocalDate.now()
             val startOfDay = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
             val endOfDay = today.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-            
-            val allChecks = accountingDB.getAllChecks()
-            allChecks.count { check ->
-                val dueTime = check.dueDate?.time ?: 0L
-                dueTime >= startOfDay && dueTime < endOfDay
+
+            checkManager.getAllChecks().count { check ->
+                check.status == com.persianai.assistant.finance.CheckManager.CheckStatus.PENDING &&
+                    check.dueDate in startOfDay until endOfDay
             }
         } catch (e: Exception) {
             android.util.Log.e("DashboardActivity", "Error getting today checks", e)
@@ -1078,11 +1078,8 @@ class DashboardActivity : AppCompatActivity() {
      */
     private fun getRemainingInstallmentsCount(): Int {
         return try {
-            val accountingDB = com.persianai.assistant.data.AccountingDB(this)
-            val allInstallments = accountingDB.getAllInstallments()
-            allInstallments.count { installment ->
-                installment.status != com.persianai.assistant.models.InstallmentStatus.COMPLETED
-            }
+            val installmentManager = com.persianai.assistant.finance.InstallmentManager(this)
+            installmentManager.getAllInstallments().count { it.paidInstallments < it.totalInstallments }
         } catch (e: Exception) {
             android.util.Log.e("DashboardActivity", "Error getting remaining installments", e)
             0

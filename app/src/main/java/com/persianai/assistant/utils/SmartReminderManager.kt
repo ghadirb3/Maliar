@@ -61,7 +61,8 @@ class SmartReminderManager(private val context: Context) {
      */
     enum class AlertType {
         NOTIFICATION,
-        FULL_SCREEN
+        FULL_SCREEN,
+        SMART
     }
     
     /**
@@ -500,7 +501,9 @@ class SmartReminderManager(private val context: Context) {
             }
         }
 
-        val useAlarm = reminder.alertType == AlertType.FULL_SCREEN || reminder.tags.any { it.startsWith("use_alarm:true") }
+        val useAlarm = reminder.alertType == AlertType.FULL_SCREEN ||
+            reminder.alertType == AlertType.SMART ||
+            reminder.tags.any { it.startsWith("use_alarm:true") }
         
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             action = "com.persianai.assistant.REMINDER_ALARM"
@@ -515,6 +518,7 @@ class SmartReminderManager(private val context: Context) {
             putExtra("message", reminder.title)
             putExtra("use_alarm", useAlarm)
             putExtra("alert_type", reminder.alertType.name)
+            putStringArrayListExtra("reminder_tags", ArrayList(reminder.tags))
         }
         
         Log.d(TAG, "🔔 Intent prepared: title=${reminder.title}, alertType=${reminder.alertType}, useAlarm=$useAlarm, tags=${reminder.tags}")
@@ -541,12 +545,31 @@ class SmartReminderManager(private val context: Context) {
             }
             
             Log.d(TAG, "Alarm will trigger at: $triggerTime (now: $now)")
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerTime,
-                pendingIntent
-            )
-            Log.d(TAG, "✅ Alarm set for: ${reminder.title}")
+
+            if (useAlarm) {
+                val showIntent = Intent(context, com.persianai.assistant.activities.FullScreenAlarmActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("smart_reminder_id", reminder.id)
+                }
+                val showPendingIntent = PendingIntent.getActivity(
+                    context,
+                    reminder.id.hashCode() + 5000,
+                    showIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTime, showPendingIntent)
+                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+                Log.d(TAG, "✅ AlarmClock set for fullscreen/smart: ${reminder.title}")
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+                Log.d(TAG, "✅ Alarm set for: ${reminder.title}")
+            }
+
+            ensureReminderServiceRunning()
         } catch (e: SecurityException) {
             Log.e(TAG, "خطا در تنظیم آلارم: ${e.message}")
             // اگر setExactAndAllowWhileIdle ناموفق بود، از setAndAllowWhileIdle استفاده کن
@@ -560,6 +583,19 @@ class SmartReminderManager(private val context: Context) {
             } catch (e2: Exception) {
                 Log.e(TAG, "خطا در تنظیم آلارم (غیر دقیق): ${e2.message}")
             }
+        }
+    }
+
+    private fun ensureReminderServiceRunning() {
+        try {
+            val serviceIntent = Intent(context, com.persianai.assistant.services.ReminderService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not start ReminderService backup", e)
         }
     }
     

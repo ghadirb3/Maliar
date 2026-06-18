@@ -89,17 +89,24 @@ class ReminderReceiver : BroadcastReceiver() {
             val title = intent.getStringExtra("reminder_title") ?: "⏰ یادآوری"
             val description = intent.getStringExtra("reminder_description") ?: ""
             val alertType = intent.getStringExtra("alert_type") ?: "NOTIFICATION"
-            
-            Log.d(TAG, "📝 Reminder received: title=$title, alertType=$alertType, id=$reminderId")
-            
-            val useFullScreen = alertType == "FULL_SCREEN"
-            
+            val useAlarm = intent.getBooleanExtra("use_alarm", false)
+            val tags = intent.getStringArrayListExtra("reminder_tags") ?: arrayListOf()
+            val isSmartReminder = alertType == "SMART" ||
+                tags.any { it.startsWith("smart:true") }
+
+            Log.d(TAG, "📝 Reminder received: title=$title, alertType=$alertType, id=$reminderId, smart=$isSmartReminder")
+
+            val useFullScreen = alertType == "FULL_SCREEN" ||
+                alertType == "SMART" ||
+                useAlarm ||
+                tags.any { it.startsWith("use_alarm:true") }
+
             if (useFullScreen) {
-                showFullScreenAlarm(context, title, description, reminderId)
+                showFullScreenAlarm(context, title, description, reminderId, tags, isSmartReminder)
             } else {
                 showHeadsUpNotification(context, title, description, reminderId)
             }
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error handling alarm", e)
         }
@@ -112,7 +119,9 @@ class ReminderReceiver : BroadcastReceiver() {
         context: Context,
         title: String,
         description: String,
-        reminderId: String?
+        reminderId: String?,
+        tags: ArrayList<String> = arrayListOf(),
+        isSmartReminder: Boolean = false
     ) {
         try {
             Log.d(TAG, "🎬 Forcing FullScreenAlarmActivity + fullScreen notification")
@@ -126,6 +135,8 @@ class ReminderReceiver : BroadcastReceiver() {
                 putExtra("title", title)
                 putExtra("description", description)
                 putExtra("smart_reminder_id", reminderId)
+                putExtra("is_smart_reminder", isSmartReminder)
+                putStringArrayListExtra("tags", tags)
             }
 
             val pendingIntentFlags =
@@ -163,9 +174,10 @@ class ReminderReceiver : BroadcastReceiver() {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setFullScreenIntent(fullScreenPendingIntent, true)
+                .setContentIntent(fullScreenPendingIntent)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setOngoing(false)
+                .setAutoCancel(false)
+                .setOngoing(true)
                 .build()
 
             NotificationManagerCompat.from(context).notify(reminderId?.hashCode() ?: 2001, notification)

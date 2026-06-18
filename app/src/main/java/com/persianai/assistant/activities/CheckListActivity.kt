@@ -1,18 +1,20 @@
 package com.persianai.assistant.activities
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.persianai.assistant.adapters.CheckAdapter
-import com.persianai.assistant.data.AccountingDB
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.persianai.assistant.adapters.ChecksAdapter
 import com.persianai.assistant.databinding.ActivityCheckListBinding
-import kotlinx.coroutines.launch
+import com.persianai.assistant.finance.CheckManager
+import com.persianai.assistant.utils.PersianDateConverter
+import java.util.Calendar
 
 class CheckListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCheckListBinding
-    private lateinit var db: AccountingDB
+    private lateinit var checkManager: CheckManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,81 +25,58 @@ class CheckListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "چک‌ها"
 
-        db = AccountingDB(this)
+        checkManager = CheckManager(this)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
 
         loadChecks()
     }
 
     private fun loadChecks() {
-        lifecycleScope.launch {
-            val checks = db.getAllChecks()
-            binding.recyclerView.adapter = CheckAdapter(
-                onCheckClick = { check ->
-                    // Handle check click
-                },
-                onDeleteClick = { check ->
-                    // Handle delete click
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@CheckListActivity)
-                        .setTitle("❌ حذف چک")
-                        .setMessage("آیا از حذف این چک مطمئن هستید؟")
-                        .setPositiveButton("حذف") { _, _ ->
-                            lifecycleScope.launch {
-                                db.deleteCheck(check.id)
-                                loadChecks()
-                                android.widget.Toast.makeText(this@CheckListActivity, "✅ چک حذف شد", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                        .setNegativeButton("لغو", null)
-                        .show()
-                },
-                onEditClick = { check ->
-                    // Handle edit click
-                    showEditDialog(check)
-                }
-            ).apply {
-                submitList(checks)
-            }
+        val checks = checkManager.getAllChecks()
+        binding.recyclerView.adapter = ChecksAdapter(checks) { check ->
+            showCheckDetails(check)
         }
     }
-    
-    private fun showEditDialog(check: com.persianai.assistant.models.Check) {
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(48, 32, 48, 16)
+
+    private fun showCheckDetails(check: CheckManager.Check) {
+        val calendar = Calendar.getInstance().apply { timeInMillis = check.dueDate }
+        val persianDate = PersianDateConverter.gregorianToPersian(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH) + 1,
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).toReadableString()
+
+        val statusText = when (check.status) {
+            CheckManager.CheckStatus.PENDING -> "⏳ در انتظار"
+            CheckManager.CheckStatus.PAID -> "✅ پرداخت شده"
+            CheckManager.CheckStatus.BOUNCED -> "❌ برگشتی"
+            CheckManager.CheckStatus.CANCELLED -> "🚫 لغو شده"
         }
-        
-        val amountInput = android.widget.EditText(this).apply {
-            hint = "مبلغ"
-            setText(check.amount.toString())
-            inputType = android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
-        val recipientInput = android.widget.EditText(this).apply {
-            hint = "گیرنده"
-            setText(check.recipient)
-        }
-        
-        container.addView(amountInput)
-        container.addView(recipientInput)
-        
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("✏️ ویرایش چک")
-            .setView(container)
-            .setPositiveButton("ذخیره") { _, _ ->
-                val newAmount = amountInput.text.toString().toDoubleOrNull() ?: check.amount
-                val newRecipient = recipientInput.text.toString()
-                
-                lifecycleScope.launch {
-                    val updated = check.copy(
-                        amount = newAmount,
-                        recipient = newRecipient
-                    )
-                    db.updateCheck(updated)
-                    loadChecks()
-                    android.widget.Toast.makeText(this@CheckListActivity, "✅ چک ویرایش شد", android.widget.Toast.LENGTH_SHORT).show()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("جزئیات چک")
+            .setMessage(
+                "شماره: ${check.checkNumber}\n" +
+                    "مبلغ: ${String.format("%,.0f", check.amount)} تومان\n" +
+                    "گیرنده: ${check.recipient}\n" +
+                    "سررسید: $persianDate\n" +
+                    "وضعیت: $statusText"
+            )
+            .setPositiveButton("بستن", null)
+            .apply {
+                if (check.status == CheckManager.CheckStatus.PENDING) {
+                    setNeutralButton("✅ پرداخت شد") { _, _ ->
+                        checkManager.updateCheckStatus(check.id, CheckManager.CheckStatus.PAID)
+                        Toast.makeText(this@CheckListActivity, "✅ چک پرداخت شد", Toast.LENGTH_SHORT).show()
+                        loadChecks()
+                    }
                 }
             }
-            .setNegativeButton("لغو", null)
+            .setNegativeButton("حذف") { _, _ ->
+                checkManager.deleteCheck(check.id)
+                Toast.makeText(this, "✅ چک حذف شد", Toast.LENGTH_SHORT).show()
+                loadChecks()
+            }
             .show()
     }
 

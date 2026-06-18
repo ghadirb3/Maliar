@@ -162,14 +162,20 @@ class InstallmentManager(private val context: Context) {
     }
     
     fun payInstallment(id: String): Boolean {
+        val installment = getAllInstallments().firstOrNull { it.id == id } ?: return false
+        if (installment.paidInstallments >= installment.totalInstallments) return false
+
         val installments = getAllInstallments().map {
-            if (it.id == id && it.paidInstallments < it.totalInstallments) {
-                it.copy(paidInstallments = it.paidInstallments + 1)
-            } else {
-                it
-            }
+            if (it.id == id) it.copy(paidInstallments = it.paidInstallments + 1) else it
         }
         saveInstallments(installments)
+
+        FinanceManager(context).addTransaction(
+            installment.installmentAmount,
+            "expense",
+            "قسط",
+            "پرداخت قسط ${installment.paidInstallments + 1} از ${installment.totalInstallments}: ${installment.title}"
+        )
         
         // Sync payment to AccountingDB
         try {
@@ -209,20 +215,17 @@ class InstallmentManager(private val context: Context) {
     }
     
     fun deleteInstallment(id: String) {
-        val installments = getAllInstallments().filter { it.id != id }
-        saveInstallments(installments)
-        
-        // Sync deletion to AccountingDB
+        val allInstallments = getAllInstallments()
+        val deletedInstallment = allInstallments.firstOrNull { it.id == id } ?: return
+        saveInstallments(allInstallments.filter { it.id != id })
+
         try {
-            val accInstallments = accountingDB.getAllInstallments()
-            val installmentToDelete = getAllInstallments().firstOrNull() ?: return // Get remaining list
-            // Find and delete the matching AccountingDB entry
-            val accEntries = accountingDB.getAllInstallments()
-            accEntries.forEach { acc ->
-                if (acc.description == installmentToDelete.title) {
-                    accountingDB.deleteInstallment(acc.id)
+            accountingDB.getAllInstallments()
+                .firstOrNull {
+                    it.title == deletedInstallment.title &&
+                        it.totalAmount == deletedInstallment.totalAmount
                 }
-            }
+                ?.let { accountingDB.deleteInstallment(it.id) }
         } catch (e: Exception) {
             android.util.Log.e("InstallmentManager", "Error syncing deletion to AccountingDB", e)
         }
@@ -259,5 +262,73 @@ class InstallmentManager(private val context: Context) {
             })
         }
         prefs.edit().putString("installments", array.toString()).apply()
+    }
+
+    fun importInstallments(installments: List<Installment>) {
+        saveInstallments(installments)
+    }
+
+    fun updateInstallment(
+        id: String,
+        title: String,
+        totalAmount: Double,
+        installmentAmount: Double,
+        totalInstallments: Int,
+        startDate: Long,
+        paymentDay: Int,
+        recipient: String,
+        description: String
+    ): Boolean {
+        val all = getAllInstallments()
+        val existing = all.firstOrNull { it.id == id } ?: return false
+        if (totalInstallments < existing.paidInstallments) return false
+
+        val updated = existing.copy(
+            title = title,
+            totalAmount = totalAmount,
+            installmentAmount = installmentAmount,
+            totalInstallments = totalInstallments,
+            startDate = startDate,
+            paymentDay = paymentDay,
+            recipient = recipient,
+            description = description
+        )
+        saveInstallments(all.map { if (it.id == id) updated else it })
+        return true
+    }
+
+    fun generateReport(): String {
+        val all = getAllInstallments()
+        if (all.isEmpty()) return "📭 هیچ قسطی ثبت نشده است."
+
+        val active = all.filter { it.paidInstallments < it.totalInstallments }
+        val completed = all.size - active.size
+        val totalRemaining = getTotalRemainingAmount()
+        val totalPaid = all.sumOf { it.paidInstallments * it.installmentAmount }
+        val now = System.currentTimeMillis()
+        val overdue = active.count { hasOverduePayment(it, now) }
+        val upcoming = getUpcomingPayments(7)
+
+        return buildString {
+            appendLine("📊 گزارش اقساط")
+            appendLine("=".repeat(28))
+            appendLine("تعداد کل: ${all.size}")
+            appendLine("فعال: ${active.size} | تکمیل‌شده: $completed")
+            appendLine("پرداخت شده: ${String.format("%,.0f", totalPaid)} تومان")
+            appendLine("باقیمانده: ${String.format("%,.0f", totalRemaining)} تومان")
+            if (overdue > 0) appendLine("❌ عقب‌افتاده: $overdue مورد")
+            if (upcoming.isNotEmpty()) {
+                appendLine("\n⏰ سررسید ۷ روز آینده:")
+                upcoming.take(5).forEach { (inst, due) ->
+                    val days = ((due - now) / (24 * 60 * 60 * 1000)).toInt()
+                    appendLine("• ${inst.title}: $days روز دیگر (${String.format("%,.0f", inst.installmentAmount)} تومان)")
+                }
+            }
+        }
+    }
+
+    private fun hasOverduePayment(installment: Installment, now: Long): Boolean {
+        val next = calculateNextPaymentDate(installment) ?: return false
+        return next < now
     }
 }

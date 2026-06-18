@@ -37,6 +37,9 @@ class FinanceAdvancedActivity : AppCompatActivity() {
     
     private lateinit var checksAdapter: ChecksAdapter
     private lateinit var installmentsAdapter: InstallmentsAdapter
+
+    private val checksList = mutableListOf<CheckManager.Check>()
+    private val installmentsList = mutableListOf<InstallmentManager.Installment>()
     
     private val dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale("fa", "IR"))
     private val numberFormat = NumberFormat.getInstance(Locale("fa", "IR"))
@@ -98,7 +101,7 @@ class FinanceAdvancedActivity : AppCompatActivity() {
         }
         
         // RecyclerView چک‌ها
-        checksAdapter = ChecksAdapter(emptyList()) { check ->
+        checksAdapter = ChecksAdapter(checksList) { check ->
             showCheckDetails(check)
         }
         
@@ -106,7 +109,7 @@ class FinanceAdvancedActivity : AppCompatActivity() {
         binding.checksRecyclerView.adapter = checksAdapter
         
         // RecyclerView اقساط
-        installmentsAdapter = InstallmentsAdapter(emptyList()) { installment ->
+        installmentsAdapter = InstallmentsAdapter(installmentsList) { installment ->
             showInstallmentDetails(installment)
         }
         
@@ -117,16 +120,16 @@ class FinanceAdvancedActivity : AppCompatActivity() {
     private fun loadData() {
         lifecycleScope.launch {
             try {
-                // بارگذاری چک‌ها
-                val checks = checkManager.getAllChecks()
+                checksList.clear()
+                checksList.addAll(checkManager.getAllChecks())
+                checksAdapter.notifyDataSetChanged()
+
+                installmentsList.clear()
+                installmentsList.addAll(installmentManager.getAllInstallments())
+                installmentsAdapter.notifyDataSetChanged()
                 
-                // بارگذاری اقساط
-                val installments = installmentManager.getAllInstallments()
-                
-                // به‌روزرسانی خلاصه
                 updateSummary()
 
-                // ارزیابی Rule Engine
                 val ruleResult = financeRuleEngine.evaluate(14)
                 updateRuleBasedCard(ruleResult)
                 maybeNotifyCritical(ruleResult)

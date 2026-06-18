@@ -118,6 +118,13 @@
                 android:text="🔔 آلارم تمام‌صفحه"
                 style="@style/Widget.Material3.Chip.Filter" />
 
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipRecurringAlertSmart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🧠 یادآوری هوشمند"
+                style="@style/Widget.Material3.Chip.Filter" />
+
         </com.google.android.material.chip.ChipGroup>
 
     </LinearLayout>

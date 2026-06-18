@@ -129,6 +129,7 @@ class FinanceManager(private val context: Context) {
         
         val allTransactions = (dbList + onlyInPrefs)
             .sortedByDescending { it.date }
+            .distinctBy { "${it.type}_${it.amount}_${it.date / 60_000}_${it.description.trim()}" }
         
         return allTransactions
     }

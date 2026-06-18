@@ -309,6 +309,7 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                 }
                 val alertType = when (alertTypeGroup.checkedChipId) {
                     R.id.chipAlertFullScreen -> SmartReminderManager.AlertType.FULL_SCREEN
+                    R.id.chipAlertSmart -> SmartReminderManager.AlertType.SMART
                     else -> SmartReminderManager.AlertType.NOTIFICATION
                 }
                 
@@ -336,13 +337,24 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                 calendar.set(Calendar.MINUTE, selectedMinute)
                 calendar.set(Calendar.SECOND, 0)
                 
-                smartReminderManager.createSimpleReminder(
+                // برای یادآوری هوشمند، برچسب smart:true اضافه می‌شود
+                val tags = if (alertType == SmartReminderManager.AlertType.SMART) {
+                    listOf("smart:true")
+                } else {
+                    emptyList()
+                }
+                
+                val reminder = SmartReminderManager.SmartReminder(
+                    id = System.currentTimeMillis().toString(),
                     title = "$category - $title",
                     description = description,
-                    triggerTime = calendar.timeInMillis,
+                    type = SmartReminderManager.ReminderType.SIMPLE,
                     priority = priority,
-                    alertType = alertType
+                    alertType = alertType,
+                    triggerTime = calendar.timeInMillis,
+                    tags = tags
                 )
+                smartReminderManager.addReminder(reminder)
                 NotificationHelper.showReminderNotification(
                     this,
                     "یادآوری جدید ثبت شد",
@@ -537,18 +549,21 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                 }
                 
                 val checkedChipId = alertTypeGroup.checkedChipId
-                val useFullScreen = checkedChipId == R.id.chipRecurringAlertFullScreen
-                val alertType = if (useFullScreen) {
-                    SmartReminderManager.AlertType.FULL_SCREEN
-                } else {
-                    SmartReminderManager.AlertType.NOTIFICATION
+                val alertType = when (checkedChipId) {
+                    R.id.chipRecurringAlertFullScreen -> SmartReminderManager.AlertType.FULL_SCREEN
+                    R.id.chipRecurringAlertSmart -> SmartReminderManager.AlertType.SMART
+                    else -> SmartReminderManager.AlertType.NOTIFICATION
                 }
-                
-                if (useFullScreen) {
+
+                if (alertType == SmartReminderManager.AlertType.FULL_SCREEN) {
                     tags.add("use_alarm:true")
                 }
-                
-                Log.d("RecurringReminder", "✅ Alert type selected: $alertType, useFullScreen: $useFullScreen")
+                if (alertType == SmartReminderManager.AlertType.SMART) {
+                    tags.add("smart:true")
+                    tags.add("use_alarm:true")
+                }
+
+                Log.d("RecurringReminder", "✅ Alert type selected: $alertType")
 
                 val reminder = SmartReminderManager.SmartReminder(
                     id = "recurring_${System.currentTimeMillis()}",
@@ -713,6 +728,7 @@ class AdvancedRemindersActivity : AppCompatActivity() {
 
         when (reminder.alertType) {
             SmartReminderManager.AlertType.FULL_SCREEN -> alertTypeGroup.check(R.id.chipAlertFullScreen)
+            SmartReminderManager.AlertType.SMART -> alertTypeGroup.check(R.id.chipAlertSmart)
             else -> alertTypeGroup.check(R.id.chipAlertNotification)
         }
 
@@ -771,7 +787,20 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                 }
                 val newAlertType = when (alertTypeGroup.checkedChipId) {
                     R.id.chipAlertFullScreen -> SmartReminderManager.AlertType.FULL_SCREEN
+                    R.id.chipAlertSmart -> SmartReminderManager.AlertType.SMART
                     else -> SmartReminderManager.AlertType.NOTIFICATION
+                }
+
+                val newTags = when (newAlertType) {
+                    SmartReminderManager.AlertType.SMART -> {
+                        reminder.tags.filterNot { it.startsWith("smart:") || it.startsWith("use_alarm:") } +
+                            listOf("smart:true", "use_alarm:true")
+                    }
+                    SmartReminderManager.AlertType.FULL_SCREEN -> {
+                        reminder.tags.filterNot { it.startsWith("smart:") || it.startsWith("use_alarm:") } +
+                            listOf("use_alarm:true")
+                    }
+                    else -> reminder.tags.filterNot { it.startsWith("smart:") || it.startsWith("use_alarm:") }
                 }
 
                 if (newTitle.isEmpty()) {
@@ -790,7 +819,8 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                     description = newDescription,
                     triggerTime = finalCalendar.timeInMillis,
                     priority = newPriority,
-                    alertType = newAlertType
+                    alertType = newAlertType,
+                    tags = newTags
                 )
 
                 if (smartReminderManager.updateReminder(updatedReminder)) {

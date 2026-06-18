@@ -70,19 +70,19 @@
                     android:id="@+id/chipLoan"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🏦 وام" />
+                    android:text="📋 همه" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipPurchase"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🛒 خرید" />
+                    android:text="⏳ فعال" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipRent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🏠 اجاره" />
+                    android:text="✅ تکمیل‌شده" />
 
             </com.google.android.material.chip.ChipGroup>
 

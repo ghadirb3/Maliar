@@ -1,5 +1,6 @@
 package com.persianai.assistant.activities
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -15,6 +16,7 @@ import com.persianai.assistant.adapters.InstallmentsAdapter
 import com.persianai.assistant.databinding.ActivityInstallmentsManagementBinding
 import com.persianai.assistant.finance.InstallmentManager
 import com.persianai.assistant.finance.InstallmentManager.Installment
+import com.persianai.assistant.utils.AmountParser
 import com.persianai.assistant.utils.PersianDateConverter
 import kotlinx.coroutines.launch
 import java.util.*
@@ -56,6 +58,11 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         setupListeners()
         loadInstallments()
         updateStats()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.installments_menu, menu)
+        return true
     }
     
     private fun setupToolbar() {
@@ -168,6 +175,19 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         installments.clear()
         installments.addAll(filtered)
         installmentsAdapter.notifyDataSetChanged()
+
+        if (installments.isEmpty()) {
+            binding.emptyView.visibility = View.VISIBLE
+            binding.installmentsRecyclerView.visibility = View.GONE
+            binding.emptyView.text = if (installmentManager.getAllInstallments().isEmpty()) {
+                "📭 هیچ قسطی ثبت نشده است"
+            } else {
+                "🔍 قسطی با این فیلتر یافت نشد"
+            }
+        } else {
+            binding.emptyView.visibility = View.GONE
+            binding.installmentsRecyclerView.visibility = View.VISIBLE
+        }
     }
     
     private fun hasOverduePayments(installment: Installment, now: Long = System.currentTimeMillis()): Boolean {
@@ -232,6 +252,10 @@ class InstallmentsManagementActivity : AppCompatActivity() {
     }
     
     private fun showAddInstallmentDialog() {
+        showInstallmentFormDialog(null)
+    }
+
+    private fun showInstallmentFormDialog(existing: Installment?) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_installment, null)
         
         val titleInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.titleInput)
@@ -243,9 +267,25 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         val recipientInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.recipientInput)
         val descriptionInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.descriptionInput)
         
-        var selectedStartDate: Long = System.currentTimeMillis()
+        var selectedStartDate: Long = existing?.startDate ?: System.currentTimeMillis()
+
+        existing?.let { inst ->
+            titleInput.setText(inst.title)
+            totalAmountInput.setText(inst.totalAmount.toLong().toString())
+            installmentAmountInput.setText(inst.installmentAmount.toLong().toString())
+            totalInstallmentsInput.setText(inst.totalInstallments.toString())
+            paymentDayInput.setText(inst.paymentDay.toString())
+            recipientInput.setText(inst.recipient)
+            descriptionInput.setText(inst.description)
+            val calendar = Calendar.getInstance().apply { timeInMillis = inst.startDate }
+            val persianDate = PersianDateConverter.gregorianToPersian(
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH) + 1,
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+            startDateButton.text = persianDate.toReadableString()
+        }
         
-        // انتخاب تاریخ شروع
         startDateButton.setOnClickListener {
             val datePicker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("تاریخ شروع")
@@ -254,9 +294,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
             
             datePicker.addOnPositiveButtonClickListener { selection ->
                 selectedStartDate = selection
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = selection
-                }
+                val calendar = Calendar.getInstance().apply { timeInMillis = selection }
                 val persianDate = PersianDateConverter.gregorianToPersian(
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH) + 1,
@@ -269,13 +307,13 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         }
         
         MaterialAlertDialogBuilder(this)
-            .setTitle("➕ افزودن قسط جدید")
+            .setTitle(if (existing == null) "➕ افزودن قسط جدید" else "✏️ ویرایش قسط")
             .setView(dialogView)
             .setPositiveButton("ذخیره") { _, _ ->
                 val title = titleInput.text?.toString()?.trim().orEmpty()
-                val totalAmount = totalAmountInput.text?.toString()?.toLongOrNull() ?: 0L
+                val totalAmount = AmountParser.parse(totalAmountInput.text?.toString())
                 val totalInstallments = totalInstallmentsInput.text?.toString()?.toIntOrNull() ?: 0
-                val manualInstallmentAmount = installmentAmountInput.text?.toString()?.toLongOrNull()
+                val manualInstallmentAmount = AmountParser.parse(installmentAmountInput.text?.toString()).takeIf { it > 0 }
                 val paymentDay = paymentDayInput.text?.toString()?.toIntOrNull() ?: -1
                 val recipient = recipientInput.text?.toString()?.trim().orEmpty()
                 val description = descriptionInput.text?.toString()?.trim().orEmpty()
@@ -289,7 +327,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                     Toast.makeText(this, "⚠️ مبلغ کل را وارد کنید", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                
+
                 if (totalInstallments <= 0) {
                     Toast.makeText(this, "⚠️ تعداد اقساط را وارد کنید", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
@@ -299,26 +337,55 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                     Toast.makeText(this, "⚠️ روز پرداخت را بین ۱ تا ۳۱ وارد کنید", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
+
+                if (existing != null && totalInstallments < existing.paidInstallments) {
+                    Toast.makeText(
+                        this,
+                        "⚠️ تعداد اقساط نمی‌تواند کمتر از ${existing.paidInstallments} (پرداخت‌شده) باشد",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setPositiveButton
+                }
                 
                 val installmentAmount = manualInstallmentAmount
                     ?: (totalAmount / totalInstallments).takeIf { it > 0 }
-                    ?: 0L
+                    ?: 0.0
                 
                 if (installmentAmount <= 0) {
                     Toast.makeText(this, "⚠️ مبلغ هر قسط را وارد کنید", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                
-                addInstallment(
-                    title = title,
-                    totalAmount = totalAmount.toDouble(),
-                    installmentAmount = installmentAmount.toDouble(),
-                    totalInstallments = totalInstallments,
-                    startDate = selectedStartDate,
-                    paymentDay = paymentDay,
-                    creditor = recipient,
-                    notes = description
-                )
+
+                if (existing == null) {
+                    addInstallment(
+                        title = title,
+                        totalAmount = totalAmount,
+                        installmentAmount = installmentAmount,
+                        totalInstallments = totalInstallments,
+                        startDate = selectedStartDate,
+                        paymentDay = paymentDay,
+                        creditor = recipient,
+                        notes = description
+                    )
+                } else {
+                    val success = installmentManager.updateInstallment(
+                        id = existing.id,
+                        title = title,
+                        totalAmount = totalAmount,
+                        installmentAmount = installmentAmount,
+                        totalInstallments = totalInstallments,
+                        startDate = selectedStartDate,
+                        paymentDay = paymentDay,
+                        recipient = recipient,
+                        description = description
+                    )
+                    if (success) {
+                        Toast.makeText(this, "✅ قسط ویرایش شد", Toast.LENGTH_SHORT).show()
+                        loadInstallments()
+                    } else {
+                        Toast.makeText(this, "❌ خطا در ویرایش قسط", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
             .setNegativeButton("لغو", null)
             .show()
@@ -406,9 +473,27 @@ class InstallmentsManagementActivity : AppCompatActivity() {
             .setPositiveButton("جدول پرداخت") { _, _ ->
                 viewPaymentSchedule(installment)
             }
-            .setNeutralButton("بستن", null)
-            .setNegativeButton("حذف") { _, _ ->
-                deleteInstallment(installment)
+            .setNeutralButton("عملیات") { _, _ ->
+                showInstallmentActions(installment)
+            }
+            .setNegativeButton("بستن", null)
+            .show()
+    }
+
+    private fun showInstallmentActions(installment: Installment) {
+        val actions = mutableListOf("✏️ ویرایش", "🗑️ حذف")
+        if (installment.paidInstallments < installment.totalInstallments) {
+            actions.add(0, "✅ ثبت پرداخت")
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("عملیات")
+            .setItems(actions.toTypedArray()) { _, which ->
+                when (actions[which]) {
+                    "✅ ثبت پرداخت" -> markPaymentPaid(installment)
+                    "✏️ ویرایش" -> editInstallment(installment)
+                    "🗑️ حذف" -> deleteInstallment(installment)
+                }
             }
             .show()
     }
@@ -458,12 +543,39 @@ class InstallmentsManagementActivity : AppCompatActivity() {
     }
     
     private fun markPaymentPaid(installment: Installment) {
-        // TODO: پیاده‌سازی ثبت پرداخت قسط با ساختار جدید اقساط
-        Toast.makeText(this, "ثبت پرداخت قسط در نسخه فعلی در حال توسعه است.", Toast.LENGTH_SHORT).show()
+        if (installment.paidInstallments >= installment.totalInstallments) {
+            Toast.makeText(this, "✅ همه اقساط پرداخت شده‌اند", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("ثبت پرداخت قسط")
+            .setMessage("قسط ${installment.paidInstallments + 1} از ${installment.totalInstallments} به مبلغ ${formatAmount(installment.installmentAmount)} پرداخت شود؟\n\nاین مبلغ به هزینه‌ها اضافه می‌شود.")
+            .setPositiveButton("ثبت پرداخت") { _, _ ->
+                lifecycleScope.launch {
+                    try {
+                        installmentManager.payInstallment(installment.id)
+                        Toast.makeText(
+                            this@InstallmentsManagementActivity,
+                            "✅ پرداخت قسط ثبت شد",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        loadInstallments()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@InstallmentsManagementActivity,
+                            "❌ خطا: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+            .setNegativeButton("لغو", null)
+            .show()
     }
     
     private fun editInstallment(installment: Installment) {
-        Toast.makeText(this, "🚧 ویرایش در نسخه بعدی", Toast.LENGTH_SHORT).show()
+        showInstallmentFormDialog(installment)
     }
     
     private fun deleteInstallment(installment: Installment) {
@@ -500,15 +612,18 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         return String.format("%,.0f تومان", amount)
     }
     
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        // منوی اختصاصی اقساط در حال حاضر غیرفعال است
-        return super.onCreateOptionsMenu(menu)
-    }
-    
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
                 finish()
+                true
+            }
+            R.id.action_report -> {
+                generateReport()
+                true
+            }
+            R.id.action_export -> {
+                exportInstallments()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -516,10 +631,20 @@ class InstallmentsManagementActivity : AppCompatActivity() {
     }
     
     private fun exportInstallments() {
-        Toast.makeText(this, "🚧 اکسپورت در نسخه بعدی", Toast.LENGTH_SHORT).show()
+        val csv = installmentManager.exportToCSV()
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_SUBJECT, "گزارش اقساط Maliar")
+            putExtra(Intent.EXTRA_TEXT, csv)
+        }
+        startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری گزارش اقساط"))
     }
     
     private fun generateReport() {
-        Toast.makeText(this, "🚧 گزارش در نسخه بعدی", Toast.LENGTH_SHORT).show()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("📊 گزارش اقساط")
+            .setMessage(installmentManager.generateReport())
+            .setPositiveButton("بستن", null)
+            .show()
     }
 }

@@ -1,5 +1,6 @@
 package com.persianai.assistant.activities
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -33,9 +34,12 @@ class ChecksManagementActivity : AppCompatActivity() {
     private lateinit var binding: ActivityChecksManagementBinding
     private lateinit var checksAdapter: ChecksAdapter
     private lateinit var checkManager: CheckManager
+    private val allChecks = mutableListOf<CheckManager.Check>()
     private val checks = mutableListOf<CheckManager.Check>()
     
-    private var filterType: CheckFilterType = CheckFilterType.ALL
+    private var statusFilter: CheckFilterType? = null
+    private var showPayable = false
+    private var showReceivable = false
     
     enum class CheckFilterType {
         ALL,           // همه
@@ -85,6 +89,26 @@ class ChecksManagementActivity : AppCompatActivity() {
         binding.fabAddCheck.setOnClickListener {
             showAddCheckDialog()
         }
+
+        binding.chipPayable.setOnClickListener {
+            showPayable = binding.chipPayable.isChecked
+            applyFilter()
+        }
+
+        binding.chipReceivable.setOnClickListener {
+            showReceivable = binding.chipReceivable.isChecked
+            applyFilter()
+        }
+
+        binding.statusChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            statusFilter = when {
+                checkedIds.contains(R.id.chipPending) -> CheckFilterType.PENDING
+                checkedIds.contains(R.id.chipPassed) -> CheckFilterType.CASHED
+                checkedIds.contains(R.id.chipReturned) -> CheckFilterType.BOUNCED
+                else -> null
+            }
+            applyFilter()
+        }
     }
     
     private fun loadChecks() {
@@ -92,20 +116,13 @@ class ChecksManagementActivity : AppCompatActivity() {
             try {
                 binding.progressBar.visibility = View.VISIBLE
                 
-                val allChecks = checkManager.getAllChecks()
+                allChecks.clear()
+                allChecks.addAll(checkManager.getAllChecks())
                 
-                checks.clear()
-                checks.addAll(allChecks)
-                
-                applyFilter(filterType)
+                applyFilter()
                 
                 binding.progressBar.visibility = View.GONE
-                
-                if (checks.isEmpty()) {
-                    binding.checksRecyclerView.visibility = View.GONE
-                } else {
-                    binding.checksRecyclerView.visibility = View.VISIBLE
-                }
+                updateEmptyState()
                 
                 updateStats()
                 
@@ -120,17 +137,76 @@ class ChecksManagementActivity : AppCompatActivity() {
         }
     }
     
-    private fun applyFilter(type: CheckFilterType) {
-        filterType = type
+    private fun applyFilter() {
+        var filtered = allChecks.asSequence()
+
+        if (showPayable || showReceivable) {
+            filtered = filtered.filter { check ->
+                val isPayable = check.issuer.isNotBlank()
+                val isReceivable = check.recipient.isNotBlank() && check.issuer.isBlank()
+                (showPayable && isPayable) || (showReceivable && isReceivable)
+            }
+        }
+
+        filtered = when (statusFilter) {
+            CheckFilterType.PENDING -> filtered.filter { it.status == CheckManager.CheckStatus.PENDING }
+            CheckFilterType.CASHED -> filtered.filter { it.status == CheckManager.CheckStatus.PAID }
+            CheckFilterType.BOUNCED -> filtered.filter { it.status == CheckManager.CheckStatus.BOUNCED }
+            CheckFilterType.UPCOMING -> filtered.filter {
+                it.status == CheckManager.CheckStatus.PENDING &&
+                    it.dueDate <= System.currentTimeMillis() + (7 * 24 * 60 * 60 * 1000L)
+            }
+            else -> filtered
+        }
+
+        checks.clear()
+        checks.addAll(filtered.sortedBy { it.dueDate })
         checksAdapter.notifyDataSetChanged()
+        updateEmptyState()
+    }
+
+    private fun updateEmptyState() {
+        if (checks.isEmpty()) {
+            binding.checksRecyclerView.visibility = View.GONE
+            binding.emptyView.visibility = View.VISIBLE
+            binding.emptyView.text = if (allChecks.isEmpty()) {
+                "📭 هیچ چکی ثبت نشده است\n\nبرای افزودن چک جدید، دکمه + را بزنید"
+            } else {
+                "🔍 چکی با این فیلتر یافت نشد"
+            }
+        } else {
+            binding.checksRecyclerView.visibility = View.VISIBLE
+            binding.emptyView.visibility = View.GONE
+        }
     }
     
     private fun updateStats() {
         lifecycleScope.launch {
             try {
+                if (allChecks.isEmpty()) {
+                    binding.statsCard.visibility = View.GONE
+                    binding.statsText.text = ""
+                    return@launch
+                }
+
                 binding.statsCard.visibility = View.VISIBLE
+                val pending = allChecks.filter { it.status == CheckManager.CheckStatus.PENDING }
+                val pendingAmount = pending.sumOf { it.amount }
+                val paidAmount = allChecks.filter { it.status == CheckManager.CheckStatus.PAID }.sumOf { it.amount }
+                val bouncedCount = allChecks.count { it.status == CheckManager.CheckStatus.BOUNCED }
+                val upcomingCount = pending.count {
+                    it.dueDate <= System.currentTimeMillis() + (7 * 24 * 60 * 60 * 1000L)
+                }
+
+                binding.statsText.text = buildString {
+                    appendLine("تعداد کل: ${allChecks.size}")
+                    appendLine("در انتظار: ${pending.size} (${formatAmount(pendingAmount)})")
+                    appendLine("پرداخت شده: ${formatAmount(paidAmount)}")
+                    if (bouncedCount > 0) appendLine("برگشتی: $bouncedCount")
+                    if (upcomingCount > 0) appendLine("سررسید ۷ روز آینده: $upcomingCount")
+                }
             } catch (e: Exception) {
-                // Stats not available
+                binding.statsCard.visibility = View.GONE
             }
         }
     }
@@ -292,14 +368,42 @@ class ChecksManagementActivity : AppCompatActivity() {
             appendLine("وضعیت: $statusText")
         }
         
-        MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle("جزئیات چک")
             .setMessage(details)
-            .setPositiveButton("بستن", null)
-            .setNegativeButton("حذف") { _, _ ->
-                deleteCheck(check)
+
+        when (check.status) {
+            CheckManager.CheckStatus.PENDING -> {
+                dialog
+                    .setPositiveButton("✅ پرداخت شد") { _, _ ->
+                        checkManager.updateCheckStatus(check.id, CheckManager.CheckStatus.PAID)
+                        Toast.makeText(this, "✅ چک پرداخت شد و به هزینه‌ها اضافه شد", Toast.LENGTH_SHORT).show()
+                        loadChecks()
+                    }
+                    .setNeutralButton("❌ برگشتی") { _, _ ->
+                        checkManager.updateCheckStatus(check.id, CheckManager.CheckStatus.BOUNCED)
+                        Toast.makeText(this, "❌ چک برگشتی ثبت شد", Toast.LENGTH_SHORT).show()
+                        loadChecks()
+                    }
+                    .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
             }
-            .show()
+            CheckManager.CheckStatus.PAID -> {
+                dialog
+                    .setPositiveButton("↩️ برگشت به انتظار") { _, _ ->
+                        checkManager.updateCheckStatus(check.id, CheckManager.CheckStatus.PENDING)
+                        Toast.makeText(this, "⏳ وضعیت چک به «در انتظار» برگشت", Toast.LENGTH_SHORT).show()
+                        loadChecks()
+                    }
+                    .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
+            }
+            else -> {
+                dialog
+                    .setPositiveButton("بستن", null)
+                    .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
+            }
+        }
+
+        dialog.show()
     }
     
     private fun deleteCheck(check: CheckManager.Check) {
@@ -337,7 +441,8 @@ class ChecksManagementActivity : AppCompatActivity() {
     }
     
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        return super.onCreateOptionsMenu(menu)
+        menuInflater.inflate(R.menu.checks_menu, menu)
+        return true
     }
     
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -346,7 +451,21 @@ class ChecksManagementActivity : AppCompatActivity() {
                 finish()
                 true
             }
+            R.id.action_export -> {
+                exportChecks()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun exportChecks() {
+        val csv = checkManager.exportToCSV()
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_SUBJECT, "گزارش چک‌های Maliar")
+            putExtra(Intent.EXTRA_TEXT, csv)
+        }
+        startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری گزارش چک‌ها"))
     }
 }

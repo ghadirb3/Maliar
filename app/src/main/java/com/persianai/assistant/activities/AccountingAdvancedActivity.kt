@@ -2,10 +2,24 @@ package com.persianai.assistant.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.persianai.assistant.R
 import com.persianai.assistant.databinding.ActivityAccountingAdvancedBinding
+import com.persianai.assistant.finance.CheckManager
+import com.persianai.assistant.finance.FinanceManager
+import com.persianai.assistant.finance.InstallmentManager
+import com.persianai.assistant.utils.PersianDateConverter
+import java.util.Calendar
 
 class AccountingAdvancedActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_SHOW_ADD = "show_add"
+    }
 
     private lateinit var binding: ActivityAccountingAdvancedBinding
 
@@ -27,11 +41,11 @@ class AccountingAdvancedActivity : AppCompatActivity() {
         }
 
         binding.btnChecks.setOnClickListener {
-            startActivity(Intent(this, CheckListActivity::class.java))
+            startActivity(Intent(this, ChecksManagementActivity::class.java))
         }
 
         binding.btnInstallments.setOnClickListener {
-            startActivity(Intent(this, InstallmentListActivity::class.java))
+            startActivity(Intent(this, InstallmentsManagementActivity::class.java))
         }
 
         binding.chatFab.setOnClickListener {
@@ -55,11 +69,11 @@ class AccountingAdvancedActivity : AppCompatActivity() {
         }
         
         binding.btnAddCheckManual.setOnClickListener {
-            showManualInputDialog("چک", "check")
+            showAddCheckDialog()
         }
         
         binding.btnAddInstallmentManual.setOnClickListener {
-            showManualInputDialog("قسط", "installment")
+            showAddInstallmentDialog()
         }
         
         updateStats()
@@ -71,11 +85,10 @@ class AccountingAdvancedActivity : AppCompatActivity() {
     }
     
     private fun updateStats() {
-        val financeManager = com.persianai.assistant.finance.FinanceManager(this)
-        val checkManager = com.persianai.assistant.finance.CheckManager(this)
-        val installmentManager = com.persianai.assistant.finance.InstallmentManager(this)
+        val financeManager = FinanceManager(this)
+        val checkManager = CheckManager(this)
+        val installmentManager = InstallmentManager(this)
         
-        // درآمد و هزینه
         val transactions = financeManager.getAllTransactions()
         var totalIncome = 0.0
         var totalExpense = 0.0
@@ -84,70 +97,29 @@ class AccountingAdvancedActivity : AppCompatActivity() {
             else if (transaction.type == "expense") totalExpense += transaction.amount
         }
         
-        // چک‌ها
-        val checks = checkManager.getAllChecks()
-        var totalChecks = 0.0
-        for (check in checks) {
-            totalChecks += check.amount
-        }
+        val pendingChecks = checkManager.getTotalPendingAmount()
+        val remainingInstallments = installmentManager.getTotalRemainingAmount()
         
-        // اقساط
-        val installments = installmentManager.getAllInstallments()
-        var totalInstallments = 0.0
-        for (installment in installments) {
-            totalInstallments += installment.totalAmount
-        }
-        
-        // نمایش در UI
         binding.incomeAmount.text = "💰 ${String.format("%,.0f", totalIncome)} تومان"
         binding.expenseAmount.text = "💸 ${String.format("%,.0f", totalExpense)} تومان"
-        binding.checksAmount.text = "📋 ${String.format("%,.0f", totalChecks)} تومان"
-        binding.installmentsAmount.text = "💳 ${String.format("%,.0f", totalInstallments)} تومان"
+        binding.checksAmount.text = "📋 ${String.format("%,.0f", pendingChecks)} تومان (در انتظار)"
+        binding.installmentsAmount.text = "💳 ${String.format("%,.0f", remainingInstallments)} تومان (باقیمانده)"
     }
     
     private fun showMonthlyBalance() {
-        val financeManager = com.persianai.assistant.finance.FinanceManager(this)
-        val transactions = financeManager.getAllTransactions()
-        val currentMonth = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH)
-        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        
-        var income = 0.0
-        var expense = 0.0
-        
-        for (transaction in transactions) {
-            val cal = java.util.Calendar.getInstance()
-            cal.timeInMillis = transaction.date
-            if (cal.get(java.util.Calendar.MONTH) == currentMonth && cal.get(java.util.Calendar.YEAR) == currentYear) {
-                if (transaction.type == "income") income += transaction.amount
-                else if (transaction.type == "expense") expense += transaction.amount
-            }
-        }
-        
-        val balance = income - expense
-        val message = "📅 تراز ماهانه:\n💰 درآمد: ${String.format("%,.0f", income)} تومان\n💸 هزینه: ${String.format("%,.0f", expense)} تومان\n📊 تراز: ${String.format("%,.0f", balance)} تومان"
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
+        val financeManager = FinanceManager(this)
+        val calendar = Calendar.getInstance()
+        val message = financeManager.getMonthlyBalanceReport(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH) + 1
+        )
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
     
     private fun showYearlyBalance() {
-        val financeManager = com.persianai.assistant.finance.FinanceManager(this)
-        val transactions = financeManager.getAllTransactions()
-        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        
-        var income = 0.0
-        var expense = 0.0
-        
-        for (transaction in transactions) {
-            val cal = java.util.Calendar.getInstance()
-            cal.timeInMillis = transaction.date
-            if (cal.get(java.util.Calendar.YEAR) == currentYear) {
-                if (transaction.type == "income") income += transaction.amount
-                else if (transaction.type == "expense") expense += transaction.amount
-            }
-        }
-        
-        val balance = income - expense
-        val message = "📊 تراز سالانه:\n💰 درآمد: ${String.format("%,.0f", income)} تومان\n💸 هزینه: ${String.format("%,.0f", expense)} تومان\n📊 تراز: ${String.format("%,.0f", balance)} تومان"
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
+        val financeManager = FinanceManager(this)
+        val message = financeManager.getYearlyBalanceReport(Calendar.getInstance().get(Calendar.YEAR))
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
     
     private fun showManualInputDialog(type: String, action: String) {
@@ -162,21 +134,141 @@ class AccountingAdvancedActivity : AppCompatActivity() {
         builder.setPositiveButton("ثبت") { _, _ ->
             val amount = input.text.toString().toDoubleOrNull() ?: 0.0
             if (amount > 0) {
-                val financeManager = com.persianai.assistant.finance.FinanceManager(this)
+                val financeManager = FinanceManager(this)
                 when (action) {
                     "income" -> {
                         financeManager.addTransaction(amount, "income", "درآمد", "ورود دستی")
-                        android.widget.Toast.makeText(this, "✅ درآمد ثبت شد", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "✅ درآمد ثبت شد", Toast.LENGTH_SHORT).show()
                     }
                     "expense" -> {
                         financeManager.addTransaction(amount, "expense", "هزینه", "ورود دستی")
-                        android.widget.Toast.makeText(this, "✅ هزینه ثبت شد", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "✅ هزینه ثبت شد", Toast.LENGTH_SHORT).show()
                     }
                 }
+                updateStats()
             }
         }
         builder.setNegativeButton("لغو", null)
         builder.show()
+    }
+
+    private fun showAddCheckDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_check, null)
+        val amountInput = dialogView.findViewById<TextInputEditText>(R.id.amountInput)
+        val checkNumberInput = dialogView.findViewById<TextInputEditText>(R.id.checkNumberInput)
+        val recipientInput = dialogView.findViewById<TextInputEditText>(R.id.recipientInput)
+        val bankNameInput = dialogView.findViewById<TextInputEditText>(R.id.bankNameInput)
+        val dueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
+
+        var selectedDueDate = System.currentTimeMillis()
+        dueDateButton.setOnClickListener {
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("تاریخ سررسید چک")
+                .setSelection(selectedDueDate)
+                .build()
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                selectedDueDate = selection
+                val calendar = Calendar.getInstance().apply { timeInMillis = selection }
+                val persianDate = PersianDateConverter.gregorianToPersian(
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH) + 1,
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                )
+                dueDateButton.text = persianDate.toReadableString()
+            }
+            datePicker.show(supportFragmentManager, "CHECK_DUE_DATE")
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("📋 ثبت چک جدید")
+            .setView(dialogView)
+            .setPositiveButton("ثبت") { _, _ ->
+                val amount = amountInput.text.toString().toDoubleOrNull() ?: 0.0
+                if (amount <= 0) {
+                    Toast.makeText(this, "⚠️ مبلغ را وارد کنید", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                val checkManager = CheckManager(this)
+                checkManager.addCheck(
+                    checkNumber = checkNumberInput.text.toString().ifBlank { System.currentTimeMillis().toString() },
+                    amount = amount,
+                    issuer = "من",
+                    recipient = recipientInput.text.toString().ifBlank { "نامشخص" },
+                    issueDate = System.currentTimeMillis(),
+                    dueDate = selectedDueDate,
+                    bankName = bankNameInput.text.toString(),
+                    accountNumber = "",
+                    description = "ثبت دستی از حسابداری"
+                )
+                Toast.makeText(this, "✅ چک ثبت شد", Toast.LENGTH_SHORT).show()
+                updateStats()
+            }
+            .setNegativeButton("لغو", null)
+            .show()
+    }
+
+    private fun showAddInstallmentDialog() {
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 16)
+        }
+
+        val titleInput = android.widget.EditText(this).apply { hint = "عنوان (مثلاً وام خودرو)" }
+        val totalInput = android.widget.EditText(this).apply {
+            hint = "مبلغ کل"
+            inputType = android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        }
+        val monthlyInput = android.widget.EditText(this).apply {
+            hint = "مبلغ هر قسط"
+            inputType = android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+        }
+        val countInput = android.widget.EditText(this).apply {
+            hint = "تعداد اقساط"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        val dayInput = android.widget.EditText(this).apply {
+            hint = "روز پرداخت ماه (۱ تا ۳۱)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+
+        container.addView(titleInput)
+        container.addView(totalInput)
+        container.addView(monthlyInput)
+        container.addView(countInput)
+        container.addView(dayInput)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("💳 ثبت قسط جدید")
+            .setView(container)
+            .setPositiveButton("ثبت") { _, _ ->
+                val title = titleInput.text.toString().ifBlank { "قسط" }
+                val totalAmount = totalInput.text.toString().toDoubleOrNull() ?: 0.0
+                val monthlyAmount = monthlyInput.text.toString().toDoubleOrNull() ?: 0.0
+                val totalInstallments = countInput.text.toString().toIntOrNull() ?: 0
+                val paymentDay = dayInput.text.toString().toIntOrNull()?.coerceIn(1, 31) ?: 1
+
+                if (totalAmount <= 0 || monthlyAmount <= 0 || totalInstallments <= 0) {
+                    Toast.makeText(this, "⚠️ اطلاعات را کامل وارد کنید", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                InstallmentManager(this).addInstallment(
+                    title = title,
+                    totalAmount = totalAmount,
+                    installmentAmount = monthlyAmount,
+                    totalInstallments = totalInstallments,
+                    startDate = System.currentTimeMillis(),
+                    paymentDay = paymentDay,
+                    recipient = "",
+                    description = "ثبت دستی از حسابداری"
+                )
+                Toast.makeText(this, "✅ قسط ثبت شد", Toast.LENGTH_SHORT).show()
+                updateStats()
+            }
+            .setNegativeButton("لغو", null)
+            .show()
     }
 
     override fun onSupportNavigateUp(): Boolean {

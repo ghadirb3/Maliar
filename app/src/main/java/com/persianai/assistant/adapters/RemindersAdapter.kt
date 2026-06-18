@@ -51,9 +51,24 @@ class RemindersAdapter(
             }
             typeIconText.text = typeIcon
             
-            // Alert type indicator (notification vs full-screen)
+            // Alert type indicator (notification vs full-screen vs smart)
             val isFullScreen = reminder.alertType == SmartReminderManager.AlertType.FULL_SCREEN ||
                     reminder.tags.any { it.startsWith("use_alarm:true") }
+            val isSmart = reminder.alertType == SmartReminderManager.AlertType.SMART ||
+                    reminder.tags.any { it.startsWith("smart:true") }
+            
+            // نشانگر نوع هشدار
+            try {
+                val alertBadge = itemView.findViewById<android.widget.TextView?>(R.id.alertTypeText)
+                if (alertBadge != null) {
+                    alertBadge.text = when {
+                        isSmart -> "🧠 هوشمند"
+                        isFullScreen -> "🔔 تمام‌صفحه"
+                        else -> "📱 نوتیفیکیشن"
+                    }
+                    alertBadge.visibility = android.view.View.VISIBLE
+                }
+            } catch (_: Exception) {}
             alertTypeText.text = if (isFullScreen) {
                 "🔔 تمام‌صفحه"
             } else {

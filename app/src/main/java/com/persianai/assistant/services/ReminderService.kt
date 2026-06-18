@@ -145,9 +145,10 @@ class ReminderService : Service() {
             
             // بررسی نوع آلارم
             val useFullScreen = reminder.alertType == SmartReminderManager.AlertType.FULL_SCREEN ||
+                               reminder.alertType == SmartReminderManager.AlertType.SMART ||
                                reminder.tags.any { it.startsWith("use_alarm:true") }
             
-            Log.d(TAG, "🔔 Triggering with useFullScreen=$useFullScreen")
+            Log.d(TAG, "🔔 Triggering with useFullScreen=$useFullScreen, alertType=${reminder.alertType}")
             
             if (useFullScreen) {
                 showFullScreenAlarm(reminder)
