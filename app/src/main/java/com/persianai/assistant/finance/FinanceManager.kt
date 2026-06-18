@@ -12,6 +12,10 @@ import java.util.*
 
 /**
  * سیستم حسابداری ساده - یکپارچه با AccountingDB
+ * 
+ * توجه: تنها منبع حقیقت (source of truth) دیتابیس SQLite است.
+ * SharedPreferences فقط برای سازگاری با نسخه‌های قدیمی (Legacy) نگه داشته شده
+ * و هنگام خواندن تراکنش‌ها اولویت با دیتابیس است و SharedPreferences مکمل.
  */
 class FinanceManager(private val context: Context) {
     
@@ -40,15 +44,9 @@ class FinanceManager(private val context: Context) {
     private val prefs = context.getSharedPreferences("finance", Context.MODE_PRIVATE)
     
     fun addTransaction(amount: Double, type: String, category: String, desc: String): String {
-        val id = UUID.randomUUID().toString()
-        val transaction = Transaction(id, amount, type, category, desc, System.currentTimeMillis())
-        
-        // ذخیره در SharedPreferences
-        val transactions = getAllTransactions().toMutableList()
-        transactions.add(transaction)
-        saveTransactions(transactions)
-        
-        // ذخیره همزمان در AccountingDB برای نمایش در لیست‌ها
+        val now = System.currentTimeMillis()
+        var finalId: String = UUID.randomUUID().toString()
+
         try {
             if (type == "income" || type == "expense") {
                 val dbType = if (type == "income") TransactionType.INCOME else TransactionType.EXPENSE
@@ -57,27 +55,43 @@ class FinanceManager(private val context: Context) {
                     amount = amount,
                     category = category,
                     description = desc,
-                    date = transaction.date
+                    date = now
                 )
-                accountingDB.addTransaction(dbTransaction)
+                val dbId = accountingDB.addTransaction(dbTransaction)
+                if (dbId > 0) {
+                    finalId = dbId.toString()
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("FinanceManager", "خطا در ذخیره در AccountingDB", e)
         }
-        
-        return id
+
+        // ساخت شیٔ نهایی تراکنش با شناسهٔ نهایی (db id یا uuid)
+        val transaction = Transaction(finalId, amount, type, category, desc, now)
+
+        // ذخیره در SharedPreferences (برای سازگاری و تاریخچه)
+        // فقط تراکنش‌های قدیمی را نگه می‌داریم که در دیتابیس نیستند
+        val existingPrefs = getLegacyPrefsTransactions()
+        // اگر قبلاً تراکنشی با همان id وجود داشته باشد آن را حذف می‌کنیم
+        val filtered = existingPrefs.filter { it.id != transaction.id }.toMutableList()
+        filtered.add(transaction)
+        saveTransactions(filtered)
+
+        return finalId
     }
     
-    fun getAllTransactions(): List<Transaction> {
-        // First try from SharedPreferences (legacy)
+    /**
+     * خواندن فقط از SharedPreferences (برای مهاجرت)
+     */
+    private fun getLegacyPrefsTransactions(): List<Transaction> {
         val json = prefs.getString("transactions", "[]") ?: "[]"
         val array = JSONArray(json)
-        val prefsList = mutableListOf<Transaction>()
+        val list = mutableListOf<Transaction>()
         
         for (i in 0 until array.length()) {
             try {
                 val obj = array.getJSONObject(i)
-                prefsList.add(Transaction(
+                list.add(Transaction(
                     obj.getString("id"),
                     obj.getDouble("amount"),
                     obj.getString("type"),
@@ -87,8 +101,11 @@ class FinanceManager(private val context: Context) {
                 ))
             } catch (_: Exception) {}
         }
-        
-        // Also read from AccountingDB (newer source)
+        return list
+    }
+    
+    fun getAllTransactions(): List<Transaction> {
+        // منبع اصلی: AccountingDB (جدیدترین و معتبرترین منبع)
         val dbList = try {
             accountingDB.getAllTransactions().map { dbTx ->
                 Transaction(
@@ -100,12 +117,17 @@ class FinanceManager(private val context: Context) {
                     date = dbTx.date
                 )
             }
-        } catch (_: Exception) { emptyList() }
+        } catch (_: Exception) { emptyList<Transaction>() }
         
-        // Merge both sources, deduplicate by ID
-        val seenIds = mutableSetOf<String>()
-        val allTransactions = (prefsList + dbList)
-            .filter { seenIds.add(it.id) }
+        // منبع ثانویه: SharedPreferences (برای تراکنش‌های قدیمی که در دیتابیس نیستند)
+        val prefsList = getLegacyPrefsTransactions()
+        
+        // ادغام: تراکنش‌های دیتابیس اولویت دارند
+        // تراکنش‌های SharedPreferences که ID آن‌ها در دیتابیس نیست اضافه می‌شوند
+        val dbIds = dbList.map { it.id }.toSet()
+        val onlyInPrefs = prefsList.filter { it.id !in dbIds }
+        
+        val allTransactions = (dbList + onlyInPrefs)
             .sortedByDescending { it.date }
         
         return allTransactions
@@ -293,14 +315,16 @@ class FinanceManager(private val context: Context) {
     }
     
     fun deleteTransaction(id: String) {
-        val transactions = getAllTransactions().filter { it.id != id }
-        saveTransactions(transactions)
-        // Also delete from AccountingDB
+        // حذف از دیتابیس
         try {
             val dbId = id.toLongOrNull()
             if (dbId != null) {
                 accountingDB.deleteTransaction(dbId)
             }
         } catch (_: Exception) {}
+        
+        // حذف از SharedPreferences
+        val prefsTransactions = getLegacyPrefsTransactions().filter { it.id != id }
+        saveTransactions(prefsTransactions)
     }
 }

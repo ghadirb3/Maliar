@@ -29,6 +29,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.GestureDetectorCompat
 import com.persianai.assistant.R
 import com.persianai.assistant.utils.SmartReminderManager
+import com.persianai.assistant.utils.TTSHelper
 import kotlin.math.abs
 
 /**
@@ -49,6 +50,8 @@ class FullScreenAlarmActivity : Activity() {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var smartReminderId: String? = null
+    private var isSmartReminder: Boolean = false
+    private var ttsHelper: TTSHelper? = null
     private val TAG = "FullScreenAlarm"
     
     private lateinit var rootLayout: FrameLayout
@@ -84,10 +87,24 @@ class FullScreenAlarmActivity : Activity() {
             setupWindow()
             setContentView(R.layout.activity_full_screen_alarm)
             
+            // بررسی آیا یادآوری هوشمند است (دارای برچسب smart:true)
+            val tags = intent.getStringArrayListExtra("tags") ?: arrayListOf()
+            isSmartReminder = tags.contains("smart:true") || 
+                            intent.getBooleanExtra("is_smart_reminder", false)
+            
+            Log.d(TAG, "🧠 isSmartReminder=$isSmartReminder")
+            
             initializeViews()
             setupGestureDetector()
             setupUI()
-            startAlarmEffects()
+            
+            // برای یادآوری هوشمند: ابتدا TTS پخش شود، سپس آلارم
+            if (isSmartReminder) {
+                startSmartReminderTTS()
+            } else {
+                startAlarmEffects()
+            }
+            
             showSwipeHints()
             
             Log.d(TAG, "✅ onCreate completed successfully")
@@ -485,6 +502,61 @@ class FullScreenAlarmActivity : Activity() {
         }
     }
     
+    /**
+     * پخش یادآوری هوشمند با TTS (متن به گفتار)
+     * برای یادآوری‌هایی که با هوش مصنوعی تولید شده‌اند
+     * اولویت: GapGPT (آنلاین) → Android TTS (آفلاین)
+     */
+    private fun startSmartReminderTTS() {
+        try {
+            Log.d(TAG, "🔊 Starting smart reminder TTS")
+            val title = intent.getStringExtra("title") ?: "⏰ یادآوری"
+            val description = intent.getStringExtra("description") ?: ""
+            
+            // متن کامل برای پخش
+            val ttsText = buildString {
+                append(title)
+                if (description.isNotBlank()) {
+                    append(". ")
+                    append(description)
+                }
+            }
+            
+            // تنظیم volume به حداکثر
+            try {
+                val audioManager = getSystemService(AUDIO_SERVICE) as? AudioManager
+                audioManager?.setStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+                    AudioManager.FLAG_SHOW_UI
+                )
+            } catch (_: Exception) {}
+            
+            // TTS با صدای بلند - ابتدا GapGPT آنلاین، سپس Android TTS
+            ttsHelper = TTSHelper(this)
+            ttsHelper?.initialize {
+                // TTS آماده شد - پخش صدا
+                Log.d(TAG, "✅ TTS initialized, speaking: $ttsText")
+                ttsHelper?.speak(ttsText)
+            }
+            
+            // اگر TTS آماده نشد (مثلاً timeout)، بعد از 3 ثانیه آلارم معمولی پخش شود
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (!isActionTaken) {
+                    Log.d(TAG, "⏰ TTS timeout or done, starting alarm effects")
+                    startAlarmSound()
+                    startVibration()
+                }
+            }, 8000)
+            
+            Log.d(TAG, "✅ Smart reminder TTS initiated: $ttsText")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error starting smart reminder TTS", e)
+            startAlarmEffects()
+        }
+    }
+
     private fun startAlarmEffects() {
         startAlarmSound()
         startVibration()
@@ -652,6 +724,10 @@ class FullScreenAlarmActivity : Activity() {
         Log.d(TAG, "🔚 onDestroy")
         cancelAlarmNotification()
         stopAlarm()
+        // پاکسازی TTS
+        try {
+            ttsHelper?.shutdown()
+        } catch (_: Exception) {}
     }
     
     override fun onBackPressed() {

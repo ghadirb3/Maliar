@@ -12,8 +12,10 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.persianai.assistant.R
 import com.persianai.assistant.activities.DashboardActivity
+import com.persianai.assistant.activities.FullScreenAlarmActivity
 import com.persianai.assistant.utils.SmartReminderManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -178,18 +180,71 @@ class ReminderService : Service() {
 
     private fun showFullScreenAlarm(reminder: SmartReminderManager.SmartReminder) {
         try {
-            val intent = Intent(this, com.persianai.assistant.activities.FullScreenAlarmActivity::class.java).apply {
+            Log.d(TAG, "🎬 Showing full-screen alarm: ${reminder.title}")
+            
+            // روش اصلی: استفاده از fullScreenIntent نوتیفیکیشن
+            // این روش روی Android 10+ کار می‌کند و مستقیماً Activity را باز می‌کند
+            // تشخیص یادآوری هوشمند (دارای برچسب smart:true)
+            val isSmart = reminder.tags.any { it.startsWith("smart:true") }
+            
+            val fullIntent = Intent(this, FullScreenAlarmActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                         Intent.FLAG_ACTIVITY_CLEAR_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_FROM_BACKGROUND
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("title", reminder.title)
                 putExtra("description", reminder.description)
                 putExtra("smart_reminder_id", reminder.id)
+                putExtra("is_smart_reminder", isSmart)
+                putStringArrayListExtra("tags", ArrayList(reminder.tags))
             }
             
-            Log.d(TAG, "🎬 Starting full-screen activity: ${reminder.title}")
-            startActivity(intent)
+            val fullPi = PendingIntent.getActivity(
+                this,
+                reminder.id.hashCode() + 1000,
+                fullIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            // ساختن نوتیفیکیشن با fullScreenIntent که مستقیماً Activity را باز می‌کند
+            val channelId = "reminder_fullscreen_${reminder.id.hashCode()}"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    channelId,
+                    "یادآوری تمام‌صفحه",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "یادآوری‌های فوری تمام‌صفحه"
+                    enableVibration(true)
+                    setShowBadge(true)
+                    lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                }
+                val nm = getSystemService(NotificationManager::class.java)
+                nm.createNotificationChannel(channel)
+            }
+            
+            val fullScreenNotification = NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("⏰ " + reminder.title)
+                .setContentText(reminder.description)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setFullScreenIntent(fullPi, true)
+                .setOngoing(true)
+                .setAutoCancel(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .build()
+            
+            // با نوتیفیکیشن مخصوص fullScreenIntent، Activity بلافاصله باز می‌شود
+            NotificationManagerCompat.from(this).notify(reminder.id.hashCode() + 2000, fullScreenNotification)
+            
+            // همچنین روش مستقیم startActivity برای backward compatibility
+            try {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    startActivity(fullIntent)
+                }
+            } catch (_: Exception) {}
+            
+            Log.d(TAG, "✅ Full-screen alarm triggered via notification fullScreenIntent")
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error showing full-screen alarm", e)
