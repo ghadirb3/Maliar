@@ -275,8 +275,123 @@ class ProfessionalAccountingActivity : AppCompatActivity() {
     }
     
     private fun showCheckDialog(check: Check) {
-        // نمایش جزئیات چک
-        Toast.makeText(this, "جزئیات چک: ${check.checkNumber}", Toast.LENGTH_SHORT).show()
+        // نمایش و امکان ویرایش چک
+        val view = layoutInflater.inflate(R.layout.dialog_add_check, null)
+        val checkNumberInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.checkNumberInput)
+        val amountInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.amountInput)
+        val issuerInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.issuerInput)
+        val recipientInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.recipientInput)
+        val issueDateButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.issueDateButton)
+        val dueDateButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
+        val bankNameInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.bankNameInput)
+        val accountNumberInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.accountNumberInput)
+        val descriptionInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.descriptionInput)
+        val receivedCheckbox = view.findViewById<android.widget.CheckBox>(R.id.receivedCheckbox)
+
+        // پیش‌پر کردن مقادیر
+        checkNumberInput.setText(check.checkNumber)
+        amountInput.setText(check.amount.toString())
+        recipientInput.setText(check.recipient)
+        bankNameInput.setText(check.bankName ?: "")
+        descriptionInput.setText(check.description ?: "")
+
+        var issueDateMillis = check.issueDate?.time ?: System.currentTimeMillis()
+        var dueDateMillis = check.dueDate?.time ?: System.currentTimeMillis()
+
+        val setIssueText: (Long) -> Unit = { ms ->
+            val c = java.util.Calendar.getInstance(); c.timeInMillis = ms
+            val p = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH))
+            issueDateButton.text = "📅 صدور: ${p.toReadableString()}"
+        }
+        val setDueText: (Long) -> Unit = { ms ->
+            val c = java.util.Calendar.getInstance(); c.timeInMillis = ms
+            val p = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH))
+            dueDateButton.text = "📅 سررسید: ${p.toReadableString()}"
+        }
+
+        setIssueText(issueDateMillis)
+        setDueText(dueDateMillis)
+
+        issueDateButton.setOnClickListener {
+            val cal = java.util.Calendar.getInstance()
+            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
+                val c = java.util.Calendar.getInstance(); c.set(y, m, d, 0, 0, 0)
+                issueDateMillis = c.timeInMillis
+                setIssueText(issueDateMillis)
+            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
+            dp.show()
+        }
+
+        dueDateButton.setOnClickListener {
+            val cal = java.util.Calendar.getInstance()
+            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
+                val c = java.util.Calendar.getInstance(); c.set(y, m, d, 0, 0, 0)
+                dueDateMillis = c.timeInMillis
+                setDueText(dueDateMillis)
+            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
+            dp.show()
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("ویرایش چک")
+            .setView(view)
+            .setPositiveButton("ذخیره") { _, _ ->
+                val newNumber = checkNumberInput.text.toString()
+                val newAmount = amountInput.text.toString().toDoubleOrNull() ?: check.amount
+                val newRecipient = recipientInput.text.toString()
+                val newBank = bankNameInput.text.toString()
+                val newDesc = descriptionInput.text.toString()
+
+                lifecycleScope.launch {
+                    try {
+                        // Update DB model via AccountingManager
+                        val accMgr = accountingManager
+                        val dbChecks = accMgr.getAllChecks().toMutableList()
+                        val dbCheck = dbChecks.firstOrNull { it.checkNumber == check.checkNumber }
+                        if (dbCheck != null) {
+                            val updated = dbCheck.copy(
+                                amount = newAmount,
+                                checkNumber = newNumber,
+                                recipient = newRecipient,
+                                dueDate = java.util.Date(dueDateMillis),
+                                description = newDesc,
+                                issueDate = java.util.Date(issueDateMillis),
+                                bankName = newBank
+                            )
+                            try { accMgr.updateCheck(updated) } catch (e: Exception) { android.util.Log.e("ProfessionalAccounting", "Error updating DB check", e) }
+                        }
+
+                        // Also update CheckManager's stored checks if present
+                        try {
+                            val cm = com.persianai.assistant.finance.CheckManager(this@ProfessionalAccountingActivity)
+                            val localChecks = cm.getAllChecks()
+                            val found = localChecks.firstOrNull { it.checkNumber == check.checkNumber }
+                            if (found != null) {
+                                val updatedLocal = found.copy(
+                                    checkNumber = newNumber,
+                                    amount = newAmount,
+                                    recipient = newRecipient,
+                                    bankName = newBank,
+                                    issueDate = issueDateMillis,
+                                    dueDate = dueDateMillis,
+                                    description = newDesc
+                                )
+                                cm.updateCheck(updatedLocal)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("ProfessionalAccounting", "Could not update local CheckManager store: ${e.message}")
+                        }
+
+                        // reload lists
+                        loadFinancialData()
+                        Toast.makeText(this@ProfessionalAccountingActivity, "✅ چک بروزرسانی شد", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(this@ProfessionalAccountingActivity, "خطا در بروزرسانی: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNegativeButton("انصراف", null)
+            .show()
     }
     
     private fun showInstallmentDialog(installment: Installment) {

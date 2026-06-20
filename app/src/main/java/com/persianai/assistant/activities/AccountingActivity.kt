@@ -188,38 +188,76 @@ class AccountingActivity : AppCompatActivity() {
     }
     
     private fun showCheckDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_add_transaction, null)
-        val amountField = view.findViewById<TextInputEditText>(R.id.amountField)
-        val categoryField = view.findViewById<TextInputEditText>(R.id.categoryField)
-        val descField = view.findViewById<TextInputEditText>(R.id.descriptionField)
-        
-        categoryField.hint = "شماره چک"
-        descField.hint = "توضیحات"
-        
+        val view = layoutInflater.inflate(R.layout.dialog_add_check, null)
+        val checkNumberInput = view.findViewById<TextInputEditText>(R.id.checkNumberInput)
+        val amountInput = view.findViewById<TextInputEditText>(R.id.amountInput)
+        val issuerInput = view.findViewById<TextInputEditText>(R.id.issuerInput)
+        val recipientInput = view.findViewById<TextInputEditText>(R.id.recipientInput)
+        val issueDateButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.issueDateButton)
+        val dueDateButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
+        val bankNameInput = view.findViewById<TextInputEditText>(R.id.bankNameInput)
+        val accountNumberInput = view.findViewById<TextInputEditText>(R.id.accountNumberInput)
+        val descriptionInput = view.findViewById<TextInputEditText>(R.id.descriptionInput)
+        val receivedCheckbox = view.findViewById<android.widget.CheckBox>(R.id.receivedCheckbox)
+
+        var issueDateMillis = System.currentTimeMillis()
+        var dueDateMillis = System.currentTimeMillis()
+
+        issueDateButton.setOnClickListener {
+            val cal = java.util.Calendar.getInstance()
+            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
+                val c = java.util.Calendar.getInstance()
+                c.set(y, m, d, 0, 0, 0)
+                issueDateMillis = c.timeInMillis
+                val persian = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(y, m + 1, d)
+                issueDateButton.text = "📅 صدور: ${persian.toReadableString()}"
+            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
+            dp.show()
+        }
+
+        dueDateButton.setOnClickListener {
+            val cal = java.util.Calendar.getInstance()
+            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
+                val c = java.util.Calendar.getInstance()
+                c.set(y, m, d, 0, 0, 0)
+                dueDateMillis = c.timeInMillis
+                val persian = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(y, m + 1, d)
+                dueDateButton.text = "📅 سررسید: ${persian.toReadableString()}"
+            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
+            dp.show()
+        }
+
         MaterialAlertDialogBuilder(this)
             .setTitle("📝 چک جدید")
             .setView(view)
             .setPositiveButton("ثبت") { _, _ ->
-                val amount = amountField.text.toString().toDoubleOrNull() ?: 0.0
-                val checkNum = categoryField.text.toString()
-                val desc = descField.text.toString()
-                
-                if (amount > 0) {
+                val amount = amountInput.text.toString().toDoubleOrNull() ?: 0.0
+                val checkNum = checkNumberInput.text.toString()
+                val issuer = issuerInput.text.toString()
+                val recipient = recipientInput.text.toString()
+                val bank = bankNameInput.text.toString()
+                val accNum = accountNumberInput.text.toString()
+                val desc = descriptionInput.text.toString()
+                val isReceived = receivedCheckbox.isChecked
+
+                if (amount > 0 && checkNum.isNotBlank()) {
+                    // Save via CheckManager and record a transaction (income/expense)
+                    try {
+                        val cm = com.persianai.assistant.finance.CheckManager(this)
+                        cm.addCheck(checkNum, amount, issuer, recipient, issueDateMillis, dueDateMillis, bank, accNum, desc, isReceived)
+                    } catch (e: Exception) {
+                        android.util.Log.e("AccountingActivity", "Error saving check", e)
+                    }
+
                     lifecycleScope.launch {
-                        val transaction = Transaction(
-                            id = 0,
-                            type = TransactionType.CHECK_OUT,
-                            amount = amount,
-                            category = "چک $checkNum",
-                            description = desc,
-                            date = System.currentTimeMillis(),
-                            checkNumber = checkNum
-                        )
-                        financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
+                        val txType = if (isReceived) "income" else "expense"
+                        financeManager.addTransaction(amount, txType, "چک $checkNum", desc)
                         updateBalance()
                         loadTransactions()
                         Toast.makeText(this@AccountingActivity, "✅ چک ثبت شد", Toast.LENGTH_SHORT).show()
                     }
+                } else {
+                    Toast.makeText(this@AccountingActivity, "لطفاً شماره و مبلغ چک را وارد کنید", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("لغو", null)

@@ -25,7 +25,8 @@ class CheckManager(private val context: Context) {
         val bankName: String,
         val accountNumber: String,
         val description: String,
-        val alertDays: Int = 7
+        val alertDays: Int = 7,
+        val isIncoming: Boolean = false
     ) {
         fun getFormattedDueDate(): String {
             val calendar = Calendar.getInstance()
@@ -61,12 +62,14 @@ class CheckManager(private val context: Context) {
         accountNumber: String,
         description: String,
         alertDays: Int = 7
+    ,    isIncoming: Boolean = false
     ): String {
         val id = UUID.randomUUID().toString()
         val check = Check(
             id, checkNumber, amount, issuer, recipient,
             issueDate, dueDate, CheckStatus.PENDING,
             bankName, accountNumber, description, alertDays
+            , isIncoming
         )
         
         val checks = getAllChecks().toMutableList()
@@ -115,7 +118,8 @@ class CheckManager(private val context: Context) {
                 obj.getString("bankName"),
                 obj.getString("accountNumber"),
                 obj.getString("description"),
-                obj.optInt("alertDays", 7)
+                obj.optInt("alertDays", 7),
+                obj.optBoolean("isIncoming", false)
             ))
         }
         
@@ -149,11 +153,13 @@ class CheckManager(private val context: Context) {
         saveChecks(checks)
 
         if (previous?.status == CheckStatus.PENDING && status == CheckStatus.PAID) {
+            val txType = if (previous.isIncoming) "income" else "expense"
+            val desc = if (previous.isIncoming) "وصول چک ${previous.checkNumber}" else "پرداخت چک ${previous.checkNumber}"
             FinanceManager(context).addTransaction(
                 previous.amount,
-                "expense",
+                txType,
                 "چک",
-                "پرداخت چک ${previous.checkNumber}"
+                desc
             )
         }
         
@@ -228,6 +234,7 @@ class CheckManager(private val context: Context) {
                 put("accountNumber", c.accountNumber)
                 put("description", c.description)
                 put("alertDays", c.alertDays)
+                put("isIncoming", c.isIncoming)
             })
         }
         prefs.edit().putString("checks", array.toString()).apply()
@@ -245,5 +252,46 @@ class CheckManager(private val context: Context) {
 
     fun importChecks(checks: List<Check>) {
         saveChecks(checks)
+    }
+
+    fun updateCheck(updated: Check) {
+        val checks = getAllChecks().toMutableList()
+        val idx = checks.indexOfFirst { it.id == updated.id }
+        if (idx != -1) {
+            checks[idx] = updated
+            saveChecks(checks)
+        }
+
+        // Sync to AccountingDB if possible
+        try {
+            val accChecks = accountingManager.getAllChecks()
+            accChecks.firstOrNull { it.checkNumber == updated.checkNumber }?.let { accCheck ->
+                val modelStatus = when (updated.status) {
+                    CheckStatus.PAID -> com.persianai.assistant.models.CheckStatus.DEPOSITED
+                    CheckStatus.BOUNCED -> com.persianai.assistant.models.CheckStatus.BOUNCED
+                    CheckStatus.CANCELLED -> com.persianai.assistant.models.CheckStatus.CANCELLED
+                    else -> com.persianai.assistant.models.CheckStatus.PENDING
+                }
+
+                val newModel = accCheck.copy(
+                    amount = updated.amount,
+                    checkNumber = updated.checkNumber,
+                    recipient = updated.recipient,
+                    dueDate = java.util.Date(updated.dueDate),
+                    status = modelStatus,
+                    description = updated.description,
+                    issueDate = java.util.Date(updated.issueDate),
+                    bankName = updated.bankName
+                )
+
+                try {
+                    kotlinx.coroutines.runBlocking { accountingManager.updateCheck(newModel) }
+                } catch (e: Exception) {
+                    android.util.Log.e("CheckManager", "Error updating check in AccountingDB", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CheckManager", "Error syncing updated check to AccountingDB", e)
+        }
     }
 }

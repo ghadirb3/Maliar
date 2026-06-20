@@ -502,7 +502,6 @@ class SmartReminderManager(private val context: Context) {
         }
 
         val useAlarm = reminder.alertType == AlertType.FULL_SCREEN ||
-            reminder.alertType == AlertType.SMART ||
             reminder.tags.any { it.startsWith("use_alarm:true") }
         
         val intent = Intent(context, ReminderReceiver::class.java).apply {

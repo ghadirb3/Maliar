@@ -97,15 +97,39 @@ class ReminderReceiver : BroadcastReceiver() {
             Log.d(TAG, "📝 Reminder received: title=$title, alertType=$alertType, id=$reminderId, smart=$isSmartReminder")
 
             val useFullScreen = alertType == "FULL_SCREEN" ||
-                alertType == "SMART" ||
                 useAlarm ||
                 tags.any { it.startsWith("use_alarm:true") }
 
             if (useFullScreen) {
                 showFullScreenAlarm(context, title, description, reminderId, tags, isSmartReminder)
-            } else {
-                showHeadsUpNotification(context, title, description, reminderId)
+                return
             }
+
+            // اگر حالت هوشمند درخواست شده، آن را به ReminderService بسپاریم تا AI+TTS را اجرا کند
+            if (isSmartReminder) {
+                try {
+                    val svcIntent = Intent(context, com.persianai.assistant.services.ReminderService::class.java).apply {
+                        action = "PLAY_SMART_REMINDER"
+                        putExtra("smart_reminder_id", reminderId)
+                        putExtra("reminder_title", title)
+                        putExtra("reminder_description", description)
+                        putStringArrayListExtra("reminder_tags", tags)
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(svcIntent)
+                    } else {
+                        context.startService(svcIntent)
+                    }
+                    Log.d(TAG, "Delegated smart reminder to ReminderService: $title")
+                    return
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to start ReminderService for smart reminder: ${e.message}", e)
+                    // fallback to heads-up
+                }
+            }
+
+            // حالت پیش‌فرض: heads-up notification
+            showHeadsUpNotification(context, title, description, reminderId)
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error handling alarm", e)

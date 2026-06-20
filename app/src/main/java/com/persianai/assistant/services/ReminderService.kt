@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -50,7 +51,33 @@ class ReminderService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand called")
+        Log.d(TAG, "onStartCommand called, action=${intent?.action}")
+
+        try {
+            if (intent?.action == "PLAY_SMART_REMINDER") {
+                val id = intent.getStringExtra("smart_reminder_id") ?: System.currentTimeMillis().toString()
+                val title = intent.getStringExtra("reminder_title") ?: "یادآوری"
+                val description = intent.getStringExtra("reminder_description") ?: ""
+                val tags = intent.getStringArrayListExtra("reminder_tags") ?: arrayListOf<String>()
+
+                // Build a minimal SmartReminder object to pass to smart handler
+                val reminder = SmartReminderManager.SmartReminder(
+                    id = id,
+                    title = title,
+                    description = description,
+                    type = SmartReminderManager.ReminderType.SIMPLE,
+                    priority = SmartReminderManager.Priority.MEDIUM,
+                    alertType = SmartReminderManager.AlertType.SMART,
+                    triggerTime = System.currentTimeMillis(),
+                    tags = tags
+                )
+
+                showSmartReminder(reminder)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling start command action: ${e.message}", e)
+        }
+
         return START_STICKY
     }
 
@@ -144,20 +171,67 @@ class ReminderService : Service() {
             wakeupDevice()
             
             // بررسی نوع آلارم
-            val useFullScreen = reminder.alertType == SmartReminderManager.AlertType.FULL_SCREEN ||
-                               reminder.alertType == SmartReminderManager.AlertType.SMART ||
-                               reminder.tags.any { it.startsWith("use_alarm:true") }
-            
-            Log.d(TAG, "🔔 Triggering with useFullScreen=$useFullScreen, alertType=${reminder.alertType}")
-            
-            if (useFullScreen) {
+            val forceFullScreen = reminder.alertType == SmartReminderManager.AlertType.FULL_SCREEN ||
+                                   reminder.tags.any { it.startsWith("use_alarm:true") }
+
+            Log.d(TAG, "🔔 Triggering: alertType=${reminder.alertType}, forceFullScreen=$forceFullScreen, tags=${reminder.tags}")
+
+            if (forceFullScreen) {
                 showFullScreenAlarm(reminder)
-            } else {
-                showNotification(reminder)
+                return
             }
+
+            // حالت هوشمند: تلاش برای تولید متن طبیعی با مدل آنلاین سپس پخش با TTS
+            if (reminder.alertType == SmartReminderManager.AlertType.SMART) {
+                showSmartReminder(reminder)
+                return
+            }
+
+            // حالت پیش‌فرض: نمایش نوتیفیکیشن
+            showNotification(reminder)
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error triggering reminder", e)
+        }
+    }
+
+    private fun showSmartReminder(reminder: SmartReminderManager.SmartReminder) {
+        serviceScope.launch {
+            try {
+                // تلاش برای تولید متن طبیعی با مدل آنلاین
+                val assistant = com.persianai.assistant.ai.AdvancedPersianAssistant(this@ReminderService)
+                val aiResp = try {
+                    assistant.processRequestWithAI(reminder.description.ifBlank { reminder.title }, contextHint = "یادآوری")
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "AI generation failed: ${e.message}")
+                    null
+                }
+
+                val textToSpeak = aiResp?.text?.takeIf { it.isNotBlank() } ?: reminder.title
+
+                // تلاش برای پخش TTS روی Main
+                try {
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        val tts = com.persianai.assistant.voice.PersianVoiceAlerts(this@ReminderService)
+                        tts.speak(textToSpeak)
+                    }
+
+                    // نمایش نوتیفیکیشن مختصر همراه متن طبیعی
+                    showNotification(reminder.copy(description = textToSpeak))
+                    android.util.Log.d(TAG, "✅ Smart reminder played via TTS: ${reminder.title}")
+                    return@launch
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "TTS playback failed: ${e.message}", e)
+                }
+
+                // اگر AI یا TTS ناموفق بود، fallback به full-screen
+                android.util.Log.w(TAG, "Smart reminder fallback to full-screen: ${reminder.title}")
+                showFullScreenAlarm(reminder)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error in smart reminder path", e)
+                showFullScreenAlarm(reminder)
+            }
         }
     }
 
