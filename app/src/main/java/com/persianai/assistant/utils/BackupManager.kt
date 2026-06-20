@@ -30,6 +30,7 @@ class BackupManager(private val context: Context) {
 
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val db = AccountingDB(context)
+    private val accountingManager = com.persianai.assistant.utils.AccountingManager(context)
     private val featureFlags = FeatureFlags(context)
     private val prefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
 
@@ -173,7 +174,7 @@ class BackupManager(private val context: Context) {
 
             // Restore transactions
             backupData.transactions.forEach { transaction ->
-                try { db.addTransaction(transaction); transRestored++ } 
+                try { accountingManager.addTransaction(transaction); transRestored++ }
                 catch (_: Exception) {}
             }
 
@@ -194,7 +195,7 @@ class BackupManager(private val context: Context) {
                         issueDate = java.util.Date(checkData.issueDate),
                         bankName = ""
                     )
-                    db.addCheck(check)
+                    accountingManager.addCheck(check)
                     restoredChecks.add(
                         CheckManager.Check(
                             id = checkData.id.toString().ifBlank { java.util.UUID.randomUUID().toString() },
@@ -238,7 +239,7 @@ class BackupManager(private val context: Context) {
                         description = instData.description,
                         lender = instData.lender
                     )
-                    db.addInstallment(installment)
+                    accountingManager.addInstallment(installment)
                     restoredInstallments.add(
                         InstallmentManager.Installment(
                             id = instData.id.toString().ifBlank { java.util.UUID.randomUUID().toString() },

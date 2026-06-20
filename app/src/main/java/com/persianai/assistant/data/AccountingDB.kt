@@ -40,6 +40,34 @@ class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db"
     }
     
     fun addTransaction(t: Transaction): Long {
+        // Temporary dedupe guard: if the latest transaction matches type/amount/description
+        // and is within 60 seconds, return existing id to avoid duplicates during migration.
+        try {
+            val recentCursor = readableDatabase.rawQuery(
+                "SELECT id, type, amount, description, date FROM transactions ORDER BY date DESC LIMIT 1",
+                null
+            )
+            if (recentCursor.moveToFirst()) {
+                val lastId = recentCursor.getLong(0)
+                val lastType = recentCursor.getString(1)
+                val lastAmount = recentCursor.getDouble(2)
+                val lastDesc = recentCursor.getString(3) ?: ""
+                val lastDate = recentCursor.getLong(4)
+                recentCursor.close()
+
+                val sameType = (lastType == t.type.name)
+                val sameAmount = kotlin.math.abs(lastAmount - t.amount) < 0.001
+                val sameDesc = (lastDesc.trim() == (t.description ?: "").trim())
+                val withinWindow = (System.currentTimeMillis() - lastDate) <= 60_000L
+
+                if (sameType && sameAmount && sameDesc && withinWindow) {
+                    return lastId
+                }
+            } else {
+                recentCursor.close()
+            }
+        } catch (_: Exception) {}
+
         val values = ContentValues().apply {
             put("type", t.type.name)
             put("amount", t.amount)

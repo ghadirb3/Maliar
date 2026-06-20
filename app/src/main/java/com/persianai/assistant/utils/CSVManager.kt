@@ -15,6 +15,7 @@ import java.io.OutputStreamWriter
 class CSVManager(private val context: Context) {
 
     private val db = AccountingDB(context)
+    private val accountingManager = com.persianai.assistant.utils.AccountingManager(context)
 
     /**
      * Export تمام تراکنش‌ها به CSV
@@ -151,7 +152,7 @@ class CSVManager(private val context: Context) {
             totalInstallments = totalInstallments
         )
 
-        db.addTransaction(transaction)
+        accountingManager.addTransaction(transaction)
         return true
     }
 

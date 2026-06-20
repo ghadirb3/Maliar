@@ -3,6 +3,7 @@ package com.persianai.assistant.finance
 import android.content.Context
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.utils.PersianDateConverter
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
@@ -40,6 +41,7 @@ class InstallmentManager(private val context: Context) {
     
     private val prefs = context.getSharedPreferences("installments", Context.MODE_PRIVATE)
     private val accountingDB = AccountingDB(context)
+    private val accountingManager = com.persianai.assistant.utils.AccountingManager(context)
     
     fun addInstallment(
         title: String,
@@ -65,21 +67,8 @@ class InstallmentManager(private val context: Context) {
         
         // Sync to AccountingDB - FIXED: Using proper model mapping
         try {
-            val accInstallment = com.persianai.assistant.models.Installment(
-                id = accountingDB.addInstallment(com.persianai.assistant.models.Installment(
-                    id = 0,
-                    title = title,
-                    totalAmount = totalAmount,
-                    monthlyAmount = installmentAmount,
-                    installmentCount = totalInstallments,
-                    paidInstallments = 0,
-                    paidAmount = 0.0,
-                    remainingAmount = totalAmount,
-                    nextPaymentDate = Date(startDate),
-                    status = com.persianai.assistant.models.InstallmentStatus.ACTIVE,
-                    description = description,
-                    lender = recipient
-                )),
+            val model = com.persianai.assistant.models.Installment(
+                id = 0,
                 title = title,
                 totalAmount = totalAmount,
                 monthlyAmount = installmentAmount,
@@ -92,7 +81,10 @@ class InstallmentManager(private val context: Context) {
                 description = description,
                 lender = recipient
             )
-            android.util.Log.d("InstallmentManager", "Synced to AccountingDB: id=$id")
+            runBlocking {
+                accountingManager.addInstallment(model)
+            }
+            android.util.Log.d("InstallmentManager", "Synced to AccountingDB: title=$title")
         } catch (e: Exception) {
             android.util.Log.e("InstallmentManager", "Error syncing to AccountingDB", e)
         }
@@ -179,9 +171,12 @@ class InstallmentManager(private val context: Context) {
         
         // Sync payment to AccountingDB
         try {
-            val accInstallments = accountingDB.getAllInstallments()
-            accInstallments.firstOrNull { it.title == installments.first { i -> i.id == id }.title }?.let {
-                accountingDB.payInstallment(it.id)
+            val accInstallments = accountingManager.getAllInstallments()
+            val titleToFind = installments.first { i -> i.id == id }.title
+            accInstallments.firstOrNull { it.title == titleToFind }?.let {
+                runBlocking {
+                    accountingManager.payInstallment(it.id, installment.installmentAmount)
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("InstallmentManager", "Error syncing payment to AccountingDB", e)
@@ -220,12 +215,12 @@ class InstallmentManager(private val context: Context) {
         saveInstallments(allInstallments.filter { it.id != id })
 
         try {
-            accountingDB.getAllInstallments()
+            accountingManager.getAllInstallments()
                 .firstOrNull {
                     it.title == deletedInstallment.title &&
                         it.totalAmount == deletedInstallment.totalAmount
                 }
-                ?.let { accountingDB.deleteInstallment(it.id) }
+                ?.let { runBlocking { accountingManager.deleteInstallment(it.id) } }
         } catch (e: Exception) {
             android.util.Log.e("InstallmentManager", "Error syncing deletion to AccountingDB", e)
         }

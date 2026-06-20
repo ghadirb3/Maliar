@@ -25,6 +25,7 @@ class AccountingActivity : AppCompatActivity() {
     
     private lateinit var binding: ActivityAccountingBinding
     private lateinit var db: AccountingDB
+    private lateinit var financeManager: com.persianai.assistant.finance.FinanceManager
     private lateinit var aiAssistant: AdvancedPersianAssistant
     private lateinit var incomeAdapter: TransactionAdapter
     private lateinit var expenseAdapter: TransactionAdapter
@@ -46,6 +47,7 @@ class AccountingActivity : AppCompatActivity() {
         supportActionBar?.title = "💰 حسابداری"
         
         db = AccountingDB(this)
+        financeManager = com.persianai.assistant.finance.FinanceManager(this)
         aiAssistant = AdvancedPersianAssistant(this)
         
         setupUI()
@@ -88,7 +90,7 @@ class AccountingActivity : AppCompatActivity() {
                         category = intent.description ?: "هزینه صوتی",
                         description = intent.description ?: "ثبت سریع"
                     )
-                    db.addTransaction(transaction)
+                    financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
                     Toast.makeText(this@AccountingActivity, "✅ هزینه ثبت شد", Toast.LENGTH_SHORT).show()
                     updateBalance()
                     loadTransactions()
@@ -105,7 +107,7 @@ class AccountingActivity : AppCompatActivity() {
                         description = desc,
                         checkNumber = "VOICE-${System.currentTimeMillis()}"
                     )
-                    db.addTransaction(transaction)
+                    financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
                     Toast.makeText(this@AccountingActivity, "✅ چک جدید ثبت شد", Toast.LENGTH_SHORT).show()
                     updateBalance()
                     loadTransactions()
@@ -125,7 +127,7 @@ class AccountingActivity : AppCompatActivity() {
                         category = intent.title,
                         description = "قسط خودکار ($monthsLabel)"
                     )
-                    db.addTransaction(transaction)
+                    financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
                     Toast.makeText(this@AccountingActivity, "✅ قسط صوتی ثبت شد", Toast.LENGTH_SHORT).show()
                     updateBalance()
                     loadTransactions()
@@ -174,7 +176,7 @@ class AccountingActivity : AppCompatActivity() {
                             description = desc,
                             date = System.currentTimeMillis()
                         )
-                        db.addTransaction(transaction)
+                        financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
                         updateBalance()
                     }
                 } else {
@@ -213,7 +215,7 @@ class AccountingActivity : AppCompatActivity() {
                             date = System.currentTimeMillis(),
                             checkNumber = checkNum
                         )
-                        db.addTransaction(transaction)
+                        financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
                         updateBalance()
                         loadTransactions()
                         Toast.makeText(this@AccountingActivity, "✅ چک ثبت شد", Toast.LENGTH_SHORT).show()
@@ -251,7 +253,7 @@ class AccountingActivity : AppCompatActivity() {
                             description = desc,
                             date = System.currentTimeMillis()
                         )
-                        db.addTransaction(transaction)
+                        financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
                         updateBalance()
                         loadTransactions()
                         Toast.makeText(this@AccountingActivity, "✅ قسط ثبت شد", Toast.LENGTH_SHORT).show()
@@ -313,7 +315,7 @@ class AccountingActivity : AppCompatActivity() {
                 .setMessage("آیا از حذف این تراکنش مطمئن هستید؟")
                 .setPositiveButton("حذف") { _, _ ->
                     lifecycleScope.launch {
-                        db.deleteTransaction(transaction.id)
+                        financeManager.deleteTransaction(transaction.id.toString())
                         loadTransactions() // Reload all lists
                         updateBalance()
                         Toast.makeText(this@AccountingActivity, "✅ تراکنش حذف شد", Toast.LENGTH_SHORT).show()

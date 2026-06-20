@@ -58,22 +58,12 @@ class RemindersAdapter(
                     reminder.tags.any { it.startsWith("smart:true") }
             
             // نشانگر نوع هشدار
-            try {
-                val alertBadge = itemView.findViewById<android.widget.TextView?>(R.id.alertTypeText)
-                if (alertBadge != null) {
-                    alertBadge.text = when {
-                        isSmart -> "🧠 هوشمند"
-                        isFullScreen -> "🔔 تمام‌صفحه"
-                        else -> "📱 نوتیفیکیشن"
-                    }
-                    alertBadge.visibility = android.view.View.VISIBLE
-                }
-            } catch (_: Exception) {}
-            alertTypeText.text = if (isFullScreen) {
-                "🔔 تمام‌صفحه"
-            } else {
-                "📱 نوتیفیکیشن"
+            alertTypeText.text = when {
+                isSmart -> "🧠 هوشمند"
+                isFullScreen -> "🔔 تمام‌صفحه"
+                else -> "📱 نوتیفیکیشن"
             }
+            alertTypeText.visibility = android.view.View.VISIBLE
             
             // Description
             if (reminder.description.isNotEmpty()) {

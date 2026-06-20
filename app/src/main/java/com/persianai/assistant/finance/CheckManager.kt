@@ -48,6 +48,7 @@ class CheckManager(private val context: Context) {
     
     private val prefs = context.getSharedPreferences("checks", Context.MODE_PRIVATE)
     private val accountingDB = AccountingDB(context)
+    private val accountingManager = com.persianai.assistant.utils.AccountingManager(context)
     
     fun addCheck(
         checkNumber: String,
@@ -74,16 +75,20 @@ class CheckManager(private val context: Context) {
         
         // Sync to AccountingDB - FIXED: Using proper model mapping
         try {
-            accountingDB.addCheck(com.persianai.assistant.models.Check(
-                checkNumber = checkNumber,
+            val model = com.persianai.assistant.models.Check(
+                id = 0,
                 amount = amount,
+                checkNumber = checkNumber,
                 recipient = recipient,
-                issueDate = Date(issueDate),
-                dueDate = Date(dueDate),
+                dueDate = java.util.Date(dueDate),
                 status = com.persianai.assistant.models.CheckStatus.PENDING,
                 description = description,
+                issueDate = java.util.Date(issueDate),
                 bankName = bankName
-            ))
+            )
+            kotlinx.coroutines.runBlocking {
+                accountingManager.addCheck(model)
+            }
         } catch (e: Exception) {
             android.util.Log.e("CheckManager", "Error syncing to AccountingDB", e)
         }
@@ -152,18 +157,24 @@ class CheckManager(private val context: Context) {
             )
         }
         
-        // Sync status update to AccountingDB
+        // Sync status update to AccountingDB via AccountingManager
         try {
-            val accChecks = accountingDB.getAllChecks()
+            val accChecks = accountingManager.getAllChecks()
             val check = checks.first { it.id == id }
             accChecks.firstOrNull { it.checkNumber == check.checkNumber }?.let { accCheck ->
-                val accStatus = when (status) {
-                    CheckStatus.PAID -> com.persianai.assistant.data.CheckStatus.CASHED
-                    CheckStatus.BOUNCED -> com.persianai.assistant.data.CheckStatus.BOUNCED
-                    CheckStatus.CANCELLED -> com.persianai.assistant.data.CheckStatus.PENDING
-                    else -> com.persianai.assistant.data.CheckStatus.PENDING
+                val modelStatus = when (status) {
+                    CheckStatus.PAID -> com.persianai.assistant.models.CheckStatus.DEPOSITED
+                    CheckStatus.BOUNCED -> com.persianai.assistant.models.CheckStatus.BOUNCED
+                    CheckStatus.CANCELLED -> com.persianai.assistant.models.CheckStatus.CANCELLED
+                    else -> com.persianai.assistant.models.CheckStatus.PENDING
                 }
-                accountingDB.updateCheckStatus(accCheck.id, accStatus)
+
+                val updated = accCheck.copy(status = modelStatus)
+                try {
+                    kotlinx.coroutines.runBlocking { accountingManager.updateCheck(updated) }
+                } catch (e: Exception) {
+                    android.util.Log.e("CheckManager", "Error updating check in AccountingDB", e)
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("CheckManager", "Error syncing status to AccountingDB", e)
@@ -179,9 +190,9 @@ class CheckManager(private val context: Context) {
         // Sync deletion to AccountingDB
         try {
             deletedCheck?.let { check ->
-                val accChecks = accountingDB.getAllChecks()
+                val accChecks = accountingManager.getAllChecks()
                 accChecks.firstOrNull { it.checkNumber == check.checkNumber }?.let {
-                    accountingDB.deleteCheck(it.id)
+                    kotlinx.coroutines.runBlocking { accountingManager.deleteCheck(it.id) }
                 }
             }
         } catch (e: Exception) {

@@ -5,6 +5,7 @@ import android.util.Log
 import com.persianai.assistant.data.AccountingDB
 import com.persianai.assistant.data.Transaction
 import com.persianai.assistant.data.TransactionType
+import com.persianai.assistant.utils.AccountingManager
 import com.persianai.assistant.api.AIModelManager
 import com.persianai.assistant.utils.PreferencesManager
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,7 @@ class ContextualAIAssistant(private val context: Context) {
     private val nlp = PersianNLP()
     private val aiModelManager = AIModelManager(context)
     private val prefsManager = PreferencesManager(context)
+    private val accountingManager: AccountingManager by lazy { AccountingManager(context) }
     
     suspend fun processAccountingCommand(userMessage: String, db: AccountingDB): AIResponse = withContext(Dispatchers.IO) {
         val workingMode = prefsManager.getWorkingMode()
@@ -45,7 +47,7 @@ class ContextualAIAssistant(private val context: Context) {
                     if (amount > 0) {
                         val transType = if (type == "income") TransactionType.INCOME else TransactionType.EXPENSE
                         val t = Transaction(0, transType, amount, "", desc, System.currentTimeMillis())
-                        db.addTransaction(t)
+                        try { accountingManager.addTransaction(t) } catch (_: Exception) {}
                         return@withContext AIResponse(true, "✅ ${if (type == "income") "درآمد" else "هزینه"} ${formatMoney(amount)} تومان ثبت شد", "add_transaction")
                     }
                 }
@@ -69,7 +71,7 @@ class ContextualAIAssistant(private val context: Context) {
             PersianNLP.Type.EXPENSE -> {
                 if (cmd.amount != null && cmd.amount > 0) {
                     val t = Transaction(0, TransactionType.EXPENSE, cmd.amount, "", cmd.text ?: "", System.currentTimeMillis())
-                    db.addTransaction(t)
+                    try { accountingManager.addTransaction(t) } catch (_: Exception) {}
                     AIResponse(true, "✅ هزینه ${formatMoney(cmd.amount)} تومان ثبت شد", "add_transaction")
                 } else {
                     AIResponse(false, "مبلغ نامعتبر است", "error")
@@ -78,7 +80,7 @@ class ContextualAIAssistant(private val context: Context) {
             PersianNLP.Type.INCOME -> {
                 if (cmd.amount != null && cmd.amount > 0) {
                     val t = Transaction(0, TransactionType.INCOME, cmd.amount, "", cmd.text ?: "", System.currentTimeMillis())
-                    db.addTransaction(t)
+                    try { accountingManager.addTransaction(t) } catch (_: Exception) {}
                     AIResponse(true, "✅ درآمد ${formatMoney(cmd.amount)} تومان ثبت شد", "add_transaction")
                 } else {
                     AIResponse(false, "مبلغ نامعتبر است", "error")
@@ -149,7 +151,7 @@ class ContextualAIAssistant(private val context: Context) {
             val description = message.replace(Regex("\\d+(?:\\.\\d+)?"), "").trim()
             
             val transaction = Transaction(0, type, amount, "", description, System.currentTimeMillis())
-            db.addTransaction(transaction)
+            try { accountingManager.addTransaction(transaction) } catch (_: Exception) {}
             
             val typeText = if (isIncome) "درآمد" else "هزینه"
             return AIResponse(true, "✅ $typeText ${formatMoney(amount)} تومان ثبت شد", "add_transaction")
