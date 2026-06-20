@@ -244,7 +244,18 @@ class AccountingActivity : AppCompatActivity() {
                     // Save via CheckManager and record a transaction (income/expense)
                     try {
                         val cm = com.persianai.assistant.finance.CheckManager(this)
-                        cm.addCheck(checkNum, amount, issuer, recipient, issueDateMillis, dueDateMillis, bank, accNum, desc, isReceived)
+                        cm.addCheck(
+                            checkNum,
+                            amount,
+                            issuer,
+                            recipient,
+                            issueDateMillis,
+                            dueDateMillis,
+                            bank,
+                            accNum,
+                            desc,
+                            isIncoming = isReceived
+                        )
                     } catch (e: Exception) {
                         android.util.Log.e("AccountingActivity", "Error saving check", e)
                     }
