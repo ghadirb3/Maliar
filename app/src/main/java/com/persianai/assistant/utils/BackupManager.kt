@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import kotlinx.coroutines.runBlocking
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
@@ -155,14 +156,14 @@ class BackupManager(private val context: Context) {
                 BufferedReader(InputStreamReader(inputStream)).use { reader -> reader.readText() }
             } ?: return RestoreResult(false, "❌ فایل پشتیبان خالی است")
 
-            restoreFromJson(jsonString)
+            runBlocking { restoreFromJson(jsonString) }
         } catch (e: Exception) {
             Log.e("BackupManager", "خطا در بازیابی", e)
             RestoreResult(false, "❌ خطا در بازیابی: ${e.message}")
         }
     }
 
-    fun restoreFromJson(jsonString: String): RestoreResult {
+    suspend fun restoreFromJson(jsonString: String): RestoreResult {
         return try {
             val backupData = gson.fromJson(jsonString, BackupData::class.java)
                 ?: return RestoreResult(false, "❌ فرمت JSON نامعتبر است")

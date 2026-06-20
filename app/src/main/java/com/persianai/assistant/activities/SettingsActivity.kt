@@ -397,13 +397,9 @@ class SettingsActivity : AppCompatActivity() {
     private fun performGoogleDriveBackup() {
         lifecycleScope.launch {
             try {
-                val cloudHelper = com.persianai.assistant.utils.CloudBackupHelper(this@SettingsActivity)
-                if (!cloudHelper.isConnected()) {
-                    val signInIntent = cloudHelper.getSignInIntent()
-                    startActivityForResult(signInIntent, REQUEST_CODE_DRIVE_SIGN_IN)
-                } else {
-                    performDriveBackup()
-                }
+                // CloudBackupHelper currently performs local backup and abstracts Drive upload.
+                // Directly attempt drive backup (helper will fallback to local save).
+                performDriveBackup()
             } catch (e: Exception) {
                 Toast.makeText(this@SettingsActivity, "خطا در اتصال به Google Drive: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -451,25 +447,20 @@ class SettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val cloudHelper = com.persianai.assistant.utils.CloudBackupHelper(this@SettingsActivity)
-                if (!cloudHelper.isConnected()) {
-                    val signInIntent = cloudHelper.getSignInIntent()
-                    startActivityForResult(signInIntent, REQUEST_CODE_DRIVE_RESTORE)
-                } else {
-                    Toast.makeText(this@SettingsActivity, "☁️ در حال دانلود از Google Drive...", Toast.LENGTH_SHORT).show()
-                    val jsonContent = withContext(Dispatchers.IO) { cloudHelper.downloadLatestBackup() }
-                    if (jsonContent != null) {
-                        val success = withContext(Dispatchers.IO) {
-                            com.persianai.assistant.utils.BackupManager.restoreBackup(this@SettingsActivity, jsonContent)
-                        }
-                        if (success) {
-                            Toast.makeText(this@SettingsActivity, "✅ بازیابی از Google Drive موفق!", Toast.LENGTH_SHORT).show()
-                            loadSettings()
-                        } else {
-                            Toast.makeText(this@SettingsActivity, "❌ خطا در بازیابی", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(this@SettingsActivity, "❌ هیچ فایل بک‌آپی در Drive یافت نشد", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@SettingsActivity, "☁️ در حال دانلود از Google Drive...", Toast.LENGTH_SHORT).show()
+                val jsonContent = withContext(Dispatchers.IO) { cloudHelper.downloadLatestBackup() }
+                if (jsonContent != null) {
+                    val success = withContext(Dispatchers.IO) {
+                        com.persianai.assistant.utils.BackupManager.restoreBackup(this@SettingsActivity, jsonContent)
                     }
+                    if (success) {
+                        Toast.makeText(this@SettingsActivity, "✅ بازیابی از Google Drive موفق!", Toast.LENGTH_SHORT).show()
+                        loadSettings()
+                    } else {
+                        Toast.makeText(this@SettingsActivity, "❌ خطا در بازیابی", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this@SettingsActivity, "❌ هیچ فایل بک‌آپی در Drive یافت نشد", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@SettingsActivity, "❌ خطا: ${e.message}", Toast.LENGTH_SHORT).show()
