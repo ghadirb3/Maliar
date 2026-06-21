@@ -6,6 +6,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import android.widget.CheckBox
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -227,6 +228,21 @@ class ChecksManagementActivity : AppCompatActivity() {
         
         var selectedDueDate: Long = System.currentTimeMillis()
         var selectedIssueDate: Long = System.currentTimeMillis()
+
+        // initialize Persian date display for buttons
+        run {
+            val cal = Calendar.getInstance().apply { timeInMillis = selectedIssueDate }
+            val persian = PersianDateConverter.gregorianToPersian(
+                cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)
+            )
+            issueDateButton.text = persian.toReadableString()
+
+            val cal2 = Calendar.getInstance().apply { timeInMillis = selectedDueDate }
+            val persian2 = PersianDateConverter.gregorianToPersian(
+                cal2.get(Calendar.YEAR), cal2.get(Calendar.MONTH) + 1, cal2.get(Calendar.DAY_OF_MONTH)
+            )
+            dueDateButton.text = persian2.toReadableString()
+        }
         
         issueDateButton.setOnClickListener {
             val datePicker = MaterialDatePicker.Builder.datePicker()
@@ -272,6 +288,8 @@ class ChecksManagementActivity : AppCompatActivity() {
             datePicker.show(supportFragmentManager, "DUE_DATE_PICKER")
         }
         
+        val receivedCheckbox = dialogView.findViewById<CheckBox>(R.id.receivedCheckbox)
+
         MaterialAlertDialogBuilder(this)
             .setTitle("➕ افزودن چک جدید")
             .setView(dialogView)
@@ -294,7 +312,8 @@ class ChecksManagementActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
                 
-                addCheck(checkNumber, amount, issuer, recipient, selectedIssueDate, selectedDueDate, bankName, accountNumber, description)
+                val isIncoming = receivedCheckbox.isChecked
+                addCheck(checkNumber, amount, issuer, recipient, selectedIssueDate, selectedDueDate, bankName, accountNumber, description, isIncoming)
             }
             .setNegativeButton("لغو", null)
             .show()
@@ -310,6 +329,7 @@ class ChecksManagementActivity : AppCompatActivity() {
         bankName: String,
         accountNumber: String,
         description: String
+        , isIncoming: Boolean = false
     ) {
         lifecycleScope.launch {
             try {
@@ -322,7 +342,8 @@ class ChecksManagementActivity : AppCompatActivity() {
                     dueDate = dueDate,
                     bankName = bankName,
                     accountNumber = accountNumber,
-                    description = description
+                    description = description,
+                    isIncoming = isIncoming
                 )
                 
                 Toast.makeText(
@@ -341,6 +362,97 @@ class ChecksManagementActivity : AppCompatActivity() {
                 ).show()
             }
         }
+    }
+
+    private fun showEditCheckDialog(check: CheckManager.Check) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_check, null)
+
+        val amountInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.amountInput)
+        val checkNumberInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.checkNumberInput)
+        val issuerInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.issuerInput)
+        val recipientInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.recipientInput)
+        val bankNameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.bankNameInput)
+        val accountNumberInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.accountNumberInput)
+        val descriptionInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.descriptionInput)
+        val issueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.issueDateButton)
+        val dueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
+        val receivedCheckbox = dialogView.findViewById<CheckBox>(R.id.receivedCheckbox)
+
+        var selectedIssueDate = check.issueDate
+        var selectedDueDate = check.dueDate
+
+        // populate fields
+        checkNumberInput.setText(check.checkNumber)
+        amountInput.setText(check.amount.toLong().toString())
+        issuerInput.setText(check.issuer)
+        recipientInput.setText(check.recipient)
+        bankNameInput.setText(check.bankName)
+        accountNumberInput.setText(check.accountNumber)
+        descriptionInput.setText(check.description)
+        receivedCheckbox.isChecked = check.isIncoming
+
+        // init date buttons with Persian date
+        run {
+            val c1 = Calendar.getInstance().apply { timeInMillis = selectedIssueDate }
+            issueDateButton.text = PersianDateConverter.gregorianToPersian(c1.get(Calendar.YEAR), c1.get(Calendar.MONTH) + 1, c1.get(Calendar.DAY_OF_MONTH)).toReadableString()
+            val c2 = Calendar.getInstance().apply { timeInMillis = selectedDueDate }
+            dueDateButton.text = PersianDateConverter.gregorianToPersian(c2.get(Calendar.YEAR), c2.get(Calendar.MONTH) + 1, c2.get(Calendar.DAY_OF_MONTH)).toReadableString()
+        }
+
+        issueDateButton.setOnClickListener {
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("تاریخ صدور")
+                .setSelection(selectedIssueDate)
+                .build()
+            datePicker.addOnPositiveButtonClickListener { sel ->
+                selectedIssueDate = sel
+                val cal = Calendar.getInstance().apply { timeInMillis = sel }
+                issueDateButton.text = PersianDateConverter.gregorianToPersian(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)).toReadableString()
+            }
+            datePicker.show(supportFragmentManager, "EDIT_ISSUE_DATE")
+        }
+
+        dueDateButton.setOnClickListener {
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("تاریخ سررسید")
+                .setSelection(selectedDueDate)
+                .build()
+            datePicker.addOnPositiveButtonClickListener { sel ->
+                selectedDueDate = sel
+                val cal = Calendar.getInstance().apply { timeInMillis = sel }
+                dueDateButton.text = PersianDateConverter.gregorianToPersian(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)).toReadableString()
+            }
+            datePicker.show(supportFragmentManager, "EDIT_DUE_DATE")
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("✏️ ویرایش چک")
+            .setView(dialogView)
+            .setPositiveButton("ذخیره") { _, _ ->
+                val amount = amountInput.text.toString().toLongOrNull() ?: 0L
+                val updated = check.copy(
+                    checkNumber = checkNumberInput.text.toString(),
+                    amount = amount.toDouble(),
+                    issuer = issuerInput.text.toString(),
+                    recipient = recipientInput.text.toString(),
+                    issueDate = selectedIssueDate,
+                    dueDate = selectedDueDate,
+                    bankName = bankNameInput.text.toString(),
+                    accountNumber = accountNumberInput.text.toString(),
+                    description = descriptionInput.text.toString(),
+                    isIncoming = receivedCheckbox.isChecked
+                )
+                checkManager.updateCheck(updated)
+                Toast.makeText(this, "✅ چک بروزرسانی شد", Toast.LENGTH_SHORT).show()
+                loadChecks()
+            }
+            .setNeutralButton("❌ برگشتی") { _, _ ->
+                checkManager.updateCheck(check.copy(status = CheckManager.CheckStatus.BOUNCED))
+                Toast.makeText(this, "❌ چک به عنوان برگشتی ثبت شد", Toast.LENGTH_SHORT).show()
+                loadChecks()
+            }
+            .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
+            .show()
     }
     
     private fun viewCheckDetails(check: CheckManager.Check) {
@@ -380,10 +492,8 @@ class ChecksManagementActivity : AppCompatActivity() {
                         Toast.makeText(this, "✅ چک پرداخت شد و به هزینه‌ها اضافه شد", Toast.LENGTH_SHORT).show()
                         loadChecks()
                     }
-                    .setNeutralButton("❌ برگشتی") { _, _ ->
-                        checkManager.updateCheckStatus(check.id, CheckManager.CheckStatus.BOUNCED)
-                        Toast.makeText(this, "❌ چک برگشتی ثبت شد", Toast.LENGTH_SHORT).show()
-                        loadChecks()
+                    .setNeutralButton("ویرایش") { _, _ ->
+                        showEditCheckDialog(check)
                     }
                     .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
             }
@@ -394,11 +504,13 @@ class ChecksManagementActivity : AppCompatActivity() {
                         Toast.makeText(this, "⏳ وضعیت چک به «در انتظار» برگشت", Toast.LENGTH_SHORT).show()
                         loadChecks()
                     }
+                    .setNeutralButton("ویرایش") { _, _ -> showEditCheckDialog(check) }
                     .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
             }
             else -> {
                 dialog
                     .setPositiveButton("بستن", null)
+                    .setNeutralButton("ویرایش") { _, _ -> showEditCheckDialog(check) }
                     .setNegativeButton("حذف") { _, _ -> deleteCheck(check) }
             }
         }

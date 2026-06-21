@@ -157,16 +157,21 @@ class InstallmentManager(private val context: Context) {
         val installment = getAllInstallments().firstOrNull { it.id == id } ?: return false
         if (installment.paidInstallments >= installment.totalInstallments) return false
 
+        // determine the intended payment date (next scheduled payment)
+        val nextPaymentDate = calculateNextPaymentDate(installment)
+
         val installments = getAllInstallments().map {
             if (it.id == id) it.copy(paidInstallments = it.paidInstallments + 1) else it
         }
         saveInstallments(installments)
 
+        val paymentNumber = installment.paidInstallments + 1
         FinanceManager(context).addTransaction(
             installment.installmentAmount,
             "expense",
             "قسط",
-            "پرداخت قسط ${installment.paidInstallments + 1} از ${installment.totalInstallments}: ${installment.title}"
+            "پرداخت قسط $paymentNumber از ${installment.totalInstallments}: ${installment.title}",
+            date = nextPaymentDate
         )
         
         // Sync payment to AccountingDB

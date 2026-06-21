@@ -8,6 +8,7 @@ import com.persianai.assistant.databinding.ItemCheckBinding
 import com.persianai.assistant.finance.CheckManager
 import java.text.SimpleDateFormat
 import java.util.*
+import com.persianai.assistant.utils.PersianDateConverter
 
 class ChecksAdapter(
     private val checks: List<CheckManager.Check>,
@@ -34,14 +35,14 @@ class ChecksAdapter(
             // دارنده/گیرنده
             holderNameText.text = "در وجه: ${check.recipient}"
             
-            // تاریخ سررسید
-            dueDateText.text = "📅 سررسید: ${dateFormat.format(Date(check.dueDate))}"
+            // تاریخ سررسید (نمایش پارسی)
+            dueDateText.text = "📅 سررسید: ${check.getFormattedDueDate()}"
 
-            // نوع/بانک روی typeText
-            typeText.text = if (check.bankName.isNotBlank()) {
-                "بانک: ${check.bankName}"
-            } else {
-                "چک"
+            // نوع/بانک یا جهت چک (دریافتی/پرداختی)
+            typeText.text = when {
+                check.bankName.isNotBlank() -> "بانک: ${check.bankName}"
+                check.isIncoming -> "دریافتی"
+                else -> "پرداختی"
             }
 
             // وضعیت روی چیپ وضعیت

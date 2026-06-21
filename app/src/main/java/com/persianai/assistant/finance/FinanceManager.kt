@@ -38,8 +38,8 @@ class FinanceManager(private val context: Context) {
         }
     }
 
-    fun addTransaction(amount: Double, type: String, category: String, desc: String): String {
-        val now = System.currentTimeMillis()
+    fun addTransaction(amount: Double, type: String, category: String, desc: String, date: Long? = null): String {
+        val now = date ?: System.currentTimeMillis()
         try {
             if (type == "income" || type == "expense") {
                 val dbType = if (type == "income") TransactionType.INCOME else TransactionType.EXPENSE

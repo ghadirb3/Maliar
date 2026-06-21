@@ -10,6 +10,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.persianai.assistant.databinding.ActivitySettingsBinding
 import com.persianai.assistant.services.AIAssistantService
 import com.persianai.assistant.utils.PreferencesManager
+import com.persianai.assistant.utils.SharedDataManager
 import com.persianai.assistant.utils.AutoProvisioningManager
 import com.persianai.assistant.utils.DriveHelper
 import com.persianai.assistant.utils.EncryptionHelper
@@ -71,6 +72,12 @@ class SettingsActivity : AppCompatActivity() {
         binding.persistentNotificationActionsSwitch.isChecked = prefsManager.isPersistentNotificationActionsEnabled()
         
         binding.ttsSwitch.isChecked = prefsManager.isTTSEnabled()
+
+        // Smart reminder preferences
+        try {
+            binding.smartReminderNotificationSwitch.isChecked = SharedDataManager.getSmartReminderShowNotification(this)
+            binding.onlineTtsSwitch.isChecked = SharedDataManager.isOnlineTtsEnabled(this)
+        } catch (_: Exception) { }
 
         binding.currentModeText.text = "صفحه شروع: ${if (prefsManager.getStartDestination() == PreferencesManager.StartDestination.DASHBOARD) "داشبورد" else "دستیار"}"
         refreshRecordingModeUI()
@@ -156,6 +163,15 @@ class SettingsActivity : AppCompatActivity() {
         binding.ttsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefsManager.setTTSEnabled(isChecked)
             Toast.makeText(this, if (isChecked) "اعلام صوتی پاسخ‌ها فعال شد" else "اعلام صوتی پاسخ‌ها غیرفعال شد", Toast.LENGTH_SHORT).show()
+        }
+        binding.smartReminderNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            SharedDataManager.setSmartReminderShowNotification(this, isChecked)
+            Toast.makeText(this, if (isChecked) "نوتیفیکیشن کوتاه یادآوری‌ها نمایش داده می‌شود" else "نوتیفیکیشن کوتاه یادآوری‌ها مخفی است", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.onlineTtsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            SharedDataManager.setOnlineTtsEnabled(this, isChecked)
+            Toast.makeText(this, if (isChecked) "TTS آنلاین فعال شد" else "TTS آنلاین غیرفعال شد", Toast.LENGTH_SHORT).show()
         }
         binding.backupButton.setOnClickListener {
             performBackup()

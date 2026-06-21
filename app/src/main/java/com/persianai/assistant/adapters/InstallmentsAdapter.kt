@@ -50,14 +50,20 @@ class InstallmentsAdapter(
             val nextPayment = calendar.timeInMillis
             val daysRemaining = ((nextPayment - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
 
+            // prepare Persian date string for next payment
+            val nextCal = Calendar.getInstance().apply { timeInMillis = nextPayment }
+            val persianDate = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(
+                nextCal.get(Calendar.YEAR), nextCal.get(Calendar.MONTH) + 1, nextCal.get(Calendar.DAY_OF_MONTH)
+            ).toReadableString()
+
             // برچسب و رنگ پس‌زمینه بر اساس نزدیک بودن قسط بعدی
             val nextPaymentLabel: String = if (remaining > 0) {
                 if (daysRemaining <= installment.alertDaysBefore) {
                     root.setCardBackgroundColor(Color.parseColor("#FFF3E0")) // نارنجی روشن
-                    "⚠️ قسط بعدی: $daysRemaining روز دیگر"
+                    "⚠️ قسط بعدی: $daysRemaining روز دیگر ($persianDate)"
                 } else {
                     root.setCardBackgroundColor(Color.WHITE)
-                    "📅 قسط بعدی: $daysRemaining روز دیگر"
+                    "📅 قسط بعدی: $daysRemaining روز دیگر ($persianDate)"
                 }
             } else {
                 root.setCardBackgroundColor(Color.parseColor("#E8F5E9")) // سبز روشن

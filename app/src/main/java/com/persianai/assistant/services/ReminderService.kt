@@ -208,23 +208,52 @@ class ReminderService : Service() {
                 }
 
                 val textToSpeak = aiResp?.text?.takeIf { it.isNotBlank() } ?: reminder.title
+                // تصمیم‌گیری: آیا از TTS آنلاین استفاده شود؟ سپس fallback به Android TTS و در نهایت full-screen
+                val useOnlineTts = com.persianai.assistant.utils.SharedDataManager.isOnlineTtsEnabled(this@ReminderService)
 
-                // تلاش برای پخش TTS روی Main
+                if (useOnlineTts) {
+                    try {
+                        val ttsHelper = com.persianai.assistant.utils.TTSHelper(this@ReminderService)
+                        // initialize Android TTS in background (non-blocking)
+                        ttsHelper.initialize()
+
+                        // Try online-first strategy (GapGPT → Android)
+                        withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            ttsHelper.speakOnlineFirstAndWait(textToSpeak, timeoutMs = 15_000L)
+                        }
+
+                        android.util.Log.d(TAG, "✅ Smart reminder played via online-first TTS: ${reminder.title}")
+
+                        val showNotif = com.persianai.assistant.utils.SharedDataManager.getSmartReminderShowNotification(this@ReminderService)
+                        if (showNotif) showNotification(reminder.copy(description = textToSpeak))
+                        else android.util.Log.d(TAG, "ℹ️ Smart reminder notification suppressed by user preference")
+
+                        ttsHelper.cleanup()
+                        return@launch
+                    } catch (e: Exception) {
+                        android.util.Log.w(TAG, "Online-first TTS failed: ${e.message}")
+                    }
+                }
+
+                // Next: try device Android TTS (PersianVoiceAlerts)
                 try {
                     withContext(kotlinx.coroutines.Dispatchers.Main) {
                         val tts = com.persianai.assistant.voice.PersianVoiceAlerts(this@ReminderService)
                         tts.speak(textToSpeak)
                     }
 
-                    // نمایش نوتیفیکیشن مختصر همراه متن طبیعی
-                    showNotification(reminder.copy(description = textToSpeak))
-                    android.util.Log.d(TAG, "✅ Smart reminder played via TTS: ${reminder.title}")
+                    android.util.Log.d(TAG, "✅ Smart reminder played via device TTS: ${reminder.title}")
+
+                    val showNotif = com.persianai.assistant.utils.SharedDataManager.getSmartReminderShowNotification(this@ReminderService)
+                    if (showNotif) showNotification(reminder.copy(description = textToSpeak))
+                    else android.util.Log.d(TAG, "ℹ️ Smart reminder notification suppressed by user preference")
+
                     return@launch
                 } catch (e: Exception) {
-                    android.util.Log.w(TAG, "TTS playback failed: ${e.message}", e)
+                    android.util.Log.w(TAG, "Device TTS failed: ${e.message}", e)
                 }
 
-                // اگر AI یا TTS ناموفق بود، fallback به full-screen
+                // اگر همه روش‌ها ناموفق بودند، fallback به full-screen
                 android.util.Log.w(TAG, "Smart reminder fallback to full-screen: ${reminder.title}")
                 showFullScreenAlarm(reminder)
 

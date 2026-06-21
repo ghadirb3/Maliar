@@ -186,6 +186,30 @@ object SharedDataManager {
             apply()
         }
     }
+
+    // ==================== Smart Reminder Preferences ====================
+
+    fun getSmartReminderShowNotification(context: Context): Boolean {
+        return getPrefs(context).getBoolean("smart_reminder_show_notification", false)
+    }
+
+    fun setSmartReminderShowNotification(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().apply {
+            putBoolean("smart_reminder_show_notification", enabled)
+            apply()
+        }
+    }
+
+    fun isOnlineTtsEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean("use_online_tts", false)
+    }
+
+    fun setOnlineTtsEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().apply {
+            putBoolean("use_online_tts", enabled)
+            apply()
+        }
+    }
     
     // ==================== Sync Status ====================
     

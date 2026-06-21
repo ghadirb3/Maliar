@@ -614,6 +614,48 @@
 
                     </LinearLayout>
 
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="نمایش نوتیفیکیشن کوتاه برای یادآوری‌های هوشمند"
+                                android:alpha="0.8" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/smartReminderNotificationSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="استفاده از TTS آنلاین (در صورت فعال بودن)"
+                                android:alpha="0.8" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/onlineTtsSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+
+                        </LinearLayout>
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>

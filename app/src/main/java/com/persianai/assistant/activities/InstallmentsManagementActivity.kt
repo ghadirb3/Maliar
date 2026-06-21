@@ -11,6 +11,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.button.MaterialButton
+import android.widget.TextView
 import com.persianai.assistant.R
 import com.persianai.assistant.adapters.InstallmentsAdapter
 import com.persianai.assistant.databinding.ActivityInstallmentsManagementBinding
@@ -269,6 +271,15 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         
         var selectedStartDate: Long = existing?.startDate ?: System.currentTimeMillis()
 
+        // set initial Persian date display even when creating new installment
+        run {
+            val c = Calendar.getInstance().apply { timeInMillis = selectedStartDate }
+            val persianDate = PersianDateConverter.gregorianToPersian(
+                c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH)
+            )
+            startDateButton.text = persianDate.toReadableString()
+        }
+
         existing?.let { inst ->
             titleInput.setText(inst.title)
             totalAmountInput.setText(inst.totalAmount.toLong().toString())
@@ -292,16 +303,22 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                 .setSelection(selectedStartDate)
                 .build()
             
-            datePicker.addOnPositiveButtonClickListener { selection ->
-                selectedStartDate = selection
-                val calendar = Calendar.getInstance().apply { timeInMillis = selection }
-                val persianDate = PersianDateConverter.gregorianToPersian(
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH) + 1,
-                    calendar.get(Calendar.DAY_OF_MONTH)
-                )
-                startDateButton.text = persianDate.toReadableString()
-            }
+                datePicker.addOnPositiveButtonClickListener { selection ->
+                    // normalize selection to local midnight to avoid timezone shifts
+                    val c = Calendar.getInstance().apply { timeInMillis = selection }
+                    c.set(Calendar.HOUR_OF_DAY, 0)
+                    c.set(Calendar.MINUTE, 0)
+                    c.set(Calendar.SECOND, 0)
+                    c.set(Calendar.MILLISECOND, 0)
+                    selectedStartDate = c.timeInMillis
+
+                    val persianDate = PersianDateConverter.gregorianToPersian(
+                        c.get(Calendar.YEAR),
+                        c.get(Calendar.MONTH) + 1,
+                        c.get(Calendar.DAY_OF_MONTH)
+                    )
+                    startDateButton.text = persianDate.toReadableString()
+                }
             
             datePicker.show(supportFragmentManager, "DATE_PICKER")
         }
@@ -467,17 +484,63 @@ class InstallmentsManagementActivity : AppCompatActivity() {
             }
         }
         
-        MaterialAlertDialogBuilder(this)
-            .setTitle("جزئیات قسط")
-            .setMessage(details)
-            .setPositiveButton("جدول پرداخت") { _, _ ->
-                viewPaymentSchedule(installment)
-            }
-            .setNeutralButton("عملیات") { _, _ ->
-                showInstallmentActions(installment)
-            }
-            .setNegativeButton("بستن", null)
-            .show()
+        // Use custom dialog layout so all three action buttons are visible and large
+        val dialogView = layoutInflater.inflate(R.layout.dialog_installment_details, null)
+
+        val titleTv = dialogView.findViewById<TextView>(R.id.titleText)
+        val totalAmountTv = dialogView.findViewById<TextView>(R.id.totalAmountText)
+        val monthlyAmountTv = dialogView.findViewById<TextView>(R.id.monthlyAmountText)
+        val progressTv = dialogView.findViewById<TextView>(R.id.progressText)
+        val remainingTv = dialogView.findViewById<TextView>(R.id.remainingText)
+        val nextPaymentTv = dialogView.findViewById<TextView>(R.id.nextPaymentText)
+        val recipientTv = dialogView.findViewById<TextView>(R.id.recipientText)
+        val notesTv = dialogView.findViewById<TextView>(R.id.notesText)
+
+        titleTv.text = installment.title
+        totalAmountTv.text = "مبلغ کل: ${formatAmount(installment.totalAmount)}"
+        monthlyAmountTv.text = "مبلغ هر قسط: ${formatAmount(installment.installmentAmount)}"
+        progressTv.text = "پرداخت: ${installment.paidInstallments} از ${installment.totalInstallments}"
+        val remainingInstallments = installment.totalInstallments - installment.paidInstallments
+        val remainingAmount = remainingInstallments * installment.installmentAmount
+        remainingTv.text = "باقیمانده: ${formatAmount(remainingAmount)}"
+        recipientTv.text = if (installment.recipient.isNotBlank()) "طلبکار: ${installment.recipient}" else ""
+        notesTv.text = if (installment.description.isNotBlank()) "توضیحات:\n${installment.description}" else ""
+
+        // calculate next payment and show Persian date + days remaining
+        val nextPayment = installmentManager.calculateNextPaymentDate(installment)
+        if (nextPayment != null) {
+            val days = ((nextPayment - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+            val cal = Calendar.getInstance().apply { timeInMillis = nextPayment }
+            val pers = PersianDateConverter.gregorianToPersian(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)).toReadableString()
+            nextPaymentTv.text = "قسط بعدی: $days روز دیگر ($pers)"
+        } else {
+            nextPaymentTv.text = "قسط بعدی: -"
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .create()
+
+        // wire buttons
+        val scheduleBtn = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.scheduleButton)
+        val actionsBtn = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.actionsButton)
+        val closeBtn = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.closeButton)
+
+        scheduleBtn.setOnClickListener {
+            dialog.dismiss()
+            viewPaymentSchedule(installment)
+        }
+
+        actionsBtn.setOnClickListener {
+            dialog.dismiss()
+            showInstallmentActions(installment)
+        }
+
+        closeBtn.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun showInstallmentActions(installment: Installment) {
