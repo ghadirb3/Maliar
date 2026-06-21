@@ -500,8 +500,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         totalAmountTv.text = "مبلغ کل: ${formatAmount(installment.totalAmount)}"
         monthlyAmountTv.text = "مبلغ هر قسط: ${formatAmount(installment.installmentAmount)}"
         progressTv.text = "پرداخت: ${installment.paidInstallments} از ${installment.totalInstallments}"
-        val remainingInstallments = installment.totalInstallments - installment.paidInstallments
-        val remainingAmount = remainingInstallments * installment.installmentAmount
+        // reuse remainingInstallments and remainingAmount computed earlier
         remainingTv.text = "باقیمانده: ${formatAmount(remainingAmount)}"
         recipientTv.text = if (installment.recipient.isNotBlank()) "طلبکار: ${installment.recipient}" else ""
         notesTv.text = if (installment.description.isNotBlank()) "توضیحات:\n${installment.description}" else ""
