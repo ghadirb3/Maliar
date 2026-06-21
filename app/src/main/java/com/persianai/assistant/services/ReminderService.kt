@@ -17,6 +17,7 @@ import com.persianai.assistant.R
 import com.persianai.assistant.activities.DashboardActivity
 import com.persianai.assistant.activities.FullScreenAlarmActivity
 import com.persianai.assistant.utils.SmartReminderManager
+import com.persianai.assistant.utils.SharedDataManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
