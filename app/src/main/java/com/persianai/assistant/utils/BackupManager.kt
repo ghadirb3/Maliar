@@ -202,7 +202,7 @@ class BackupManager(private val context: Context) {
                             id = checkData.id.toString().ifBlank { java.util.UUID.randomUUID().toString() },
                             checkNumber = checkData.checkNumber,
                             amount = checkData.amount,
-                            issuer = "",
+                            issuer = SharedDataManager.getUserName(context),
                             recipient = checkData.recipient,
                             issueDate = checkData.issueDate,
                             dueDate = checkData.dueDate,

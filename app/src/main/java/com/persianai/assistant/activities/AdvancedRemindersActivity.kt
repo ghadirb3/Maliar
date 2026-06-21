@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
-import com.google.android.material.datepicker.MaterialDatePicker
 import com.persianai.assistant.R
 import com.persianai.assistant.adapters.RemindersAdapter
 import com.persianai.assistant.ai.AdvancedPersianAssistant
@@ -255,14 +254,10 @@ class AdvancedRemindersActivity : AppCompatActivity() {
         categorySpinner.adapter = adapter
         
         dateButton.setOnClickListener {
-            val picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ")
-                .setSelection(selectedDate)
-                .build()
-
-            picker.addOnPositiveButtonClickListener { selection ->
-                selectedDate = selection
-                val cal = Calendar.getInstance().apply { timeInMillis = selection }
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedDate) { millis ->
+                selectedDate = millis
+                val cal = Calendar.getInstance().apply { timeInMillis = millis }
                 val persianDate = PersianDateConverter.gregorianToPersian(
                     cal.get(Calendar.YEAR),
                     cal.get(Calendar.MONTH) + 1,
@@ -270,7 +265,6 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                 )
                 dateButton.text = persianDate.toReadableString()
             }
-            picker.show(supportFragmentManager, "DATE_PICKER")
         }
         
         timeButton.setOnClickListener {
@@ -741,14 +735,10 @@ class AdvancedRemindersActivity : AppCompatActivity() {
             categorySpinner.setSelection(categoryPosition)
         }
 
-        // Listeners for date and time pickers
+        // Listeners for date and time pickers (use Jalali picker)
         dateButton.setOnClickListener {
-            val picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ")
-                .setSelection(selectedDate)
-                .build()
-
-            picker.addOnPositiveButtonClickListener { selection ->
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedDate) { selection ->
                 selectedDate = selection
                 val cal = Calendar.getInstance().apply { timeInMillis = selection }
                 val persianDate = PersianDateConverter.gregorianToPersian(
@@ -758,7 +748,6 @@ class AdvancedRemindersActivity : AppCompatActivity() {
                 )
                 dateButton.text = persianDate.toReadableString()
             }
-            picker.show(supportFragmentManager, "DATE_PICKER_EDIT")
         }
 
         timeButton.setOnClickListener {

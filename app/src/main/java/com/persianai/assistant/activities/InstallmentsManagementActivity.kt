@@ -268,6 +268,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         val paymentDayInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.paymentDayInput)
         val recipientInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.recipientInput)
         val descriptionInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.descriptionInput)
+        val paidInstallmentsInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.paidInstallmentsInput)
         
         var selectedStartDate: Long = existing?.startDate ?: System.currentTimeMillis()
 
@@ -288,6 +289,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
             paymentDayInput.setText(inst.paymentDay.toString())
             recipientInput.setText(inst.recipient)
             descriptionInput.setText(inst.description)
+            paidInstallmentsInput.setText(inst.paidInstallments.toString())
             val calendar = Calendar.getInstance().apply { timeInMillis = inst.startDate }
             val persianDate = PersianDateConverter.gregorianToPersian(
                 calendar.get(Calendar.YEAR),
@@ -298,29 +300,23 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         }
         
         startDateButton.setOnClickListener {
-            val datePicker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ شروع")
-                .setSelection(selectedStartDate)
-                .build()
-            
-                datePicker.addOnPositiveButtonClickListener { selection ->
-                    // normalize selection to local midnight to avoid timezone shifts
-                    val c = Calendar.getInstance().apply { timeInMillis = selection }
-                    c.set(Calendar.HOUR_OF_DAY, 0)
-                    c.set(Calendar.MINUTE, 0)
-                    c.set(Calendar.SECOND, 0)
-                    c.set(Calendar.MILLISECOND, 0)
-                    selectedStartDate = c.timeInMillis
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedStartDate) { selection ->
+                // normalize selection to local midnight to avoid timezone shifts
+                val c = Calendar.getInstance().apply { timeInMillis = selection }
+                c.set(Calendar.HOUR_OF_DAY, 0)
+                c.set(Calendar.MINUTE, 0)
+                c.set(Calendar.SECOND, 0)
+                c.set(Calendar.MILLISECOND, 0)
+                selectedStartDate = c.timeInMillis
 
-                    val persianDate = PersianDateConverter.gregorianToPersian(
-                        c.get(Calendar.YEAR),
-                        c.get(Calendar.MONTH) + 1,
-                        c.get(Calendar.DAY_OF_MONTH)
-                    )
-                    startDateButton.text = persianDate.toReadableString()
-                }
-            
-            datePicker.show(supportFragmentManager, "DATE_PICKER")
+                val persianDate = PersianDateConverter.gregorianToPersian(
+                    c.get(Calendar.YEAR),
+                    c.get(Calendar.MONTH) + 1,
+                    c.get(Calendar.DAY_OF_MONTH)
+                )
+                startDateButton.text = persianDate.toReadableString()
+            }
         }
         
         MaterialAlertDialogBuilder(this)
@@ -355,10 +351,17 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
 
-                if (existing != null && totalInstallments < existing.paidInstallments) {
+                val paidInstallmentsValue = paidInstallmentsInput.text?.toString()?.toIntOrNull() ?: 0
+
+                if (paidInstallmentsValue < 0) {
+                    Toast.makeText(this, "⚠️ مقدار اقساط پرداخت‌شده نامعتبر است", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                if (totalInstallments < paidInstallmentsValue) {
                     Toast.makeText(
                         this,
-                        "⚠️ تعداد اقساط نمی‌تواند کمتر از ${existing.paidInstallments} (پرداخت‌شده) باشد",
+                        "⚠️ تعداد اقساط نمی‌تواند کمتر از اقساط پرداخت‌شده باشد",
                         Toast.LENGTH_SHORT
                     ).show()
                     return@setPositiveButton
@@ -377,6 +380,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                     addInstallment(
                         title = title,
                         totalAmount = totalAmount,
+                        paidInstallments = paidInstallmentsValue,
                         installmentAmount = installmentAmount,
                         totalInstallments = totalInstallments,
                         startDate = selectedStartDate,
@@ -387,6 +391,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                 } else {
                     val success = installmentManager.updateInstallment(
                         id = existing.id,
+                        paidInstallments = paidInstallmentsValue,
                         title = title,
                         totalAmount = totalAmount,
                         installmentAmount = installmentAmount,
@@ -411,6 +416,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
     private fun addInstallment(
         title: String,
         totalAmount: Double,
+        paidInstallments: Int = 0,
         installmentAmount: Double,
         totalInstallments: Int,
         startDate: Long,
@@ -424,6 +430,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                 installmentManager.addInstallment(
                     title = title,
                     totalAmount = totalAmount,
+                    paidInstallments = paidInstallments,
                     installmentAmount = installmentAmount,
                     totalInstallments = totalInstallments,
                     startDate = startDate,

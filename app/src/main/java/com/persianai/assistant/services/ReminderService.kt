@@ -84,6 +84,13 @@ class ReminderService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startForegroundNotification() {
+        // Only run an ongoing foreground notification when user explicitly enables it in settings
+        val useForeground = SharedDataManager.isReminderServiceForegroundEnabled(this)
+        if (!useForeground) {
+            Log.d(TAG, "ℹ️ Foreground notification suppressed by settings")
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "reminder_service", 
@@ -97,7 +104,7 @@ class ReminderService : Service() {
             val nm = getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(channel)
         }
-        
+
         val notification = NotificationCompat.Builder(this, "reminder_service")
             .setContentTitle("🔔 یادآوری‌های هوشمند")
             .setSmallIcon(R.drawable.ic_notification)
@@ -106,7 +113,7 @@ class ReminderService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .build()
-        
+
         startForeground(FOREGROUND_ID, notification)
         Log.d(TAG, "✅ Foreground service started")
     }

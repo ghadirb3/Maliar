@@ -10,7 +10,7 @@ import android.widget.CheckBox
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.datepicker.MaterialDatePicker
+// Jalali picker used instead of MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.persianai.assistant.R
 import com.persianai.assistant.adapters.ChecksAdapter
@@ -245,16 +245,10 @@ class ChecksManagementActivity : AppCompatActivity() {
         }
         
         issueDateButton.setOnClickListener {
-            val datePicker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ صدور")
-                .setSelection(selectedIssueDate)
-                .build()
-            
-            datePicker.addOnPositiveButtonClickListener { selection ->
-                selectedIssueDate = selection
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = selection
-                }
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedIssueDate) { millis ->
+                selectedIssueDate = millis
+                val calendar = Calendar.getInstance().apply { timeInMillis = millis }
                 val persianDate = PersianDateConverter.gregorianToPersian(
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH) + 1,
@@ -262,21 +256,13 @@ class ChecksManagementActivity : AppCompatActivity() {
                 )
                 issueDateButton.text = persianDate.toReadableString()
             }
-            
-            datePicker.show(supportFragmentManager, "ISSUE_DATE_PICKER")
         }
         
         dueDateButton.setOnClickListener {
-            val datePicker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ سررسید")
-                .setSelection(selectedDueDate)
-                .build()
-            
-            datePicker.addOnPositiveButtonClickListener { selection ->
-                selectedDueDate = selection
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = selection
-                }
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedDueDate) { millis ->
+                selectedDueDate = millis
+                val calendar = Calendar.getInstance().apply { timeInMillis = millis }
                 val persianDate = PersianDateConverter.gregorianToPersian(
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH) + 1,
@@ -284,8 +270,6 @@ class ChecksManagementActivity : AppCompatActivity() {
                 )
                 dueDateButton.text = persianDate.toReadableString()
             }
-            
-            datePicker.show(supportFragmentManager, "DUE_DATE_PICKER")
         }
         
         val receivedCheckbox = dialogView.findViewById<CheckBox>(R.id.receivedCheckbox)
@@ -400,29 +384,21 @@ class ChecksManagementActivity : AppCompatActivity() {
         }
 
         issueDateButton.setOnClickListener {
-            val datePicker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ صدور")
-                .setSelection(selectedIssueDate)
-                .build()
-            datePicker.addOnPositiveButtonClickListener { sel ->
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedIssueDate) { sel ->
                 selectedIssueDate = sel
                 val cal = Calendar.getInstance().apply { timeInMillis = sel }
                 issueDateButton.text = PersianDateConverter.gregorianToPersian(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)).toReadableString()
             }
-            datePicker.show(supportFragmentManager, "EDIT_ISSUE_DATE")
         }
 
         dueDateButton.setOnClickListener {
-            val datePicker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ سررسید")
-                .setSelection(selectedDueDate)
-                .build()
-            datePicker.addOnPositiveButtonClickListener { sel ->
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedDueDate) { sel ->
                 selectedDueDate = sel
                 val cal = Calendar.getInstance().apply { timeInMillis = sel }
                 dueDateButton.text = PersianDateConverter.gregorianToPersian(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)).toReadableString()
             }
-            datePicker.show(supportFragmentManager, "EDIT_DUE_DATE")
         }
 
         MaterialAlertDialogBuilder(this)

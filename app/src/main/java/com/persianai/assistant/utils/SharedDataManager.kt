@@ -210,6 +210,17 @@ object SharedDataManager {
             apply()
         }
     }
+
+    fun isReminderServiceForegroundEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean("reminder_service_foreground", false)
+    }
+
+    fun setReminderServiceForegroundEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().apply {
+            putBoolean("reminder_service_foreground", enabled)
+            apply()
+        }
+    }
     
     // ==================== Sync Status ====================
     

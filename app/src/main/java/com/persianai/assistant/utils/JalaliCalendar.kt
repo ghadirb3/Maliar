@@ -77,4 +77,70 @@ class JalaliCalendar(year: Int, month: Int, day: Int) {
 
         return JalaliCalendar(jy, jm, jd)
     }
+
+    companion object {
+        private val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29)
+        private val gDaysInMonth = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+        private fun isGregorianLeap(y: Int): Boolean {
+            return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)
+        }
+
+        fun jalaliToGregorian(jy: Int, jm: Int, jd: Int): java.util.Calendar {
+            var jy2 = jy - 979
+            val jm2 = jm - 1
+            val jd2 = jd - 1
+
+            var jDayNo = 365 * jy2 + (jy2 / 33) * 8 + ((jy2 % 33 + 3) / 4)
+            for (i in 0 until jm2) {
+                jDayNo += jDaysInMonth[i]
+            }
+            jDayNo += jd2
+
+            var gDayNo = jDayNo + 79
+
+            var gy = 1600 + 400 * (gDayNo / 146097)
+            gDayNo %= 146097
+
+            if (gDayNo >= 36525) {
+                gDayNo -= 1
+                gy += 100 * (gDayNo / 36524)
+                gDayNo %= 36524
+                if (gDayNo >= 365) {
+                    gDayNo += 1
+                }
+            }
+
+            gy += 4 * (gDayNo / 1461)
+            gDayNo %= 1461
+
+            if (gDayNo >= 366) {
+                gy += (gDayNo - 1) / 365
+                gDayNo = (gDayNo - 1) % 365
+            }
+
+            var i = 0
+            while (i < 12) {
+                var v = gDaysInMonth[i]
+                if (i == 1 && isGregorianLeap(gy)) v = 29
+                if (gDayNo < v) break
+                gDayNo -= v
+                i++
+            }
+
+            val gm = i + 1
+            val gd = gDayNo + 1
+
+            val cal = java.util.Calendar.getInstance()
+            cal.set(java.util.Calendar.YEAR, gy)
+            cal.set(java.util.Calendar.MONTH, gm - 1)
+            cal.set(java.util.Calendar.DAY_OF_MONTH, gd)
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            cal.set(java.util.Calendar.MINUTE, 0)
+            cal.set(java.util.Calendar.SECOND, 0)
+            cal.set(java.util.Calendar.MILLISECOND, 0)
+
+            return cal
+        }
+    }
 }

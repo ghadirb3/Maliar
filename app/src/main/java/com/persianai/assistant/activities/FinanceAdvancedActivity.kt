@@ -315,16 +315,10 @@ class FinanceAdvancedActivity : AppCompatActivity() {
     }
     
     private fun showDatePicker(onDateSelected: (Long) -> Unit) {
-        val datePicker = com.google.android.material.datepicker.MaterialDatePicker.Builder.datePicker()
-            .setTitleText("تاریخ را انتخاب کنید")
-            .setSelection(System.currentTimeMillis())
-            .build()
-        
-        datePicker.addOnPositiveButtonClickListener { selection ->
-            onDateSelected(selection)
+        val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+        picker.show(System.currentTimeMillis()) { millis ->
+            onDateSelected(millis)
         }
-        
-        datePicker.show(supportFragmentManager, "DATE_PICKER")
     }
     
     private fun showCheckDetails(check: CheckManager.Check) {

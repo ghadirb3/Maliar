@@ -52,12 +52,13 @@ class InstallmentManager(private val context: Context) {
         paymentDay: Int,
         recipient: String,
         description: String,
+        paidInstallments: Int = 0,
         alertDaysBefore: Int = 3
     ): String {
         val id = UUID.randomUUID().toString()
         val installment = Installment(
             id, title, totalAmount, installmentAmount,
-            totalInstallments, 0, startDate, paymentDay,
+            totalInstallments, paidInstallments, startDate, paymentDay,
             recipient, description, alertDaysBefore, true
         )
         
@@ -67,17 +68,27 @@ class InstallmentManager(private val context: Context) {
         
         // Sync to AccountingDB - FIXED: Using proper model mapping
         try {
+            val paidAmount = paidInstallments * installmentAmount
+            val remainingAmount = (totalAmount - paidAmount).coerceAtLeast(0.0)
+
+            // compute next payment date based on paidInstallments
+            val cal = Calendar.getInstance().apply { timeInMillis = startDate }
+            cal.add(Calendar.MONTH, paidInstallments)
+            cal.set(Calendar.DAY_OF_MONTH, paymentDay)
+            val nextPaymentDate = Date(cal.timeInMillis)
+
             val model = com.persianai.assistant.models.Installment(
                 id = 0,
                 title = title,
                 totalAmount = totalAmount,
                 monthlyAmount = installmentAmount,
                 installmentCount = totalInstallments,
-                paidInstallments = 0,
-                paidAmount = 0.0,
-                remainingAmount = totalAmount,
-                nextPaymentDate = Date(startDate),
-                status = com.persianai.assistant.models.InstallmentStatus.ACTIVE,
+                paidInstallments = paidInstallments,
+                paidAmount = paidAmount,
+                remainingAmount = remainingAmount,
+                nextPaymentDate = nextPaymentDate,
+                status = if (paidInstallments >= totalInstallments) com.persianai.assistant.models.InstallmentStatus.COMPLETED
+                         else com.persianai.assistant.models.InstallmentStatus.ACTIVE,
                 description = description,
                 lender = recipient
             )
@@ -278,16 +289,19 @@ class InstallmentManager(private val context: Context) {
         paymentDay: Int,
         recipient: String,
         description: String
+        , paidInstallments: Int = -1
     ): Boolean {
         val all = getAllInstallments()
         val existing = all.firstOrNull { it.id == id } ?: return false
-        if (totalInstallments < existing.paidInstallments) return false
+        val newPaid = if (paidInstallments >= 0) paidInstallments else existing.paidInstallments
+        if (totalInstallments < newPaid) return false
 
         val updated = existing.copy(
             title = title,
             totalAmount = totalAmount,
             installmentAmount = installmentAmount,
             totalInstallments = totalInstallments,
+            paidInstallments = newPaid,
             startDate = startDate,
             paymentDay = paymentDay,
             recipient = recipient,

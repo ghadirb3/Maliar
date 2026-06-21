@@ -13,6 +13,7 @@ import com.persianai.assistant.finance.CheckManager
 import com.persianai.assistant.finance.FinanceManager
 import com.persianai.assistant.finance.InstallmentManager
 import com.persianai.assistant.utils.PersianDateConverter
+import com.persianai.assistant.utils.SharedDataManager
 import java.util.Calendar
 
 class AccountingAdvancedActivity : AppCompatActivity() {
@@ -162,13 +163,10 @@ class AccountingAdvancedActivity : AppCompatActivity() {
 
         var selectedDueDate = System.currentTimeMillis()
         dueDateButton.setOnClickListener {
-            val datePicker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("تاریخ سررسید چک")
-                .setSelection(selectedDueDate)
-                .build()
-            datePicker.addOnPositiveButtonClickListener { selection ->
-                selectedDueDate = selection
-                val calendar = Calendar.getInstance().apply { timeInMillis = selection }
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedDueDate) { millis ->
+                selectedDueDate = millis
+                val calendar = Calendar.getInstance().apply { timeInMillis = millis }
                 val persianDate = PersianDateConverter.gregorianToPersian(
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH) + 1,
@@ -176,7 +174,6 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                 )
                 dueDateButton.text = persianDate.toReadableString()
             }
-            datePicker.show(supportFragmentManager, "CHECK_DUE_DATE")
         }
 
         MaterialAlertDialogBuilder(this)
@@ -193,7 +190,7 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                 checkManager.addCheck(
                     checkNumber = checkNumberInput.text.toString().ifBlank { System.currentTimeMillis().toString() },
                     amount = amount,
-                    issuer = "من",
+                    issuer = SharedDataManager.getUserName(this),
                     recipient = recipientInput.text.toString().ifBlank { "نامشخص" },
                     issueDate = System.currentTimeMillis(),
                     dueDate = selectedDueDate,
