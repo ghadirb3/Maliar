@@ -203,28 +203,42 @@ class AccountingActivity : AppCompatActivity() {
         var issueDateMillis = System.currentTimeMillis()
         var dueDateMillis = System.currentTimeMillis()
 
-        issueDateButton.setOnClickListener {
+        // Show Persian dates on buttons initially
+        run {
             val cal = java.util.Calendar.getInstance()
-            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
-                val c = java.util.Calendar.getInstance()
-                c.set(y, m, d, 0, 0, 0)
-                issueDateMillis = c.timeInMillis
-                val persian = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(y, m + 1, d)
+            val persianIssue = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(
+                cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH) + 1, cal.get(java.util.Calendar.DAY_OF_MONTH)
+            )
+            issueDateButton.text = "📅 صدور: ${persianIssue.toReadableString()}"
+            
+            val persianDue = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(
+                cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH) + 1, cal.get(java.util.Calendar.DAY_OF_MONTH)
+            )
+            dueDateButton.text = "📅 سررسید: ${persianDue.toReadableString()}"
+        }
+
+        issueDateButton.setOnClickListener {
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(issueDateMillis) { millis ->
+                issueDateMillis = millis
+                val c = java.util.Calendar.getInstance().apply { timeInMillis = millis }
+                val persian = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(
+                    c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH)
+                )
                 issueDateButton.text = "📅 صدور: ${persian.toReadableString()}"
-            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
-            dp.show()
+            }
         }
 
         dueDateButton.setOnClickListener {
-            val cal = java.util.Calendar.getInstance()
-            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
-                val c = java.util.Calendar.getInstance()
-                c.set(y, m, d, 0, 0, 0)
-                dueDateMillis = c.timeInMillis
-                val persian = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(y, m + 1, d)
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(dueDateMillis) { millis ->
+                dueDateMillis = millis
+                val c = java.util.Calendar.getInstance().apply { timeInMillis = millis }
+                val persian = com.persianai.assistant.utils.PersianDateConverter.gregorianToPersian(
+                    c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH)
+                )
                 dueDateButton.text = "📅 سررسید: ${persian.toReadableString()}"
-            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
-            dp.show()
+            }
         }
 
         MaterialAlertDialogBuilder(this)

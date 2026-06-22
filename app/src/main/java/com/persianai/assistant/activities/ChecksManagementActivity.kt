@@ -451,7 +451,9 @@ class ChecksManagementActivity : AppCompatActivity() {
         val details = buildString {
             appendLine("شماره چک: ${check.checkNumber}")
             appendLine("مبلغ: ${formatAmount(check.amount)}")
-            appendLine("دارنده: ${check.recipient}")
+            if (check.issuer.isNotBlank()) appendLine("صادرکننده: ${check.issuer}")
+            if (check.recipient.isNotBlank()) appendLine("دریافت‌کننده: ${check.recipient}")
+            if (check.bankName.isNotBlank()) appendLine("بانک: ${check.bankName}")
             appendLine("تاریخ سررسید: $persianDate")
             appendLine("وضعیت: $statusText")
         }

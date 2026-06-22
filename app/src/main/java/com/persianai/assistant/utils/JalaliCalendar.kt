@@ -86,6 +86,16 @@ class JalaliCalendar(year: Int, month: Int, day: Int) {
             return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0)
         }
 
+        /**
+         * Check if a Jalali year is a leap year
+         * Jalali leap years follow a 33-year cycle: years 1, 5, 9, 13, 17, 22, 26, 30 in each cycle
+         */
+        fun isJalaliLeapYear(jy: Int): Boolean {
+            val yearInCycle = jy % 33
+            val leapYearsInCycle = setOf(1, 5, 9, 13, 17, 22, 26, 30)
+            return yearInCycle in leapYearsInCycle
+        }
+
         fun jalaliToGregorian(jy: Int, jm: Int, jd: Int): java.util.Calendar {
             var jy2 = jy - 979
             val jm2 = jm - 1

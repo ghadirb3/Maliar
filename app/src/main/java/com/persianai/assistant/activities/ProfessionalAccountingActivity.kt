@@ -291,9 +291,12 @@ class ProfessionalAccountingActivity : AppCompatActivity() {
         // پیش‌پر کردن مقادیر
         checkNumberInput.setText(check.checkNumber)
         amountInput.setText(check.amount.toString())
+        issuerInput.setText(check.issuer ?: "")
         recipientInput.setText(check.recipient)
         bankNameInput.setText(check.bankName ?: "")
+        accountNumberInput.setText(check.accountNumber ?: "")
         descriptionInput.setText(check.description ?: "")
+        receivedCheckbox.isChecked = check.isIncoming
 
         var issueDateMillis = check.issueDate?.time ?: System.currentTimeMillis()
         var dueDateMillis = check.dueDate?.time ?: System.currentTimeMillis()
@@ -313,23 +316,19 @@ class ProfessionalAccountingActivity : AppCompatActivity() {
         setDueText(dueDateMillis)
 
         issueDateButton.setOnClickListener {
-            val cal = java.util.Calendar.getInstance()
-            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
-                val c = java.util.Calendar.getInstance(); c.set(y, m, d, 0, 0, 0)
-                issueDateMillis = c.timeInMillis
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(issueDateMillis) { sel ->
+                issueDateMillis = sel
                 setIssueText(issueDateMillis)
-            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
-            dp.show()
+            }
         }
 
         dueDateButton.setOnClickListener {
-            val cal = java.util.Calendar.getInstance()
-            val dp = android.app.DatePickerDialog(this, { _, y, m, d ->
-                val c = java.util.Calendar.getInstance(); c.set(y, m, d, 0, 0, 0)
-                dueDateMillis = c.timeInMillis
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(dueDateMillis) { sel ->
+                dueDateMillis = sel
                 setDueText(dueDateMillis)
-            }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
-            dp.show()
+            }
         }
 
         MaterialAlertDialogBuilder(this)

@@ -73,8 +73,8 @@ class InstallmentManager(private val context: Context) {
 
             // compute next payment date based on paidInstallments
             val cal = Calendar.getInstance().apply { timeInMillis = startDate }
-            cal.add(Calendar.MONTH, paidInstallments)
             cal.set(Calendar.DAY_OF_MONTH, paymentDay)
+            cal.add(Calendar.MONTH, paidInstallments)
             val nextPaymentDate = Date(cal.timeInMillis)
 
             val model = com.persianai.assistant.models.Installment(
@@ -158,8 +158,10 @@ class InstallmentManager(private val context: Context) {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = installment.startDate
         
-        calendar.add(Calendar.MONTH, installment.paidInstallments)
+        // FIX: Always set DAY_OF_MONTH FIRST, then add months
+        // This prevents the day from shifting when going through months with different lengths
         calendar.set(Calendar.DAY_OF_MONTH, installment.paymentDay)
+        calendar.add(Calendar.MONTH, installment.paidInstallments)
         
         return calendar.timeInMillis
     }

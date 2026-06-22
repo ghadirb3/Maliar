@@ -1,40 +1,34 @@
-# Task Implementation Plan
+# Fix Plan Based on Code Analysis
 
-## 1. 🔧 Fix Backup System (Google Drive + Local)
-- **Problem**: Backup button gives error, no Google Drive option
-- **Fix**: 
-  - Overhaul BackupManager to include all data (transactions, reminders, checks, installments, feature flags)
-  - Add Google Drive backup/restore with proper OAuth flow
-  - Add a dialog to choose between Local/Google Drive backup
+## Found Issues:
 
-## 2. 💡 AI-Powered Smart Reminders
-- **Problem**: Reminders are basic text only
-- **Fix**:
-  - Add "Smart Mode" to reminders that uses AI to generate natural language reminder text
-  - Add fullscreen alarm with AI-generated friendly message
-  - Add TTS playback for smart reminders (if TTS works)
-  - Make reminders display in a smart, natural way
+### 1. ProfessionalAccountingActivity - Check Edit Missing Issuer Field
+- `showCheckDialog()` finds `issuerInput` but NEVER sets `issuerInput.setText(check.issuer)`
+- Also `accountNumberInput` and `receivedCheckbox` are not set
 
-## 3. 💰 Fix Accounting Data Issues
-- **Problem**: 
-  - Monthly report shows wrong amounts (1,400,000 → 1,000,000)
-  - Fragmented data storage (FinanceManager vs AccountingManager vs AccountingDB)
-  - Missing monthly/yearly balance sheet reports
-- **Fix**:
-  - Unify data source - make AccountingManager the single source of truth
-  - Fix the monthly report calculation precision
-  - Add proper monthly/yearly balance reports
-  - Ensure backup includes all accounting data
+### 2. Installment Payment Day Calculation Bug
+- `InstallmentManager.calculateNextPaymentDate()` uses `calendar.add(Calendar.MONTH, paid)` THEN `calendar.set(Calendar.DAY_OF_MONTH, paymentDay)`
+- If startDate day > paymentDay, the first payment shows wrong date
+- Example: startDate = 1403/1/15, paymentDay = 2 → first payment shows as 1403/1/2 (past!)
 
-## 4. 🤖 Chat AI Access to Reminders & Accounting
-- **Problem**: Chat model can't access reminders/accounting data
-- **Fix**:
-  - Enhance EnhancedSmartAssistant to properly route queries to ReminderModule and FinanceModule
-  - Add system prompt context about user's current reminders and financial status
-  - Enable the chat to create reminders and query financial data naturally
+### 3. Installment paymentDayInput Default
+- No default value for paymentDay in new installment dialog (starts empty)
+- Should default to 1
 
-## 5. 🧪 Testing & Verification
-- Test backup/restore with Google Drive
-- Test AI-powered reminders
-- Test accounting data integrity
-- Test chat interaction with both modules
+### 4. SmartReminderManager - Need to check for crash
+- "Smart reminder" selected → app crashes/closes
+
+### 5. Call stuck at "در حال پردازش فرمان"
+- Need to trace the call flow
+
+### 6. Reminder date picker issue
+- Old RemindersActivity only has time input, no date
+- AdvancedRemindersActivity uses JalaliDatePickerDialog correctly
+
+## Fix Priority:
+1. ✅ Fix check edit issuer display in ProfessionalAccountingActivity
+2. ✅ Fix installment payment day calculation
+3. ✅ Fix installment paymentDayInput default to 1
+4. Fix smart reminder crash (need more investigation)
+5. Fix call stuck issue (need more investigation)
+6. Add Jalali date picker to old RemindersActivity

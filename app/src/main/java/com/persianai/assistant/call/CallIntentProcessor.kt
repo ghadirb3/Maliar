@@ -104,10 +104,17 @@ class CallIntentProcessor(private val context: Context) {
             
             Log.d(TAG, "👤 نام مخاطب استخراج شد: '$contactName'")
             
-            // مرحله ۳: جستجوی مخاطب
+            // مرحله ۳: جستجوی مخاطب با Timeout (8 ثانیه)
             val query = contactName
             Log.d(TAG, "🔍 جستجوی مخاطب با عبارت: '$query'")
-            val contacts = contactSearcher.searchContacts(query, maxResults = 3)
+            val contacts = try {
+                withTimeout(8000L) {
+                    contactSearcher.searchContacts(query, maxResults = 3)
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Log.e(TAG, "❌ Timeout در جستجوی مخاطبین")
+                emptyList()
+            }
             
             when {
                 contacts.isEmpty() -> {

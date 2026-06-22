@@ -578,8 +578,10 @@ class InstallmentsManagementActivity : AppCompatActivity() {
             
             for (i in 1..installment.totalInstallments) {
                 calendar.timeInMillis = installment.startDate
-                calendar.add(Calendar.MONTH, i - 1)
+                // FIX: Set DAY_OF_MONTH FIRST, then add months
+                // This prevents day shifting in short months
                 calendar.set(Calendar.DAY_OF_MONTH, installment.paymentDay)
+                calendar.add(Calendar.MONTH, i - 1)
                 val dueTime = calendar.timeInMillis
                 val dueCal = Calendar.getInstance().apply {
                     timeInMillis = dueTime

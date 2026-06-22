@@ -13,10 +13,26 @@ import com.persianai.assistant.utils.JalaliCalendar
 /**
  * A minimal Jalali date picker dialog backed by JalaliCalendar.
  * Returns selected date as milliseconds via callback.
+ * 
+ * Enhanced to show Persian month names dynamically based on selection.
  */
 class JalaliDatePickerDialog(private val ctx: Context) {
 
     data class Result(val year: Int, val month: Int, val day: Int)
+
+    private val persianMonthNames = arrayOf(
+        "فروردین", "اردیبهشت", "خرداد",
+        "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر",
+        "دی", "بهمن", "اسفند"
+    )
+
+    private fun getMaxDays(jy: Int, jm: Int): Int {
+        return if (jm <= 6) 31 else if (jm <= 11) 30 else {
+            // اسفند - check if leap year
+            if (JalaliCalendar.isJalaliLeapYear(jy)) 30 else 29
+        }
+    }
 
     fun show(initialMillis: Long = System.currentTimeMillis(), onSelected: (Long) -> Unit) {
         val cal = java.util.Calendar.getInstance().apply { timeInMillis = initialMillis }
@@ -33,16 +49,28 @@ class JalaliDatePickerDialog(private val ctx: Context) {
         yearPicker.maxValue = j.getYear() + 50
         yearPicker.value = j.getYear()
 
+        // Use Persian month names in the month picker
         monthPicker.minValue = 1
         monthPicker.maxValue = 12
         monthPicker.value = j.getMonth()
+        monthPicker.displayedValues = persianMonthNames
 
         dayPicker.minValue = 1
-        dayPicker.maxValue = 31
+        dayPicker.maxValue = getMaxDays(j.getYear(), j.getMonth())
         dayPicker.value = j.getDay()
 
+        // Update days when month or year changes
+        val updateDays = {
+            val maxDay = getMaxDays(yearPicker.value, monthPicker.value)
+            dayPicker.maxValue = maxDay
+            if (dayPicker.value > maxDay) dayPicker.value = maxDay
+        }
+        
+        monthPicker.setOnValueChangedListener { _, _, _ -> updateDays() }
+        yearPicker.setOnValueChangedListener { _, _, _ -> updateDays() }
+
         MaterialAlertDialogBuilder(ctx)
-            .setTitle("انتخاب تاریخ")
+            .setTitle("انتخاب تاریخ به شمسی")
             .setView(view)
             .setPositiveButton("انتخاب") { _, _ ->
                 val selJ = Result(yearPicker.value, monthPicker.value, dayPicker.value)
