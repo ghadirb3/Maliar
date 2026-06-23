@@ -24,6 +24,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -208,14 +209,19 @@ class ReminderService : Service() {
             try {
                 var textToSpeak = reminder.title
                 
-                // تلاش برای تولید متن طبیعی با مدل آنلاین (با Timeout)
+                // تلاش برای تولید متن طبیعی با مدل آنلاین (بدون استفاده از withTimeout نامشخص)
                 try {
                     val assistant = com.persianai.assistant.ai.AdvancedPersianAssistant(this@ReminderService)
-                    val aiResp = withTimeout(10_000L) {
-                        assistant.processRequestWithAI(
-                            reminder.description.ifBlank { reminder.title },
-                            contextHint = "یادآوری"
-                        )
+                    val aiResp = try {
+                        withContext(Dispatchers.IO) {
+                            assistant.processRequestWithAI(
+                                reminder.description.ifBlank { reminder.title },
+                                contextHint = "یادآوری"
+                            )
+                        }
+                    } catch (ie: Exception) {
+                        android.util.Log.w(TAG, "AI generation timed out or failed: ${ie.message}")
+                        null
                     }
                     if (aiResp?.text?.isNotBlank() == true) {
                         textToSpeak = aiResp.text

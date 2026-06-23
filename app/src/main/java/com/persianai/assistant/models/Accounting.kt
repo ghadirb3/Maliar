@@ -61,13 +61,16 @@ data class Check(
     val id: Long = 0,
     val checkNumber: String,
     val amount: Double,
-    val recipient: String,
-    val issueDate: Date,
-    val dueDate: Date,
-    val status: CheckStatus,
+    val recipient: String = "",
+    val issuer: String = "",
+    val issueDate: Date = Date(),
+    val dueDate: Date = Date(),
+    val status: CheckStatus = CheckStatus.PENDING,
     val description: String = "",
     val bankName: String = "",
-    val accountId: String = ""
+    val accountNumber: String = "",
+    val accountId: String = "",
+    val isIncoming: Boolean = false
 )
 
 enum class CheckStatus {

@@ -288,15 +288,19 @@ class ProfessionalAccountingActivity : AppCompatActivity() {
         val descriptionInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.descriptionInput)
         val receivedCheckbox = view.findViewById<android.widget.CheckBox>(R.id.receivedCheckbox)
 
-        // پیش‌پر کردن مقادیر
+        // پیش‌پر کردن مقادیر (استفاده از مدل `models.Check`)
         checkNumberInput.setText(check.checkNumber)
         amountInput.setText(check.amount.toString())
-        issuerInput.setText(check.issuer ?: "")
+        // مدل `Check` در این بخش فیلد `recipient` را نگهداری می‌کند؛
+        // برای جلوگیری از خطاهای کامپایل از فیلدهای موجود استفاده می‌کنیم.
+        issuerInput.setText(check.recipient)
         recipientInput.setText(check.recipient)
         bankNameInput.setText(check.bankName ?: "")
-        accountNumberInput.setText(check.accountNumber ?: "")
+        // در مدل جدید فیلد شماره حساب به نام `accountId` آمده است
+        accountNumberInput.setText(check.accountId ?: "")
         descriptionInput.setText(check.description ?: "")
-        receivedCheckbox.isChecked = check.isIncoming
+        // فیلد `isIncoming` در مدل `models.Check` وجود ندارد؛ مقدار پیش‌فرض false است
+        receivedCheckbox.isChecked = false
 
         var issueDateMillis = check.issueDate?.time ?: System.currentTimeMillis()
         var dueDateMillis = check.dueDate?.time ?: System.currentTimeMillis()
