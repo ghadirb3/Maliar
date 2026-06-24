@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.content.ContentValues
 
-class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db", null, 2) {
+class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db", null, 3) {
     
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""CREATE TABLE transactions (
@@ -16,8 +16,17 @@ class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db"
         
         db.execSQL("""CREATE TABLE checks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            amount REAL, checkNumber TEXT, issuer TEXT, dueDate INTEGER,
-            status TEXT, type TEXT, description TEXT, createdDate INTEGER)""")
+            amount REAL,
+            checkNumber TEXT,
+            issuer TEXT,
+            recipient TEXT,
+            dueDate INTEGER,
+            status TEXT,
+            type TEXT,
+            description TEXT,
+            bankName TEXT,
+            accountNumber TEXT,
+            createdDate INTEGER)""")
         
         db.execSQL("""CREATE TABLE installments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,13 +38,20 @@ class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db"
         if (old < 2) {
             db.execSQL("""CREATE TABLE IF NOT EXISTS checks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                amount REAL, checkNumber TEXT, issuer TEXT, dueDate INTEGER,
-                status TEXT, type TEXT, description TEXT, createdDate INTEGER)""")
+                amount REAL, checkNumber TEXT, issuer TEXT, recipient TEXT, dueDate INTEGER,
+                status TEXT, type TEXT, description TEXT, bankName TEXT, accountNumber TEXT, createdDate INTEGER)""")
             
             db.execSQL("""CREATE TABLE IF NOT EXISTS installments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 totalAmount REAL, monthlyAmount REAL, totalMonths INTEGER, paidMonths INTEGER,
                 startDate INTEGER, description TEXT, category TEXT, reminderEnabled INTEGER, createdDate INTEGER)""")
+        }
+
+        if (old < 3) {
+            // add missing columns if upgrading from older schema
+            try { db.execSQL("ALTER TABLE checks ADD COLUMN recipient TEXT") } catch (_: Exception) {}
+            try { db.execSQL("ALTER TABLE checks ADD COLUMN bankName TEXT") } catch (_: Exception) {}
+            try { db.execSQL("ALTER TABLE checks ADD COLUMN accountNumber TEXT") } catch (_: Exception) {}
         }
     }
     
@@ -193,11 +209,14 @@ class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db"
         val values = ContentValues().apply {
             put("amount", check.amount)
             put("checkNumber", check.checkNumber)
-            put("issuer", check.recipient)
+            put("issuer", check.issuer)
+            put("recipient", check.recipient)
             put("dueDate", check.dueDate.time)
             put("status", check.status.name)
             put("type", "PAYMENT") // Default type
             put("description", check.description)
+            put("bankName", check.bankName)
+            put("accountNumber", check.accountNumber)
             put("createdDate", check.issueDate.time)
         }
         return writableDatabase.insert("checks", null, values)
@@ -209,24 +228,41 @@ class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db"
             "SELECT * FROM checks ORDER BY dueDate ASC", null)
 
         while (cursor.moveToNext()) {
-            val statusString = cursor.getString(5)
-            val status = try {
-                com.persianai.assistant.models.CheckStatus.valueOf(statusString)
-            } catch (e: Exception) {
-                com.persianai.assistant.models.CheckStatus.PENDING // Default status
-            }
+            try {
+                val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
+                val amount = cursor.getDouble(cursor.getColumnIndexOrThrow("amount"))
+                val checkNumber = cursor.getString(cursor.getColumnIndexOrThrow("checkNumber")) ?: ""
+                val issuer = cursor.getString(cursor.getColumnIndexOrThrow("issuer")) ?: ""
+                val recipient = try { cursor.getString(cursor.getColumnIndexOrThrow("recipient")) ?: "" } catch (_: Exception) { "" }
+                val dueDateVal = cursor.getLong(cursor.getColumnIndexOrThrow("dueDate"))
+                val statusString = cursor.getString(cursor.getColumnIndexOrThrow("status")) ?: "PENDING"
+                val description = try { cursor.getString(cursor.getColumnIndexOrThrow("description")) ?: "" } catch (_: Exception) { "" }
+                val createdDate = try { cursor.getLong(cursor.getColumnIndexOrThrow("createdDate")) } catch (_: Exception) { System.currentTimeMillis() }
+                val bankName = try { cursor.getString(cursor.getColumnIndexOrThrow("bankName")) ?: "" } catch (_: Exception) { "" }
+                val accountNumber = try { cursor.getString(cursor.getColumnIndexOrThrow("accountNumber")) ?: "" } catch (_: Exception) { "" }
 
-            checks.add(com.persianai.assistant.models.Check(
-                id = cursor.getLong(0),
-                amount = cursor.getDouble(1),
-                checkNumber = cursor.getString(2) ?: "",
-                recipient = cursor.getString(3) ?: "",
-                dueDate = java.util.Date(cursor.getLong(4)),
-                status = status,
-                description = cursor.getString(7) ?: "",
-                issueDate = java.util.Date(cursor.getLong(8)),
-                bankName = ""
-            ))
+                val status = try {
+                    com.persianai.assistant.models.CheckStatus.valueOf(statusString)
+                } catch (e: Exception) {
+                    com.persianai.assistant.models.CheckStatus.PENDING
+                }
+
+                checks.add(com.persianai.assistant.models.Check(
+                    id = id,
+                    checkNumber = checkNumber,
+                    amount = amount,
+                    recipient = recipient,
+                    issuer = issuer,
+                    issueDate = java.util.Date(createdDate),
+                    dueDate = java.util.Date(dueDateVal),
+                    status = status,
+                    description = description,
+                    bankName = bankName,
+                    accountNumber = accountNumber
+                ))
+            } catch (e: Exception) {
+                android.util.Log.w("AccountingDB", "Skipping malformed check row: ${e.message}")
+            }
         }
         cursor.close()
         return checks
@@ -243,11 +279,14 @@ class AccountingDB(context: Context) : SQLiteOpenHelper(context, "accounting.db"
         val values = ContentValues().apply {
             put("amount", check.amount)
             put("checkNumber", check.checkNumber)
-            put("issuer", check.recipient)
+            put("issuer", check.issuer)
+            put("recipient", check.recipient)
             put("dueDate", check.dueDate.time)
             put("status", check.status.name)
             put("type", "PAYMENT")
             put("description", check.description)
+            put("bankName", check.bankName)
+            put("accountNumber", check.accountNumber)
             put("createdDate", check.issueDate.time)
         }
         return writableDatabase.update("checks", values, "id = ?", arrayOf(check.id.toString()))

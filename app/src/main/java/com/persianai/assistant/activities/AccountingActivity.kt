@@ -290,41 +290,9 @@ class AccountingActivity : AppCompatActivity() {
     }
     
     private fun showInstallmentDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_add_transaction, null)
-        val amountField = view.findViewById<TextInputEditText>(R.id.amountField)
-        val categoryField = view.findViewById<TextInputEditText>(R.id.categoryField)
-        val descField = view.findViewById<TextInputEditText>(R.id.descriptionField)
-        
-        categoryField.hint = "تعداد اقساط"
-        descField.hint = "توضیحات"
-        
-        MaterialAlertDialogBuilder(this)
-            .setTitle("📊 قسط جدید")
-            .setView(view)
-            .setPositiveButton("ثبت") { _, _ ->
-                val amount = amountField.text.toString().toDoubleOrNull() ?: 0.0
-                val months = categoryField.text.toString().toIntOrNull() ?: 1
-                val desc = descField.text.toString()
-                
-                if (amount > 0) {
-                    lifecycleScope.launch {
-                        val transaction = Transaction(
-                            id = 0,
-                            type = TransactionType.INSTALLMENT,
-                            amount = amount / months,
-                            category = "قسط $months ماهه",
-                            description = desc,
-                            date = System.currentTimeMillis()
-                        )
-                        financeManager.addTransaction(transaction.amount, transaction.type.name.lowercase().let { if (it == "check_in" ) "income" else if (it == "check_out") "expense" else if (it == "installment") "expense" else it }, transaction.category, transaction.description)
-                        updateBalance()
-                        loadTransactions()
-                        Toast.makeText(this@AccountingActivity, "✅ قسط ثبت شد", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            .setNegativeButton("لغو", null)
-            .show()
+        // Open the full Installment form activity/dialog instead of the simplified one
+        val intent = android.content.Intent(this, com.persianai.assistant.activities.InstallmentsManagementActivity::class.java)
+        startActivity(intent)
     }
     
     private fun showAIChat() {

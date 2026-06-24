@@ -280,7 +280,7 @@ class ChecksManagementActivity : AppCompatActivity() {
             .setPositiveButton("ذخیره") { _, _ ->
                 val amount = amountInput.text.toString().toLongOrNull() ?: 0L
                 val checkNumber = checkNumberInput.text.toString()
-                val issuer = issuerInput.text.toString()
+                val issuer = issuerInput.text.toString().ifBlank { com.persianai.assistant.utils.SharedDataManager.getUserName(this@ChecksManagementActivity) }
                 val recipient = recipientInput.text.toString()
                 val bankName = bankNameInput.text.toString()
                 val accountNumber = accountNumberInput.text.toString()
@@ -297,7 +297,9 @@ class ChecksManagementActivity : AppCompatActivity() {
                 }
                 
                 val isIncoming = receivedCheckbox.isChecked
-                addCheck(checkNumber, amount, issuer, recipient, selectedIssueDate, selectedDueDate, bankName, accountNumber, description, isIncoming)
+                // Ensure due date is set (not zero)
+                val due = if (selectedDueDate <= 0L) System.currentTimeMillis() else selectedDueDate
+                addCheck(checkNumber, amount, issuer, recipient, selectedIssueDate, due, bankName, accountNumber, description, isIncoming)
             }
             .setNegativeButton("لغو", null)
             .show()

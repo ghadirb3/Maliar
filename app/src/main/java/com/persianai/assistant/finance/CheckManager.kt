@@ -80,14 +80,16 @@ class CheckManager(private val context: Context) {
         try {
             val model = com.persianai.assistant.models.Check(
                 id = 0,
-                amount = amount,
                 checkNumber = checkNumber,
+                amount = amount,
                 recipient = recipient,
+                issuer = issuer,
+                issueDate = java.util.Date(issueDate),
                 dueDate = java.util.Date(dueDate),
                 status = com.persianai.assistant.models.CheckStatus.PENDING,
                 description = description,
-                issueDate = java.util.Date(issueDate),
-                bankName = bankName
+                bankName = bankName,
+                accountNumber = accountNumber
             )
             kotlinx.coroutines.runBlocking {
                 accountingManager.addCheck(model)
