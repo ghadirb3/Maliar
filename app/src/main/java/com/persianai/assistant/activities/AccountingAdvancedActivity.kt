@@ -205,7 +205,7 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                     bankName = bankNameInput.text.toString(),
                     accountNumber = "",
                     description = "ثبت دستی از حسابداری",
-                    isReceived = receivedCheckbox.isChecked
+                    isIncoming = receivedCheckbox.isChecked
                 )
                 Toast.makeText(this, "✅ چک ثبت شد", Toast.LENGTH_SHORT).show()
                 updateStats()
