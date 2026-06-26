@@ -588,11 +588,7 @@ class SmartReminderManager(private val context: Context) {
     private fun ensureReminderServiceRunning() {
         try {
             val serviceIntent = Intent(context, com.persianai.assistant.services.ReminderService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            context.startService(serviceIntent)
         } catch (e: Exception) {
             Log.w(TAG, "Could not start ReminderService backup", e)
         }

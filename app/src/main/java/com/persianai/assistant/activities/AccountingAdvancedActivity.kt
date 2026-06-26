@@ -161,8 +161,15 @@ class AccountingAdvancedActivity : AppCompatActivity() {
         val recipientInput = dialogView.findViewById<TextInputEditText>(R.id.recipientInput)
         val bankNameInput = dialogView.findViewById<TextInputEditText>(R.id.bankNameInput)
         val dueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
+        val receivedCheckbox = dialogView.findViewById<android.widget.CheckBox>(R.id.receivedCheckbox)
 
         var selectedDueDate = System.currentTimeMillis()
+        // Set initial Persian date display
+        val calendar = Calendar.getInstance().apply { timeInMillis = selectedDueDate }
+        val persianDate = PersianDateConverter.gregorianToPersian(
+            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        dueDateButton.text = persianDate.toReadableString()
         dueDateButton.setOnClickListener {
             val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
             picker.show(selectedDueDate) { millis ->
@@ -197,7 +204,8 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                     dueDate = selectedDueDate,
                     bankName = bankNameInput.text.toString(),
                     accountNumber = "",
-                    description = "ثبت دستی از حسابداری"
+                    description = "ثبت دستی از حسابداری",
+                    isReceived = receivedCheckbox.isChecked
                 )
                 Toast.makeText(this, "✅ چک ثبت شد", Toast.LENGTH_SHORT).show()
                 updateStats()
