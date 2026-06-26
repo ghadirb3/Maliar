@@ -25,7 +25,8 @@ class InstallmentManager(private val context: Context) {
         val recipient: String,
         val description: String,
         val alertDaysBefore: Int = 3,
-        val autoRemind: Boolean = true
+        val autoRemind: Boolean = true,
+        val lastPaymentDate: Long = 0L
     ) {
         fun getFormattedStartDate(): String {
             val calendar = Calendar.getInstance()
@@ -53,13 +54,14 @@ class InstallmentManager(private val context: Context) {
         recipient: String,
         description: String,
         paidInstallments: Int = 0,
-        alertDaysBefore: Int = 3
+        alertDaysBefore: Int = 3,
+        lastPaymentDate: Long = 0L
     ): String {
         val id = UUID.randomUUID().toString()
         val installment = Installment(
             id, title, totalAmount, installmentAmount,
             totalInstallments, paidInstallments, startDate, paymentDay,
-            recipient, description, alertDaysBefore, true
+            recipient, description, alertDaysBefore, true, lastPaymentDate
         )
         
         val installments = getAllInstallments().toMutableList()
@@ -122,7 +124,8 @@ class InstallmentManager(private val context: Context) {
                 obj.getString("recipient"),
                 obj.getString("description"),
                 obj.optInt("alertDaysBefore", 3),
-                obj.optBoolean("autoRemind", true)
+                obj.optBoolean("autoRemind", true),
+                obj.optLong("lastPaymentDate", 0L)
             ))
         }
         
@@ -272,6 +275,7 @@ class InstallmentManager(private val context: Context) {
                 put("description", i.description)
                 put("alertDaysBefore", i.alertDaysBefore)
                 put("autoRemind", i.autoRemind)
+                put("lastPaymentDate", i.lastPaymentDate)
             })
         }
         prefs.edit().putString("installments", array.toString()).apply()
@@ -290,12 +294,14 @@ class InstallmentManager(private val context: Context) {
         startDate: Long,
         paymentDay: Int,
         recipient: String,
-        description: String
-        , paidInstallments: Int = -1
+        description: String,
+        paidInstallments: Int = -1,
+        lastPaymentDate: Long = -1L
     ): Boolean {
         val all = getAllInstallments()
         val existing = all.firstOrNull { it.id == id } ?: return false
         val newPaid = if (paidInstallments >= 0) paidInstallments else existing.paidInstallments
+        val newLastPaymentDate = if (lastPaymentDate >= 0) lastPaymentDate else existing.lastPaymentDate
         if (totalInstallments < newPaid) return false
 
         val updated = existing.copy(
@@ -307,7 +313,8 @@ class InstallmentManager(private val context: Context) {
             startDate = startDate,
             paymentDay = paymentDay,
             recipient = recipient,
-            description = description
+            description = description,
+            lastPaymentDate = newLastPaymentDate
         )
         saveInstallments(all.map { if (it.id == id) updated else it })
         return true

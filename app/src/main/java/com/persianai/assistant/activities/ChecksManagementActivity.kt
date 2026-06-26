@@ -280,7 +280,7 @@ class ChecksManagementActivity : AppCompatActivity() {
             .setPositiveButton("ذخیره") { _, _ ->
                 val amount = amountInput.text.toString().toLongOrNull() ?: 0L
                 val checkNumber = checkNumberInput.text.toString()
-                val issuer = issuerInput.text.toString().ifBlank { com.persianai.assistant.utils.SharedDataManager.getUserName(this@ChecksManagementActivity) }
+                val issuer = issuerInput.text.toString()
                 val recipient = recipientInput.text.toString()
                 val bankName = bankNameInput.text.toString()
                 val accountNumber = accountNumberInput.text.toString()

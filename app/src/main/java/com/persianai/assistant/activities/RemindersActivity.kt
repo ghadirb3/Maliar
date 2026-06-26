@@ -136,18 +136,59 @@ class RemindersActivity : AppCompatActivity() {
     }
     
     private fun showAddReminderDialog() {
-        val input = EditText(this)
-        input.hint = "پیام یادآوری"
-        input.setPadding(32, 32, 32, 32)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_reminder, null)
+        val messageInput = dialogView.findViewById<EditText>(R.id.messageInput)
+        val dateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.dateButton)
+        val timeButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.timeButton)
+        
+        var selectedDate = System.currentTimeMillis()
+        var selectedTime = System.currentTimeMillis()
+        
+        // Initialize date button with today's date
+        val cal = Calendar.getInstance().apply { timeInMillis = selectedDate }
+        val persianDate = PersianDateConverter.gregorianToPersian(
+            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)
+        )
+        dateButton.text = persianDate.toReadableString()
+        
+        // Initialize time button with current time
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        timeButton.text = timeFormat.format(Date(selectedTime))
+        
+        dateButton.setOnClickListener {
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedDate) { millis ->
+                selectedDate = millis
+                val c = Calendar.getInstance().apply { timeInMillis = millis }
+                val pDate = PersianDateConverter.gregorianToPersian(
+                    c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH)
+                )
+                dateButton.text = pDate.toReadableString()
+            }
+        }
+        
+        timeButton.setOnClickListener {
+            val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
+                .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+                .setHour(cal.get(Calendar.HOUR_OF_DAY))
+                .setMinute(cal.get(Calendar.MINUTE))
+                .build()
+            picker.show(supportFragmentManager, "timePicker")
+            picker.addOnPositiveButtonClickListener {
+                selectedTime = picker.hour * 3600000L + picker.minute * 60000L
+                timeButton.text = String.format("%02d:%02d", picker.hour, picker.minute)
+            }
+        }
         
         MaterialAlertDialogBuilder(this)
             .setTitle("🔔 یادآوری جدید")
-            .setView(input)
+            .setView(dialogView)
             .setPositiveButton("ثبت") { _, _ ->
-                val message = input.text.toString()
+                val message = messageInput.text.toString()
                 if (message.isNotEmpty()) {
-                    val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-                    reminders.add(Reminder(time, message))
+                    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                    val timeStr = timeFormat.format(Date(selectedTime))
+                    reminders.add(Reminder(timeStr, message, false, selectedDate))
                     saveReminders()
                     adapter.notifyDataSetChanged()
                     updateEmptyState()

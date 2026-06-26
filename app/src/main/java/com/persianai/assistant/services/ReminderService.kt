@@ -209,25 +209,17 @@ class ReminderService : Service() {
             try {
                 var textToSpeak = reminder.title
                 
-                // تلاش برای تولید متن طبیعی با مدل آنلاین (بدون استفاده از withTimeout نامشخص)
+                // تلاش برای تولید متن طبیعی با SmartReminderSpeechHelper
                 try {
-                    val assistant = com.persianai.assistant.ai.AdvancedPersianAssistant(this@ReminderService)
-                    val aiResp = try {
-                        withContext(Dispatchers.IO) {
-                            assistant.processRequestWithAI(
-                                reminder.description.ifBlank { reminder.title },
-                                contextHint = "یادآوری"
-                            )
-                        }
-                    } catch (ie: Exception) {
-                        android.util.Log.w(TAG, "AI generation timed out or failed: ${ie.message}")
-                        null
-                    }
-                    if (aiResp?.text?.isNotBlank() == true) {
-                        textToSpeak = aiResp.text
-                    }
+                    textToSpeak = com.persianai.assistant.utils.SmartReminderSpeechHelper.generateSpeechText(
+                        this@ReminderService,
+                        reminder.title,
+                        reminder.description
+                    )
+                    android.util.Log.d(TAG, "✅ AI-generated speech text: $textToSpeak")
                 } catch (e: Exception) {
                     android.util.Log.w(TAG, "AI generation failed: ${e.message}")
+                    textToSpeak = reminder.title
                 }
 
                 // تصمیم‌گیری: آیا از TTS آنلاین استفاده شود؟

@@ -157,6 +157,7 @@ class AccountingAdvancedActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_check, null)
         val amountInput = dialogView.findViewById<TextInputEditText>(R.id.amountInput)
         val checkNumberInput = dialogView.findViewById<TextInputEditText>(R.id.checkNumberInput)
+        val issuerInput = dialogView.findViewById<TextInputEditText>(R.id.issuerInput)
         val recipientInput = dialogView.findViewById<TextInputEditText>(R.id.recipientInput)
         val bankNameInput = dialogView.findViewById<TextInputEditText>(R.id.bankNameInput)
         val dueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
@@ -190,7 +191,7 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                 checkManager.addCheck(
                     checkNumber = checkNumberInput.text.toString().ifBlank { System.currentTimeMillis().toString() },
                     amount = amount,
-                    issuer = SharedDataManager.getUserName(this),
+                    issuer = issuerInput.text.toString(),
                     recipient = recipientInput.text.toString().ifBlank { "نامشخص" },
                     issueDate = System.currentTimeMillis(),
                     dueDate = selectedDueDate,
@@ -225,7 +226,7 @@ class AccountingAdvancedActivity : AppCompatActivity() {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
         val dayInput = android.widget.EditText(this).apply {
-            hint = "روز پرداخت ماه (۱ تا ۳۱)"
+            hint = "روز پرداخت ماه شمسی (۱ تا ۳۱)"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             setText("1")
         }

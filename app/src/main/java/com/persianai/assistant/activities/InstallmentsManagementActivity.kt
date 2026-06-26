@@ -269,8 +269,10 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         val recipientInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.recipientInput)
         val descriptionInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.descriptionInput)
         val paidInstallmentsInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.paidInstallmentsInput)
+        val paymentDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.paymentDateButton)
         
         var selectedStartDate: Long = existing?.startDate ?: System.currentTimeMillis()
+        var selectedPaymentDate: Long = existing?.lastPaymentDate ?: System.currentTimeMillis()
 
         // set initial Persian date display even when creating new installment
         run {
@@ -279,6 +281,15 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                 c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH)
             )
             startDateButton.text = persianDate.toReadableString()
+        }
+
+        // set initial payment date display
+        run {
+            val c = Calendar.getInstance().apply { timeInMillis = selectedPaymentDate }
+            val persianDate = PersianDateConverter.gregorianToPersian(
+                c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH)
+            )
+            paymentDateButton.text = persianDate.toReadableString()
         }
 
         existing?.let { inst ->
@@ -290,6 +301,7 @@ class InstallmentsManagementActivity : AppCompatActivity() {
             recipientInput.setText(inst.recipient)
             descriptionInput.setText(inst.description)
             paidInstallmentsInput.setText(inst.paidInstallments.toString())
+            
             val calendar = Calendar.getInstance().apply { timeInMillis = inst.startDate }
             val persianDate = PersianDateConverter.gregorianToPersian(
                 calendar.get(Calendar.YEAR),
@@ -297,6 +309,17 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                 calendar.get(Calendar.DAY_OF_MONTH)
             )
             startDateButton.text = persianDate.toReadableString()
+            
+            if (inst.lastPaymentDate > 0) {
+                selectedPaymentDate = inst.lastPaymentDate
+                val calPayment = Calendar.getInstance().apply { timeInMillis = inst.lastPaymentDate }
+                val persianPaymentDate = PersianDateConverter.gregorianToPersian(
+                    calPayment.get(Calendar.YEAR),
+                    calPayment.get(Calendar.MONTH) + 1,
+                    calPayment.get(Calendar.DAY_OF_MONTH)
+                )
+                paymentDateButton.text = persianPaymentDate.toReadableString()
+            }
         }
         
         startDateButton.setOnClickListener {
@@ -316,6 +339,25 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                     c.get(Calendar.DAY_OF_MONTH)
                 )
                 startDateButton.text = persianDate.toReadableString()
+            }
+        }
+
+        paymentDateButton.setOnClickListener {
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedPaymentDate) { selection ->
+                val c = Calendar.getInstance().apply { timeInMillis = selection }
+                c.set(Calendar.HOUR_OF_DAY, 0)
+                c.set(Calendar.MINUTE, 0)
+                c.set(Calendar.SECOND, 0)
+                c.set(Calendar.MILLISECOND, 0)
+                selectedPaymentDate = c.timeInMillis
+
+                val persianDate = PersianDateConverter.gregorianToPersian(
+                    c.get(Calendar.YEAR),
+                    c.get(Calendar.MONTH) + 1,
+                    c.get(Calendar.DAY_OF_MONTH)
+                )
+                paymentDateButton.text = persianDate.toReadableString()
             }
         }
         
@@ -386,7 +428,8 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                         startDate = selectedStartDate,
                         paymentDay = paymentDay,
                         creditor = recipient,
-                        notes = description
+                        notes = description,
+                        lastPaymentDate = if (paidInstallmentsValue > 0) selectedPaymentDate else 0L
                     )
                 } else {
                     val success = installmentManager.updateInstallment(
@@ -399,7 +442,8 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                         startDate = selectedStartDate,
                         paymentDay = paymentDay,
                         recipient = recipient,
-                        description = description
+                        description = description,
+                        lastPaymentDate = if (paidInstallmentsValue > 0) selectedPaymentDate else 0L
                     )
                     if (success) {
                         Toast.makeText(this, "✅ قسط ویرایش شد", Toast.LENGTH_SHORT).show()
@@ -422,7 +466,8 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         startDate: Long,
         paymentDay: Int,
         creditor: String,
-        notes: String
+        notes: String,
+        lastPaymentDate: Long = 0L
     ) {
         lifecycleScope.launch {
             try {
@@ -436,7 +481,8 @@ class InstallmentsManagementActivity : AppCompatActivity() {
                     startDate = startDate,
                     paymentDay = paymentDay,
                     recipient = creditor,
-                    description = notes
+                    description = notes,
+                    lastPaymentDate = lastPaymentDate
                 )
                 
                 Toast.makeText(
@@ -515,10 +561,22 @@ class InstallmentsManagementActivity : AppCompatActivity() {
         // calculate next payment and show Persian date + days remaining
         val nextPayment = installmentManager.calculateNextPaymentDate(installment)
         if (nextPayment != null) {
-            val days = ((nextPayment - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+            val now = System.currentTimeMillis()
+            val diffMillis = nextPayment - now
+            val days = (diffMillis / (24 * 60 * 60 * 1000)).toInt()
+            
             val cal = Calendar.getInstance().apply { timeInMillis = nextPayment }
             val pers = PersianDateConverter.gregorianToPersian(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)).toReadableString()
-            nextPaymentTv.text = "قسط بعدی: $days روز دیگر ($pers)"
+            
+            // Show days remaining with better formatting
+            val daysText = when {
+                days < 0 -> "${-days} روز عقب افتاده"
+                days == 0 -> "امروز"
+                days == 1 -> "فردا"
+                days <= 7 -> "$days روز دیگر"
+                else -> "${days / 30} ماه و ${days % 30} روز"
+            }
+            nextPaymentTv.text = "قسط بعدی: $daysText ($pers)"
         } else {
             nextPaymentTv.text = "قسط بعدی: -"
         }

@@ -54,6 +54,15 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Payment date for past installments -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/paymentDateButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="📅 تاریخ آخرین پرداخت (اختیاری)"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -96,7 +105,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:hint="روز پرداخت در ماه (1-31)"
+        android:hint="روز پرداخت در ماه شمسی (1-31)"
         app:boxBackgroundMode="outline">
 
         <com.google.android.material.textfield.TextInputEditText
