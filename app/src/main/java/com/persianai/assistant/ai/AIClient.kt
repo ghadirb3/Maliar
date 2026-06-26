@@ -284,6 +284,12 @@ class AIClient(private val context: Context, private val apiKeys: List<APIKey>) 
             if (!response.isSuccessful) {
                 android.util.Log.e("AIClient", "API Error ${response.code}: $responseBody")
 
+                // For rate limit errors (429), skip to next key immediately
+                if (response.code == 429) {
+                    android.util.Log.w("AIClient", "Rate limit hit (429), skipping to next key")
+                    throw Exception("API Error ${response.code}: ${response.message}")
+                }
+
                 // If GAPGPT returns 400 for chat/completions, try /v1/responses as fallback (newer models)
                 if (model.provider == AIProvider.GAPGPT && response.code == 400) {
                     try {

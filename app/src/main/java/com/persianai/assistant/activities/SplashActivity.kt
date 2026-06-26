@@ -316,6 +316,7 @@ class SplashActivity : AppCompatActivity() {
                         )
                     )
                     "huggingface", "hf" -> huggingFaceKey = parts[1].trim()
+                    "gapgpt" -> keys.add(APIKey(AIProvider.GAPGPT, parts[1].trim(), isActive = true))
                 }
             } else if (parts.size == 1) {
                 val token = trimmed
@@ -374,7 +375,7 @@ class SplashActivity : AppCompatActivity() {
                     // Ivira uses token manager, not string keys
                 }
                 AIProvider.GAPGPT -> {
-                    // فعلاً نیازی به سینک مستقیم در SharedPreferences قدیمی نیست
+                    editor.putString("gapgpt_api_key", key.key)
                 }
                 AIProvider.CUSTOM -> {
                     // مدل‌های سفارشی از remote
