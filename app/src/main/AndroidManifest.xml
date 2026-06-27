@@ -74,6 +74,11 @@
             android:theme="@style/Theme.PersianAIAssistant" />
 
         <activity
+            android:name=".activities.MainActivityTabbed"
+            android:exported="false"
+            android:theme="@style/Theme.PersianAIAssistant" />
+
+        <activity
             android:name=".activities.MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
