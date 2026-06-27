@@ -26,8 +26,7 @@ class AccountingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        view.findViewById<MaterialButton>(R.id.openAccountingBtn).setOnClickListener {
-            startActivity(Intent(requireContext(), AccountingAdvancedActivity::class.java))
-        }
+        // Open AccountingAdvancedActivity directly without button click
+        startActivity(Intent(requireContext(), AccountingAdvancedActivity::class.java))
     }
 }

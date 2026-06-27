@@ -35,7 +35,13 @@ class JalaliDatePickerDialog(private val ctx: Context) {
     }
 
     fun show(initialMillis: Long = System.currentTimeMillis(), onSelected: (Long) -> Unit) {
-        val cal = java.util.Calendar.getInstance().apply { timeInMillis = initialMillis }
+        val cal = java.util.Calendar.getInstance().apply { 
+            timeInMillis = initialMillis
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
         val j = com.persianai.assistant.utils.JalaliCalendar.gregorianToJalali(
             cal.get(java.util.Calendar.YEAR),
             cal.get(java.util.Calendar.MONTH) + 1,

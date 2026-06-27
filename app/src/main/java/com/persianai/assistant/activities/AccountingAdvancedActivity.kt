@@ -161,10 +161,13 @@ class AccountingAdvancedActivity : AppCompatActivity() {
         val recipientInput = dialogView.findViewById<TextInputEditText>(R.id.recipientInput)
         val bankNameInput = dialogView.findViewById<TextInputEditText>(R.id.bankNameInput)
         val dueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.dueDateButton)
+        val issueDateButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.issueDateButton)
         val receivedCheckbox = dialogView.findViewById<android.widget.CheckBox>(R.id.receivedCheckbox)
 
         var selectedDueDate = System.currentTimeMillis()
-        // Set initial Persian date display
+        var selectedIssueDate = System.currentTimeMillis()
+        
+        // Set initial Persian date display for due date
         val calendar = Calendar.getInstance().apply { timeInMillis = selectedDueDate }
         val persianDate = PersianDateConverter.gregorianToPersian(
             calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH)
@@ -181,6 +184,26 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                     calendar.get(Calendar.DAY_OF_MONTH)
                 )
                 dueDateButton.text = persianDate.toReadableString()
+            }
+        }
+        
+        // Set initial Persian date display for issue date
+        val issueCalendar = Calendar.getInstance().apply { timeInMillis = selectedIssueDate }
+        val issuePersianDate = PersianDateConverter.gregorianToPersian(
+            issueCalendar.get(Calendar.YEAR), issueCalendar.get(Calendar.MONTH) + 1, issueCalendar.get(Calendar.DAY_OF_MONTH)
+        )
+        issueDateButton.text = issuePersianDate.toReadableString()
+        issueDateButton.setOnClickListener {
+            val picker = com.persianai.assistant.ui.JalaliDatePickerDialog(this)
+            picker.show(selectedIssueDate) { millis ->
+                selectedIssueDate = millis
+                val calendar = Calendar.getInstance().apply { timeInMillis = millis }
+                val persianDate = PersianDateConverter.gregorianToPersian(
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH) + 1,
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                )
+                issueDateButton.text = persianDate.toReadableString()
             }
         }
 
@@ -200,7 +223,7 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                     amount = amount,
                     issuer = issuerInput.text.toString(),
                     recipient = recipientInput.text.toString().ifBlank { "نامشخص" },
-                    issueDate = System.currentTimeMillis(),
+                    issueDate = selectedIssueDate,
                     dueDate = selectedDueDate,
                     bankName = bankNameInput.text.toString(),
                     accountNumber = "",
@@ -238,12 +261,18 @@ class AccountingAdvancedActivity : AppCompatActivity() {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             setText("1")
         }
+        val paidInput = android.widget.EditText(this).apply {
+            hint = "تعداد اقساط پرداخت شده"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("0")
+        }
 
         container.addView(titleInput)
         container.addView(totalInput)
         container.addView(monthlyInput)
         container.addView(countInput)
         container.addView(dayInput)
+        container.addView(paidInput)
 
         MaterialAlertDialogBuilder(this)
             .setTitle("💳 ثبت قسط جدید")
@@ -260,6 +289,8 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
 
+                val paidInstallments = paidInput.text.toString().toIntOrNull() ?: 0
+                
                 InstallmentManager(this).addInstallment(
                     title = title,
                     totalAmount = totalAmount,
@@ -268,7 +299,8 @@ class AccountingAdvancedActivity : AppCompatActivity() {
                     startDate = System.currentTimeMillis(),
                     paymentDay = paymentDay,
                     recipient = "",
-                    description = "ثبت دستی از حسابداری"
+                    description = "ثبت دستی از حسابداری",
+                    paidInstallments = paidInstallments
                 )
                 Toast.makeText(this, "✅ قسط ثبت شد", Toast.LENGTH_SHORT).show()
                 updateStats()

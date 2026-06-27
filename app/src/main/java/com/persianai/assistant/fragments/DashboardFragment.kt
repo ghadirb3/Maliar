@@ -26,8 +26,7 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        view.findViewById<MaterialButton>(R.id.openDashboardBtn).setOnClickListener {
-            startActivity(Intent(requireContext(), DashboardActivity::class.java))
-        }
+        // Open DashboardActivity directly without button click
+        startActivity(Intent(requireContext(), DashboardActivity::class.java))
     }
 }

@@ -7,7 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.persianai.assistant.R
-import com.persianai.assistant.activities.RemindersActivity
+import com.persianai.assistant.activities.AdvancedRemindersActivity
 import com.google.android.material.button.MaterialButton
 
 /**
@@ -26,8 +26,7 @@ class RemindersFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        view.findViewById<MaterialButton>(R.id.openRemindersBtn).setOnClickListener {
-            startActivity(Intent(requireContext(), RemindersActivity::class.java))
-        }
+        // Open AdvancedRemindersActivity directly without button click
+        startActivity(Intent(requireContext(), AdvancedRemindersActivity::class.java))
     }
 }

@@ -26,8 +26,7 @@ class ChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        view.findViewById<MaterialButton>(R.id.openChatBtn).setOnClickListener {
-            startActivity(Intent(requireContext(), MainActivity::class.java))
-        }
+        // Open MainActivity directly without button click
+        startActivity(Intent(requireContext(), MainActivity::class.java))
     }
 }
